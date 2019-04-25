@@ -2,7 +2,7 @@
 set(CMAKE_CXX_STANDARD 17)
 FIND_PACKAGE(Boost REQUIRED)
 INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIR})
-add_executable (OCServer Entry.cpp Server.cpp Server.h WeakCallback.h Destructible.h json.hpp Item.h Item.cpp Actions.h Actions.cpp)
+add_executable (OCServer Entry.cpp Server.cpp Server.h WeakCallback.h json.hpp Item.h Item.cpp Actions.h Actions.cpp Overload.h)
 
 IF (WIN32)
   add_definitions(-DBOOST_ALL_NO_LIB)

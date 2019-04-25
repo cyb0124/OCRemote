@@ -43,21 +43,22 @@ void Client::init(const Itr &x) {
 
 Client::~Client() {
   log("disconnected");
+  std::string failureCause(logHeader + " disconnected");
 
   if (!sendQueue.empty()) {
-    s.io([sendQueue(std::move(sendQueue))]() {
+    s.io([sendQueue(std::move(sendQueue)), failureCause]() {
       for (auto &i : sendQueue) {
         for (auto &j : i) {
-          j->onError();
+          j->onError(failureCause);
         }
       }
     });
   }
 
   if (!responseQueue.empty()) {
-    s.io([responseQueue(std::move(responseQueue))]() {
+    s.io([responseQueue(std::move(responseQueue)), failureCause]() {
       for (auto &i : responseQueue) {
-        i->onError();
+        i->onError(failureCause);
       }
     });
   }
@@ -146,9 +147,10 @@ void Server::enqueueAction(const std::string &client, const SharedAction &action
 void Server::enqueueActionGroup(const std::string &client, std::vector<SharedAction> group) {
   auto itr(logins.find(client));
   if (itr == logins.end()) {
-    io([group(std::move(group))]() {
+    std::string failureCause(client + " isn't connected");
+    io([group(std::move(group)), failureCause]() {
       for (auto &i : group) {
-        i->onError();
+        i->onError(failureCause);
       }
     });
   } else {

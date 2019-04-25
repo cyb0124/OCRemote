@@ -7,8 +7,9 @@
 #include "json.hpp"
 #include "Item.h"
 
+struct Failure { std::string cause; };
 template<typename T>
-using FailableCb = std::function<void(std::optional<T>)>;
+using FailableCb = std::function<void(std::variant<Failure, T>)>;
 
 namespace Actions {
   enum {
@@ -24,14 +25,14 @@ namespace Actions {
     virtual ~Base() = default;
     virtual void dump(nlohmann::json&) = 0;
     virtual void onResponse(nlohmann::json&) = 0;
-    virtual void onError() = 0;
+    virtual void onError(std::string cause) = 0;
   };
 
   template<typename T>
   struct Impl : Base {
     FailableCb<T> cb;
-    void onError() override {
-      if (cb) cb(std::nullopt);
+    void onError(std::string cause) override {
+      if (cb) cb(Failure{std::move(cause)});
     }
   };
 
