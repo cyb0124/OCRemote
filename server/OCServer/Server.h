@@ -1,6 +1,7 @@
 #pragma once
 #include <map>
 #include <list>
+#include <variant>
 #include <optional>
 #include <boost/asio.hpp>
 #include <boost/noncopyable.hpp>
@@ -48,16 +49,16 @@ public:
   size_t countPending() const;
 };
 
-struct Server : std::enable_shared_from_this<Server> {
+struct Server {
   IOEnv &io;
 private:
+  std::shared_ptr<std::monostate> alive{std::make_shared<std::monostate>()};
   boost::asio::ip::tcp::acceptor acceptor;
   std::list<std::shared_ptr<Client>> clients;
   std::unordered_map<std::string, Client*> logins;
   void accept();
 public:
-  explicit Server(IOEnv &io);
-  void init(uint16_t port);
+  Server(IOEnv &io, uint16_t port);
   void updateLogin(Client &c);
   void removeClient(Client &c);
   void enqueueActionGroup(const std::string &client, std::vector<SharedAction> group);

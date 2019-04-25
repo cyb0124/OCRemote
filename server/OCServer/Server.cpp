@@ -2,10 +2,8 @@
 #include "Server.h"
 #include "WeakCallback.h"
 
-Server::Server(IOEnv &io)
-  :io(io), acceptor(io.io, boost::asio::ip::tcp::v6()) {}
-
-void Server::init(uint16_t port) {
+Server::Server(IOEnv &io, uint16_t port)
+  :io(io), acceptor(io.io, boost::asio::ip::tcp::v6()) {
   acceptor.set_option(boost::asio::ip::tcp::socket::reuse_address(true));
   acceptor.bind({boost::asio::ip::address_v6::any(), port});
   acceptor.listen();
@@ -14,7 +12,7 @@ void Server::init(uint16_t port) {
 
 void Server::accept() {
   auto socket(std::make_shared<boost::asio::ip::tcp::socket>(io.io));
-  acceptor.async_accept(*socket, makeWeakCallback(weak_from_this(), [this, socket](
+  acceptor.async_accept(*socket, makeWeakCallback(alive, [this, socket](
     const boost::system::error_code &error
   ) {
     if (error)
@@ -49,7 +47,7 @@ Client::~Client() {
     s.io([sendQueue(std::move(sendQueue)), failureCause]() {
       for (auto &i : sendQueue) {
         for (auto &j : i) {
-          j->onError(failureCause);
+          j->onFail(failureCause);
         }
       }
     });
@@ -58,7 +56,7 @@ Client::~Client() {
   if (!responseQueue.empty()) {
     s.io([responseQueue(std::move(responseQueue)), failureCause]() {
       for (auto &i : responseQueue) {
-        i->onError(failureCause);
+        i->onFail(failureCause);
       }
     });
   }
@@ -119,7 +117,7 @@ void Client::onPacket(nlohmann::json j) {
       log("unexpected packet");
       s.removeClient(*this);
     } else {
-      responseQueue.front()->onResponse(j);
+      responseQueue.front()->onResult(std::move(j));
       responseQueue.pop_front();
     }
   } else {
@@ -150,7 +148,7 @@ void Server::enqueueActionGroup(const std::string &client, std::vector<SharedAct
     std::string failureCause(client + " isn't connected");
     io([group(std::move(group)), failureCause]() {
       for (auto &i : group) {
-        i->onError(failureCause);
+        i->onFail(failureCause);
       }
     });
   } else {
@@ -186,8 +184,10 @@ void Client::send() {
   (*len)[2] = size >> 16u & 0xffu;
 
   isSending = true;
+  for (auto &i : head)
+    responseQueue.emplace_back(std::move(i));
   sendQueueTotal -= head.size();
-      sendQueue.pop_front();
+  sendQueue.pop_front();
   boost::asio::async_write(socket, std::vector<boost::asio::mutable_buffer>{boost::asio::buffer(*len), boost::asio::buffer(*dumped)},
     makeWeakCallback(weak_from_this(), [this, len, dumped](const boost::system::error_code &ec, size_t) {
       if (ec) {

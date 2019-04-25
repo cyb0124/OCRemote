@@ -1,6 +1,6 @@
 local serverAddr = "cyb1.net"
 local serverPort = 1847
-local clientName = "testClient"
+local clientName = "shadownode-sf4-base"
 
 local json = (function()
   local json = {}
@@ -346,7 +346,7 @@ local decode = function(cb)
   end
   state = stateReadLength()
   return function(input)
-    state(string.char(table.unpack(input)))
+    state(input)
   end
 end
 
@@ -416,7 +416,7 @@ while true do
           result = {}
           for slot = 1, stacks.count() do
             local item = stacks()
-            if item.name then
+            if item and item.name and item.size > 0 then
               result[slot] = item
             else
               result[slot] = ''
@@ -425,21 +425,21 @@ while true do
         elseif p.op == "listME" then
           result = {}
           for _, item in ipairs(inv.getItemsInNetwork()) do
-            if item.name then
+            if item and item.name and item.size > 0 then
               table.insert(result, item)
             end
           end
         elseif p.op == "listXN" then
           local pos, stacks = {x = p.x, y = p.y, z = p.z}
-          if p.side < 0 then 
+          if p.side < 0 then
             stacks = inv.getItems(pos)
           else
             stacks = inv.getItems(pos, x.side)
           end
           result = {}
           for slot = 1, stacks.n do
-            local item = stacks()
-            if item and item.name then
+            local item = stacks[slot]
+            if item and item.name and item.size > 0 then
               result[slot] = item
             else
               result[slot] = ''

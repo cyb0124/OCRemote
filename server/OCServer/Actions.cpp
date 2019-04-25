@@ -1,10 +1,6 @@
 #include "Actions.h"
 
 namespace Actions {
-  void ImplNoResult::onResponse(nlohmann::json&) {
-    if (cb) cb(std::monostate());
-  }
-
   void Print::dump(nlohmann::json &j) {
     j = {{"op", "print"}, {"color", color}};
     j["text"] = std::move(text);
@@ -16,22 +12,22 @@ namespace Actions {
     j["inv"] = std::move(inv);
   }
 
-  void List::onResponse(nlohmann::json &j) {
-    if (!cb) return;
+  void List::onResult(nlohmann::json j) {
     std::vector<SharedItemStack> items(j.size());
     for (size_t i = 0; i < items.size(); ++i) {
       auto &ji = j.at(i);
       if (!ji.is_string())
         items[i] = parseItemStack(ji);
     }
-    cb(std::move(items));
+    Promise<std::vector<SharedItemStack>>::onResult(std::move(items));
   }
 
   void ListXN::dump(nlohmann::json &j) {
     List::dump(j);
-    j["x"] = x;
-    j["y"] = y;
-    j["z"] = z;
+    j["op"] = "listXN";
+    j["x"] = pos.x;
+    j["y"] = pos.y;
+    j["z"] = pos.z;
   }
 
   void ListME::dump(nlohmann::json &j) {
@@ -39,12 +35,11 @@ namespace Actions {
     j["inv"] = std::move(inv);
   }
 
-  void ListME::onResponse(nlohmann::json &j) {
-    if (!cb) return;
+  void ListME::onResult(nlohmann::json j) {
     std::vector<SharedItemStack> items(j.size());
     for (size_t i = 0; i < items.size(); ++i)
       items[i] = parseItemStack(j.at(i));
-    cb(std::move(items));
+    Promise<std::vector<SharedItemStack>>::onResult(std::move(items));
   }
 
   void XferME::dump(nlohmann::json &j) {
@@ -60,7 +55,7 @@ namespace Actions {
     j["inv"] = std::move(inv);
   }
 
-  void Call::onResponse(nlohmann::json &j) {
-    if (cb) cb(std::move(j));
+  void Call::onResult(nlohmann::json j) {
+    Promise<nlohmann::json>::onResult(std::move(j));
   }
 }

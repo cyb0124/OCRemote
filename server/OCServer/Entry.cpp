@@ -2,6 +2,7 @@
 #include <iostream>
 #include <csignal>
 #include "Server.h"
+#include "Factory.h"
 
 static void ignoreBrokenPipe() {
   #ifndef _WIN32
@@ -16,8 +17,10 @@ int main() {
   try {
     ignoreBrokenPipe();
     IOEnv io;
-    auto server(std::make_shared<Server>(io));
-    server->init(1847);
+    Server server(io, 1847);
+    Factory factory(server, "shadownode-sf4-base", "xnet", {2811, 143, -1272}, 1000);
+    factory.addChest({2813, 143, -1272});
+    factory.cycle();
     io.io.run();
     return EXIT_SUCCESS;
   } catch (std::exception &e) {
