@@ -1,6 +1,6 @@
 local serverAddr = "cyb1.net"
 local serverPort = 1847
-local clientName = "shadownode-sf4-base"
+local clientName = ...
 
 local json = (function()
   local json = {}

@@ -35,4 +35,5 @@ public:
     :s(s), baseClient(std::move(baseClient)), baseInv(std::move(baseInv)), basePos(basePos), minCycleTime(minCycleTime) {}
   void addChest(const XNetCoord &pos);
   void cycle();
+  void log(std::string msg, uint32_t color = 0xffffffu, std::optional<float> beep = std::nullopt);
 };

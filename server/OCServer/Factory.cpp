@@ -2,6 +2,21 @@
 #include "Factory.h"
 #include "WeakCallback.h"
 
+void Factory::log(std::string msg, uint32_t color, std::optional<float> beep) {
+  struct DummyListener : Listener<std::monostate> {
+    void onFail(std::string cause) override {}
+    void onResult(std::monostate result) override {}
+  };
+
+  std::cout << msg << std::endl;
+  auto action(std::make_shared<Actions::Print>());
+  action->text = std::move(msg);
+  action->color = color;
+  action->beep = beep;
+  s.enqueueAction(baseClient, action);
+  action->listen(std::make_shared<DummyListener>());
+}
+
 void Factory::addChest(const XNetCoord &pos) {
   chests.emplace_back(pos);
 }
@@ -15,7 +30,7 @@ void Factory::cycle() {
 
     void onFail(std::string cause) override {
       if (wk.expired()) return;
-      std::cout << "Cycle failed: " << cause << std::endl;
+      rThis.log("Cycle failed: " + cause, 0xff0000u, 880.f);
       rThis.endOfCycle();
     }
 
@@ -27,7 +42,7 @@ void Factory::cycle() {
   };
 
   cycleStartTime = std::chrono::steady_clock::now();
-  std::cout << "Cycle " << currentCycleNum << std::endl;
+  log("Cycle " + std::to_string(currentCycleNum));
   gatherChests()->listen(std::make_shared<ResultListener>(*this));
 }
 
@@ -73,7 +88,7 @@ SharedPromise<std::monostate> Factory::gatherChests() {
     promises.emplace_back(gatherChest(i));
   return Promise<std::monostate>::all(promises)->map([this, wk(std::weak_ptr(alive))](auto) -> std::monostate {
     if (wk.expired()) return {};
-    std::cout << "Gathered " << itemProviders.size() << " slots" << std::endl;
+    log("Gathered " + std::to_string(itemProviders.size()) + " slots");
     return {};
   });
 }
