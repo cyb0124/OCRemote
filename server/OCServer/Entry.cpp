@@ -19,8 +19,9 @@ int main() {
     IOEnv io;
     Server server(io, 1847);
     Factory factory(server, "shadownode-sf4-base", "xnet", {2811, 143, -1272}, 1000);
-    factory.addChest({2813, 143, -1272});
-    factory.cycle();
+    factory.addItemProvider({2813, 143, -1272});
+    factory.addBackup(std::make_shared<ItemFilters::Label>("Iron Sapling"), 8);
+    factory.start();
     io.io.run();
     return EXIT_SUCCESS;
   } catch (std::exception &e) {

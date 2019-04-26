@@ -406,61 +406,59 @@ while true do
     local writeBuffer = encode(clientName)
     print{text = "Connected", color = 0x00FF00, beep = 440}
     local onRead = decode(function(p)
-      for _, p in ipairs(p) do
-        local inv, result
-        if p.inv then inv = getInv(p.inv) end
-        if p.op == "print" then
-          print(p)
-        elseif p.op == "list" then
-          local stacks = inv.getAllStacks(p.side)
-          result = {}
-          for slot = 1, stacks.count() do
-            local item = stacks()
-            if item and item.name and item.size > 0 then
-              result[slot] = item
-            else
-              result[slot] = ''
-            end
-          end
-        elseif p.op == "listME" then
-          result = {}
-          for _, item in ipairs(inv.getItemsInNetwork()) do
-            if item and item.name and item.size > 0 then
-              table.insert(result, item)
-            end
-          end
-        elseif p.op == "listXN" then
-          local pos, stacks = {x = p.x, y = p.y, z = p.z}
-          if p.side < 0 then
-            stacks = inv.getItems(pos)
+      local inv, result
+      if p.inv then inv = getInv(p.inv) end
+      if p.op == "print" then
+        print(p)
+      elseif p.op == "list" then
+        local stacks = inv.getAllStacks(p.side)
+        result = {}
+        for slot = 1, stacks.count() do
+          local item = stacks()
+          if item and item.name and item.size > 0 then
+            result[slot] = item
           else
-            stacks = inv.getItems(pos, x.side)
+            result[slot] = ''
           end
-          result = {}
-          for slot = 1, stacks.n do
-            local item = stacks[slot]
-            if item and item.name and item.size > 0 then
-              result[slot] = item
-            else
-              result[slot] = ''
-            end
-          end
-        elseif p.op == "xferME" then
-          local me = getInv(p.me)
-          db.clear(1)
-          me.store(p.filter, dbAddr, 1, 1)
-          me.setInterfaceConfiguration(1, dbAddr, 1, p.size)
-          inv.transferItem(p.fromSide, p.toSide, p.size, 1, p.slot)
-          me.setInterfaceConfiguration(1)
-        elseif p.op == "call" then
-          -- transferItem (OC): fromSide, toSide, [size, [fromSlot, [toSlot]]]
-          -- transferItem (XN): fromPos, fromSlot, size, toPos, [fromSide, [toSide]]
-          result = {inv[p.fn](table.unpack(p.args))}
-        else
-          error("invalid op")
         end
-        writeBuffer = writeBuffer .. encode(result)
+      elseif p.op == "listME" then
+        result = {}
+        for _, item in ipairs(inv.getItemsInNetwork()) do
+          if item and item.name and item.size > 0 then
+            table.insert(result, item)
+          end
+        end
+      elseif p.op == "listXN" then
+        local pos, stacks = {x = p.x, y = p.y, z = p.z}
+        if p.side < 0 then
+          stacks = inv.getItems(pos)
+        else
+          stacks = inv.getItems(pos, x.side)
+        end
+        result = {}
+        for slot = 1, stacks.n do
+          local item = stacks[slot]
+          if item and item.name and item.size > 0 then
+            result[slot] = item
+          else
+            result[slot] = ''
+          end
+        end
+      elseif p.op == "xferME" then
+        local me = getInv(p.me)
+        db.clear(1)
+        me.store(p.filter, dbAddr, 1, 1)
+        me.setInterfaceConfiguration(1, dbAddr, 1, p.size)
+        inv.transferItem(p.fromSide, p.toSide, p.size, 1, p.slot)
+        me.setInterfaceConfiguration(1)
+      elseif p.op == "call" then
+        -- transferItem (OC): fromSide, toSide, [size, [fromSlot, [toSlot]]]
+        -- transferItem (XN): fromPos, fromSlot, size, toPos, [fromSide, [toSide]]
+        result = {inv[p.fn](table.unpack(p.args))}
+      else
+        error("invalid op")
       end
+      writeBuffer = writeBuffer .. encode(result)
     end)
     while true do
       if #writeBuffer > 0 then

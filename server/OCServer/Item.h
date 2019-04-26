@@ -10,8 +10,21 @@ struct Item {
 
   bool operator==(const Item &other) const;
   bool operator!=(const Item &other) const;
+  size_t hash() const;
 };
 using SharedItem = std::shared_ptr<Item>;
+
+struct SharedItemHash {
+  size_t operator()(const SharedItem &x) const {
+    return x->hash();
+  }
+};
+
+struct SharedItemEqual {
+  bool operator()(const SharedItem &x, const SharedItem &y) const {
+    return *x == *y;
+  }
+};
 
 struct ItemStack {
   SharedItem item;
@@ -26,30 +39,36 @@ namespace ItemFilters {
     virtual void visit(const struct Name&) = 0;
     virtual void visit(const struct Label&) = 0;
     virtual void visit(const struct LabelName&) = 0;
-    virtual void visit() = 0;
+    virtual void visit(const struct Base&) = 0;
   };
 
   struct Base {
     virtual ~Base() = default;
-    virtual bool filter(const Item&) = 0;
-    virtual void accept(IndexVisitor &v) { v.visit(); }
+    virtual bool filter(const Item&) const = 0;
+    virtual void accept(IndexVisitor &v) const { v.visit(*this); }
   };
 
-  struct Name : Base {
+  struct Name final : Base {
     std::string name;
-    bool filter(const Item&) override;
-    void accept(IndexVisitor &v) override { v.visit(*this); }
+    explicit Name(std::string name) :name(std::move(name)) {}
+    bool filter(const Item&) const override;
+    void accept(IndexVisitor &v) const override { v.visit(*this); }
   };
 
-  struct Label : Base {
+  struct Label final : Base {
     std::string label;
-    bool filter(const Item&) override;
-    void accept(IndexVisitor &v) override { v.visit(*this); }
+    explicit Label(std::string label) :label(std::move(label)) {}
+    bool filter(const Item&) const override;
+    void accept(IndexVisitor &v) const override { v.visit(*this); }
   };
 
-  struct LabelName : Base {
+  struct LabelName final : Base {
     std::string label, name;
-    bool filter(const Item&) override;
-    void accept(IndexVisitor &v) override { v.visit(*this); }
+    explicit LabelName(std::string label, std::string name)
+      :label(std::move(label)), name(std::move(name)) {}
+    bool filter(const Item&) const override;
+    void accept(IndexVisitor &v) const override { v.visit(*this); }
   };
 }
+
+using SharedItemFilter = std::shared_ptr<ItemFilters::Base>;

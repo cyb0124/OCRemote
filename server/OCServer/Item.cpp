@@ -1,3 +1,4 @@
+#include <boost/container_hash/hash.hpp>
 #include "Item.h"
 
 bool Item::operator==(const Item &other) const {
@@ -12,6 +13,18 @@ bool Item::operator==(const Item &other) const {
 
 bool Item::operator!=(const Item &other) const {
   return !(*this == other);
+}
+
+size_t Item::hash() const {
+  size_t hash = 0;
+  boost::hash_combine(hash, name);
+  boost::hash_combine(hash, label);
+  boost::hash_combine(hash, damage);
+  boost::hash_combine(hash, maxDamage);
+  boost::hash_combine(hash, maxSize);
+  boost::hash_combine(hash, hasTag);
+  boost::hash_combine(hash, std::hash<nlohmann::json>()(others));
+  return hash;
 }
 
 SharedItemStack parseItemStack(nlohmann::json &j) {
@@ -35,15 +48,15 @@ SharedItemStack parseItemStack(nlohmann::json &j) {
 }
 
 namespace ItemFilters {
-  bool Name::filter(const Item &item) {
+  bool Name::filter(const Item &item) const {
     return item.name == name;
   }
 
-  bool Label::filter(const Item &item) {
+  bool Label::filter(const Item &item) const {
     return item.label == label;
   }
 
-  bool LabelName::filter(const Item &item) {
+  bool LabelName::filter(const Item &item) const {
     return item.label == label && item.name == name;
   }
 }

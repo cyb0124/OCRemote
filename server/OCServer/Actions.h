@@ -193,7 +193,7 @@ namespace Actions {
   struct Print : ImplUnit {
     std::string text;
     uint32_t color = 0xffffff;
-    std::optional<float> beep;
+    float beep = -1.f;
     void dump(nlohmann::json&) override;
   };
 

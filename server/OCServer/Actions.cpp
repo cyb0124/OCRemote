@@ -4,7 +4,7 @@ namespace Actions {
   void Print::dump(nlohmann::json &j) {
     j = {{"op", "print"}, {"color", color}};
     j["text"] = std::move(text);
-    if (beep) j["beep"] = *beep;
+    if (beep > 0) j["beep"] = beep;
   }
 
   void List::dump(nlohmann::json &j) {

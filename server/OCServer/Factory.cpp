@@ -2,7 +2,29 @@
 #include "Factory.h"
 #include "WeakCallback.h"
 
-void Factory::log(std::string msg, uint32_t color, std::optional<float> beep) {
+void ItemInfo::addProvider(const XNetCoord &pos, int slot, int size) {
+  if (!size) throw std::logic_error("empty provider");
+  auto &provider = providers.emplace_back();
+  provider.pos = pos;
+  provider.slot = slot;
+  provider.size = size;
+}
+
+void ItemInfo::backup(int size) {
+  nBackup += size;
+}
+
+int ItemInfo::getAvail(bool allowBackup) const {
+  int result = 0;
+  for (auto &i : providers)
+    result += i.size;
+  if (allowBackup)
+    return result;
+  else
+    return std::max(0, result - nBackup);
+}
+
+void Factory::log(std::string msg, uint32_t color, float beep) {
   struct DummyListener : Listener<std::monostate> {
     void onFail(std::string cause) override {}
     void onResult(std::monostate result) override {}
@@ -17,11 +39,102 @@ void Factory::log(std::string msg, uint32_t color, std::optional<float> beep) {
   action->listen(std::make_shared<DummyListener>());
 }
 
-void Factory::addChest(const XNetCoord &pos) {
-  chests.emplace_back(pos);
+SharedItem Factory::getItem(const ItemFilters::Base &filter) {
+  struct Visitor : ItemFilters::IndexVisitor {
+    Factory &rThis;
+    SharedItem result;
+    explicit Visitor(Factory &rThis) :rThis(rThis) {}
+
+    void addResult(const SharedItem &item) {
+      if (rThis.getAvail(item, true) > rThis.getAvail(result, true)) {
+        result = item;
+      }
+    }
+
+    void visit(const ItemFilters::Name &filter) override {
+      for (auto i(rThis.nameMap.equal_range(filter.name)); i.first != i.second; ++i.first) {
+        addResult(i.first->second);
+      }
+    }
+
+    void visit(const ItemFilters::Label &filter) override {
+      for (auto i(rThis.labelMap.equal_range(filter.label)); i.first != i.second; ++i.first) {
+        addResult(i.first->second);
+      }
+    }
+
+    void visit(const ItemFilters::LabelName &filter) override {
+      for (auto i(rThis.labelMap.equal_range(filter.label)); i.first != i.second; ++i.first) {
+        if (i.first->second->name == filter.name) {
+          addResult(i.first->second);
+        }
+      }
+    }
+
+    void visit(const ItemFilters::Base &filter) override {
+      for (auto &i : rThis.items) {
+        if (filter.filter(*i.first)) {
+          addResult(i.first);
+        }
+      }
+    }
+  } v(*this);
+  filter.accept(v);
+  return std::move(v.result);
 }
 
-void Factory::cycle() {
+int Factory::getAvail(const SharedItem &item, bool allowBackup) {
+  if (!item) return 0;
+  return items.at(item).getAvail(allowBackup);
+}
+
+void Factory::extract(
+  std::vector<SharedPromise<std::monostate>> &promises, const std::string &reason,
+  const SharedItem &item, int size,
+  const XNetCoord &to, int side
+) {
+  log(reason + ": " + item->label + "*" + std::to_string(size), 0x55abec);
+  auto &info(items.at(item));
+  while (size) {
+    auto fulfilled(info.extractSome(size));
+    auto fromPos(fulfilled.pos - basePos);
+    auto toPos(to - basePos);
+    auto action(std::make_shared<Actions::Call>());
+    action->inv = baseInv;
+    action->fn = "transferItem";
+    action->args.push_back({{"x", fromPos.x}, {"y", fromPos.y}, {"z", fromPos.z}});
+    action->args.push_back(fulfilled.slot);
+    action->args.push_back(fulfilled.size);
+    action->args.push_back({{"x", toPos.x}, {"y", toPos.y}, {"z", toPos.z}});
+    action->args.push_back(Actions::bottom);
+    if (side >= 0) action->args.push_back(side);
+    promises.emplace_back(action->map([](auto) -> std::monostate { return {}; }));
+    s.enqueueAction(baseClient, std::move(action));
+    size -= fulfilled.size;
+  }
+}
+
+ItemProvider ItemInfo::extractSome(int size) {
+  ItemProvider result(providers.back());
+  result.size = std::min(result.size, size);
+  if (!(providers.back().size -= result.size))
+    providers.pop_back();
+  return result;
+}
+
+void Factory::addItemProvider(const XNetCoord &pos) {
+  itemProviders.emplace_back(pos);
+}
+
+void Factory::addBackup(SharedItemFilter filter, int size) {
+  backups.emplace_back(std::move(filter), size);
+}
+
+void Factory::addProcess(SharedProcess process) {
+  processes.emplace_back(std::move(process));
+}
+
+void Factory::start() {
   struct ResultListener : Listener<std::monostate> {
     Factory &rThis;
     std::weak_ptr<std::monostate> wk;
@@ -43,11 +156,22 @@ void Factory::cycle() {
 
   cycleStartTime = std::chrono::steady_clock::now();
   log("Cycle " + std::to_string(currentCycleNum));
-  gatherChests()->listen(std::make_shared<ResultListener>(*this));
+  updateItemProvidersAndBackupItems()->then([wk(std::weak_ptr(alive)), this](std::monostate) {
+    std::vector<SharedPromise<std::monostate>> promises;
+    if (!wk.expired())
+      for (auto &i : processes)
+        promises.emplace_back(i->cycle(*this));
+    if (promises.empty()) {
+      auto result(std::make_shared<Promise<std::monostate>>());
+      s.io([result]() { result->onResult({}); });
+      return result;
+    }
+    return Promise<std::monostate>::all(promises)->map([](auto) -> std::monostate { return {}; });
+  })->listen(std::make_shared<ResultListener>(*this));
 }
 
 void Factory::endOfCycle() {
-  itemProviders.clear();
+  items.clear();
   nameMap.clear();
   labelMap.clear();
 
@@ -56,39 +180,45 @@ void Factory::endOfCycle() {
   cycleDelayTimer->async_wait(makeWeakCallback(cycleDelayTimer, [this](const boost::system::error_code &e) {
     if (e) throw boost::system::system_error(e);
     cycleDelayTimer.reset();
-    cycle();
+    start();
   }));
 }
 
-SharedPromise<std::monostate> Factory::gatherChest(const XNetCoord &pos) {
+SharedPromise<std::monostate> Factory::updateItemProvider(const XNetCoord &pos) {
   auto action(std::make_shared<Actions::ListXN>());
   action->inv = baseInv;
-  action->side = -1;
+  action->side = Actions::bottom;
   action->pos = pos - basePos;
   s.enqueueAction(baseClient, action);
-  return action->map([this, pos, wk(std::weak_ptr(alive))](std::vector<SharedItemStack> items) -> std::monostate {
+  return action->map([this, pos, wk(std::weak_ptr(alive))](std::vector<SharedItemStack> xs) -> std::monostate {
     if (wk.expired()) return {};
-    for (size_t i = 0; i < items.size(); ++i) {
-      auto &item(items[i]);
-      if (!item) continue;
-      nameMap.emplace(item->item->name, itemProviders.size());
-      labelMap.emplace(item->item->label, itemProviders.size());
-      auto &provider = itemProviders.emplace_back();
-      provider.pos = pos;
-      provider.slot = i + 1;
-      provider.item = std::move(item);
+    for (size_t i = 0; i < xs.size(); ++i) {
+      auto &x(xs[i]);
+      if (!x) continue;
+      auto info(items.try_emplace(x->item));
+      if (info.second) {
+        nameMap.emplace(x->item->name, x->item);
+        labelMap.emplace(x->item->label, x->item);
+      }
+      info.first->second.addProvider(pos, i + 1, x->size);
     }
     return {};
   });
 }
 
-SharedPromise<std::monostate> Factory::gatherChests() {
+SharedPromise<std::monostate> Factory::updateItemProvidersAndBackupItems() {
   std::vector<SharedPromise<std::monostate>> promises;
-  for (auto &i : chests)
-    promises.emplace_back(gatherChest(i));
+  for (auto &i : itemProviders) {
+    promises.emplace_back(updateItemProvider(i));
+  }
+
   return Promise<std::monostate>::all(promises)->map([this, wk(std::weak_ptr(alive))](auto) -> std::monostate {
     if (wk.expired()) return {};
-    log("Gathered " + std::to_string(itemProviders.size()) + " slots");
+    for (auto &i : backups) {
+      auto item(getItem(*i.first));
+      if (!item) continue;
+      items.at(item).backup(i.second);
+    }
     return {};
   });
 }

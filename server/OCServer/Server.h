@@ -29,10 +29,9 @@ private:
   boost::asio::ip::tcp::socket socket;
   std::optional<std::string> login;
   std::string logHeader;
-  std::list<std::vector<SharedAction>> sendQueue;
-  size_t sendQueueTotal = 0;
-  bool isSending = false;
+  std::list<SharedAction> sendQueue;
   std::list<SharedAction> responseQueue;
+  bool isSending = false;
   void readLength();
   void readContent(size_t size);
   void onPacket(const char *data, size_t size);
@@ -45,7 +44,7 @@ public:
   const Itr &getItr() const { return itr; }
   void init(const Itr&);
   void log(const std::string &message);
-  void enqueueActionGroup(std::vector<SharedAction> group);
+  void enqueueAction(SharedAction action);
   size_t countPending() const;
 };
 
@@ -61,7 +60,6 @@ public:
   Server(IOEnv &io, uint16_t port);
   void updateLogin(Client &c);
   void removeClient(Client &c);
-  void enqueueActionGroup(const std::string &client, std::vector<SharedAction> group);
-  void enqueueAction(const std::string &client, const SharedAction &action);
+  void enqueueAction(const std::string &client, SharedAction action);
   size_t countPending(const std::string &client) const;
 };
