@@ -1,7 +1,7 @@
 #include <unordered_set>
 #include "Processes.h"
 
-SharedPromise<std::monostate> ProcessHeterogeneous::cycle(Factory &factory) {
+SharedPromise<std::monostate> ProcessSingleBlock::cycle(Factory &factory) {
   if (factory.getDemand(recipes).empty())
     return makeEmptyPromise(factory.s.io);
   auto action(std::make_shared<Actions::ListXN>());

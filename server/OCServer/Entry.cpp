@@ -63,9 +63,9 @@ int main() {
     addOreTree("netherrack");
     addOreTree("glowstone");
     addOreTree("quartz");
-    factory.addProcess(std::make_shared<ProcessHeterogeneous>(
+    factory.addProcess(std::make_shared<ProcessSingleBlock>(
       "planter", XNetCoord{2808, 149, -1272}, Actions::top, 16, false, std::move(recipesPlanter)));
-    factory.addProcess(std::make_shared<ProcessHeterogeneous>(
+    factory.addProcess(std::make_shared<ProcessSingleBlock>(
       "leafBreaker", XNetCoord{2806, 148, -1272}, Actions::top, 16, false, std::move(recipesLeafBreaker)));
     factory.start();
     io.io.run();
