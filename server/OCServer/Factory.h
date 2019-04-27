@@ -62,10 +62,10 @@ struct Demand {
 
 struct Factory {
   Server &s;
+  const std::string baseClient, baseInv;
+  const XNetCoord basePos;
 private:
   std::shared_ptr<std::monostate> alive{std::make_shared<std::monostate>()};
-  std::string baseClient, baseInv;
-  XNetCoord basePos;
   int minCycleTime;
   std::vector<XNetCoord> chests;
   std::vector<std::pair<SharedItemFilter, int>> backups;
@@ -78,6 +78,7 @@ private:
 
   std::unordered_map<SharedItem, ItemInfo, SharedItemHash, SharedItemEqual> items;
   std::unordered_multimap<std::string, SharedItem> nameMap, labelMap;
+  ItemInfo &getOrAddInfo(const SharedItem &item);
   SharedPromise<std::monostate> updateChest(const XNetCoord &pos);
   SharedPromise<std::monostate> updateAndBackupItems();
 public:
@@ -88,8 +89,6 @@ public:
   void addProcess(SharedProcess process);
   void start();
 
-  const std::string &getBaseClient() const { return baseClient; }
-  const std::string &getBaseInv() const { return baseInv; }
   SharedItem getItem(const ItemFilters::Base &filter);
   int getAvail(const SharedItem &item, bool allowBackup);
   void log(std::string msg, uint32_t color = 0xffffffu, float beep = -1.f);

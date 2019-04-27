@@ -181,6 +181,15 @@ void Factory::endOfCycle() {
   }));
 }
 
+ItemInfo &Factory::getOrAddInfo(const SharedItem &item) {
+  auto info(items.try_emplace(item));
+  if (info.second) {
+    nameMap.emplace(item->name, item);
+    labelMap.emplace(item->label, item);
+  }
+  return info.first->second;
+}
+
 SharedPromise<std::monostate> Factory::updateChest(const XNetCoord &pos) {
   auto action(std::make_shared<Actions::ListXN>());
   action->inv = baseInv;
@@ -192,12 +201,7 @@ SharedPromise<std::monostate> Factory::updateChest(const XNetCoord &pos) {
     for (size_t i = 0; i < xs.size(); ++i) {
       auto &x(xs[i]);
       if (!x) continue;
-      auto info(items.try_emplace(x->item));
-      if (info.second) {
-        nameMap.emplace(x->item->name, x->item);
-        labelMap.emplace(x->item->label, x->item);
-      }
-      info.first->second.addProvider(pos, i + 1, x->size);
+      getOrAddInfo(x->item).addProvider(pos, i + 1, x->size);
     }
     return {};
   });

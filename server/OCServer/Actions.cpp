@@ -51,6 +51,7 @@ namespace Actions {
 
   void Call::dump(nlohmann::json &j) {
     j = {{"op", "call"}};
+    j["fn"] = std::move(fn);
     j["args"] = std::move(args);
     j["inv"] = std::move(inv);
   }

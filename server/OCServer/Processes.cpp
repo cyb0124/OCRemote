@@ -4,17 +4,18 @@ SharedPromise<std::monostate> ProcessHeterogeneous::cycle(Factory &factory) {
   if (factory.getDemand(recipes).empty())
     return makeEmptyPromise(factory.s.io);
   auto action(std::make_shared<Actions::ListXN>());
-  action->inv = factory.getBaseInv();
-  action->pos = pos;
+  action->inv = factory.baseInv;
+  action->pos = pos - factory.basePos;
   action->side = side;
-  factory.s.enqueueAction(factory.getBaseClient(), action);
+  factory.s.enqueueAction(factory.baseClient, action);
   return action->then([this, wk(weak_from_this()), &factory, &io(factory.s.io)](std::vector<SharedItemStack> inventory) {
     if (wk.expired())
       return makeEmptyPromise(io);
     filterInputSlots(inventory);
     int remainingMaxInProc = maxInProc;
     for (auto &item : inventory)
-      remainingMaxInProc -= item->size;
+      if (item)
+        remainingMaxInProc -= item->size;
     std::vector<SharedPromise<std::monostate>> promises;
     bool hasNew = remainingMaxInProc > 0;
     while (hasNew) {

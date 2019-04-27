@@ -21,14 +21,14 @@ int main() {
     Server server(io, 1847);
     Factory factory(server, "shadownode-sf4-base", "xnet", {2811, 143, -1272}, 1000);
     factory.addChest({2813, 143, -1272});
-    factory.addBackup(std::make_shared<ItemFilters::Label>("Iron Sapling"), 8);
+    factory.addBackup(filterName("sky_orchards:sapling_iron"), 8);
     factory.addProcess(std::make_shared<ProcessHeterogeneous>(
-      "planter", XNetCoord{2807, 149, -1272}, Actions::top, 16, std::vector<Recipe<std::monostate>>{
-        {{{filterLabel("Iron Sapling"), 32},
+      "planter", XNetCoord{2808, 149, -1272}, Actions::top, 16, std::vector<Recipe<std::monostate>>{
+        {{{filterName("sky_orchards:sapling_iron"), 32},
           {filterLabel("Oak Wood"), 256},
-          {filterLabel("Iron Leaves"), 32},
-          {filterLabel("Iron Resin"), 32}
-          }, {{filterLabel("Iron Sapling"), 1, true}}}
+          {filterName("sky_orchards:leaves_iron"), 32},
+          {filterName("sky_orchards:resin_iron"), 32}
+          }, {{filterName("sky_orchards:sapling_iron"), 1, true}}}
       }
     ));
     factory.start();

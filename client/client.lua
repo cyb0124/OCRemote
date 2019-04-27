@@ -433,7 +433,7 @@ while true do
         if p.side < 0 then
           stacks = inv.getItems(pos)
         else
-          stacks = inv.getItems(pos, x.side)
+          stacks = inv.getItems(pos, p.side)
         end
         result = {}
         for slot = 1, stacks.n do
