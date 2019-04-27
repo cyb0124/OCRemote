@@ -1,3 +1,4 @@
+#include <unordered_set>
 #include "Processes.h"
 
 SharedPromise<std::monostate> ProcessHeterogeneous::cycle(Factory &factory) {
@@ -22,6 +23,19 @@ SharedPromise<std::monostate> ProcessHeterogeneous::cycle(Factory &factory) {
       hasNew = false;
       auto demands(factory.getDemand(recipes));
       for (auto &demand : demands) {
+        // Test for homogeneity.
+        if (homogeneous) {
+          std::unordered_set<SharedItem, SharedItemHash, SharedItemEqual> inventorySet, recipeSet;
+          for (auto &item : inventory)
+            if (item)
+              inventorySet.emplace(item->item);
+          for (auto &item : demand.in)
+            recipeSet.insert(item);
+          if (inventorySet != recipeSet)
+            continue;
+        }
+
+        // Find maximum possible number of sets to process.
         int itemsInEachSet = 0;
         for (auto &item : demand.recipe->in)
           itemsInEachSet += item.size;
@@ -42,6 +56,8 @@ SharedPromise<std::monostate> ProcessHeterogeneous::cycle(Factory &factory) {
           }
           --toProc;
         }
+
+        // Execute.
         if (toProc) {
           hasNew = true;
           remainingMaxInProc -= toProc * itemsInEachSet;

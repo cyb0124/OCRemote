@@ -23,7 +23,7 @@ int main() {
     factory.addChest({2813, 143, -1272});
     factory.addBackup(filterName("sky_orchards:sapling_iron"), 8);
     factory.addProcess(std::make_shared<ProcessHeterogeneous>(
-      "planter", XNetCoord{2808, 149, -1272}, Actions::top, 16, std::vector<Recipe<std::monostate>>{
+      "planter", XNetCoord{2808, 149, -1272}, Actions::top, 16, false, std::vector<Recipe<std::monostate>>{
         {{{filterName("sky_orchards:sapling_iron"), 32},
           {filterLabel("Oak Wood"), 256},
           {filterName("sky_orchards:leaves_iron"), 32},
