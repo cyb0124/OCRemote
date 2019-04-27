@@ -463,7 +463,11 @@ while true do
     while true do
       if #writeBuffer > 0 then
         local n = socket.write(writeBuffer)
-        if n > 0 then
+        if not n then
+          print{text = "Connection closed (write)", color = 0xFF0000, beep = 880}
+          socket.close()
+          break
+        elseif n > 0 then
           writeBuffer = string.sub(writeBuffer, n + 1)
         end
       end
@@ -471,7 +475,7 @@ while true do
       if data then
         onRead(data)
       else
-        print{text = "Connection closed", color = 0xFF0000, beep = 880}
+        print{text = "Connection closed (read)", color = 0xFF0000, beep = 880}
         socket.close()
         break
       end

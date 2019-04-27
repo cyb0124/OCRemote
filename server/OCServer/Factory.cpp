@@ -1,4 +1,5 @@
 #include <iostream>
+#include <sstream>
 #include "Factory.h"
 #include "WeakCallback.h"
 
@@ -135,11 +136,19 @@ void Factory::addProcess(SharedProcess process) {
 }
 
 void Factory::start() {
+  auto now(std::chrono::steady_clock::now());
+  std::ostringstream os;
+  os << "Cycle " << currentCycleNum << ", lastCycleTime=";
+  os.precision(3);
+  os << std::fixed << std::chrono::duration_cast<std::chrono::milliseconds>(now - cycleStartTime).count() * 1E-3f;
+  log(os.str());
+  cycleStartTime = now;
+
   struct ResultListener : Listener<std::monostate> {
     Factory &rThis;
     std::weak_ptr<std::monostate> wk;
     explicit ResultListener(Factory &rThis)
-      :rThis(rThis), wk(rThis.alive) {}
+        :rThis(rThis), wk(rThis.alive) {}
 
     void onFail(std::string cause) override {
       if (wk.expired()) return;
@@ -154,8 +163,6 @@ void Factory::start() {
     }
   };
 
-  cycleStartTime = std::chrono::steady_clock::now();
-  log("Cycle " + std::to_string(currentCycleNum));
   updateAndBackupItems()->then([wk(std::weak_ptr(alive)), &io(s.io), this](std::monostate) {
     std::vector<SharedPromise<std::monostate>> promises;
     if (!wk.expired())
