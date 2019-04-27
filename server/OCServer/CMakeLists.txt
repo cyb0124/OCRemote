@@ -7,6 +7,7 @@ add_executable (OCServer Entry.cpp Server.cpp Server.h WeakCallback.h json.hpp I
 IF (WIN32)
   add_definitions(-DBOOST_ALL_NO_LIB)
   add_definitions(-D_WIN32_WINNT=0x0601)
+  add_definitions(-D_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS)
   target_link_libraries(OCServer ws2_32 mswsock)
 ELSE ()
   set(THREADS_PREFER_PTHREAD_FLAG ON)

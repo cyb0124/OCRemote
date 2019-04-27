@@ -7,9 +7,9 @@ class ProcessHeterogeneous : public Process {
   int side;
   int maxInProc;
   bool homogeneous;
-  std::vector<Recipe<std::monostate>> recipes;
+  std::vector<Recipe<>> recipes;
 public:
-  ProcessHeterogeneous(std::string name, const XNetCoord &pos, int side, int maxInProc, bool homogeneous, std::vector<Recipe<std::monostate>> recipes)
+  ProcessHeterogeneous(std::string name, const XNetCoord &pos, int side, int maxInProc, bool homogeneous, std::vector<Recipe<>> recipes)
     :name(std::move(name)), pos(pos), side(side), maxInProc(maxInProc), homogeneous(homogeneous), recipes(std::move(recipes)) {}
   virtual void filterInputSlots(std::vector<SharedItemStack> &inventory) {}
   SharedPromise<std::monostate> cycle(Factory&) override;
