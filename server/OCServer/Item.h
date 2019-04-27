@@ -32,6 +32,8 @@ struct ItemStack {
 };
 using SharedItemStack = std::shared_ptr<ItemStack>;
 SharedItemStack parseItemStack(nlohmann::json&);
+std::vector<SharedItemStack> cloneInventorySizes(const std::vector<SharedItemStack> &inventory);
+int insertIntoInventory(std::vector<SharedItemStack> &inventory, const SharedItem &item, int size);
 
 namespace ItemFilters {
   struct IndexVisitor {
@@ -70,5 +72,13 @@ namespace ItemFilters {
     void accept(IndexVisitor &v) const override { v.visit(*this); }
   };
 }
-
 using SharedItemFilter = std::shared_ptr<ItemFilters::Base>;
+
+#define DEF_FILTER_SHORTCUT(type)\
+  template<typename ...Ts>\
+  inline std::shared_ptr<ItemFilters::type> filter##type(Ts &&...xs) {\
+    return std::make_shared<ItemFilters::type>(std::forward<Ts>(xs)...);\
+  }
+DEF_FILTER_SHORTCUT(Name)
+DEF_FILTER_SHORTCUT(Label)
+DEF_FILTER_SHORTCUT(LabelName)

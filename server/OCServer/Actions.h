@@ -152,9 +152,15 @@ public:
     return context->to;
   }
 };
-
 template<typename T>
 using SharedPromise = std::shared_ptr<Promise<T>>;
+
+template<typename T>
+inline SharedPromise<std::monostate> makeEmptyPromise(T &dispatcher) {
+  auto result(std::make_shared<Promise<std::monostate>>());
+  dispatcher([result]() { result->onResult({}); });
+  return result;
+}
 
 struct XNetCoord {
   int x, y, z;

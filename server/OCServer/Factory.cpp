@@ -122,8 +122,8 @@ ItemProvider ItemInfo::extractSome(int size) {
   return result;
 }
 
-void Factory::addItemProvider(const XNetCoord &pos) {
-  itemProviders.emplace_back(pos);
+void Factory::addChest(const XNetCoord &pos) {
+  chests.emplace_back(pos);
 }
 
 void Factory::addBackup(SharedItemFilter filter, int size) {
@@ -156,16 +156,13 @@ void Factory::start() {
 
   cycleStartTime = std::chrono::steady_clock::now();
   log("Cycle " + std::to_string(currentCycleNum));
-  updateItemProvidersAndBackupItems()->then([wk(std::weak_ptr(alive)), this](std::monostate) {
+  updateAndBackupItems()->then([wk(std::weak_ptr(alive)), &io(s.io), this](std::monostate) {
     std::vector<SharedPromise<std::monostate>> promises;
     if (!wk.expired())
       for (auto &i : processes)
         promises.emplace_back(i->cycle(*this));
-    if (promises.empty()) {
-      auto result(std::make_shared<Promise<std::monostate>>());
-      s.io([result]() { result->onResult({}); });
-      return result;
-    }
+    if (promises.empty())
+      return makeEmptyPromise(io);
     return Promise<std::monostate>::all(promises)->map([](auto) -> std::monostate { return {}; });
   })->listen(std::make_shared<ResultListener>(*this));
 }
@@ -184,7 +181,7 @@ void Factory::endOfCycle() {
   }));
 }
 
-SharedPromise<std::monostate> Factory::updateItemProvider(const XNetCoord &pos) {
+SharedPromise<std::monostate> Factory::updateChest(const XNetCoord &pos) {
   auto action(std::make_shared<Actions::ListXN>());
   action->inv = baseInv;
   action->side = Actions::bottom;
@@ -206,10 +203,10 @@ SharedPromise<std::monostate> Factory::updateItemProvider(const XNetCoord &pos) 
   });
 }
 
-SharedPromise<std::monostate> Factory::updateItemProvidersAndBackupItems() {
+SharedPromise<std::monostate> Factory::updateAndBackupItems() {
   std::vector<SharedPromise<std::monostate>> promises;
-  for (auto &i : itemProviders) {
-    promises.emplace_back(updateItemProvider(i));
+  for (auto &i : chests) {
+    promises.emplace_back(updateChest(i));
   }
 
   return Promise<std::monostate>::all(promises)->map([this, wk(std::weak_ptr(alive))](auto) -> std::monostate {

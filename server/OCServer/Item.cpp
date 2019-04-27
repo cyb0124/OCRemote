@@ -47,6 +47,43 @@ SharedItemStack parseItemStack(nlohmann::json &j) {
   return result;
 }
 
+std::vector<SharedItemStack> cloneInventorySizes(const std::vector<SharedItemStack> &inventory) {
+  std::vector<SharedItemStack> result;
+  result.reserve(inventory.size());
+  for (auto &i : inventory) {
+    if (i)
+      result.emplace_back(std::make_shared<ItemStack>(*i));
+    else
+      result.emplace_back();
+  }
+  return result;
+}
+
+int insertIntoInventory(std::vector<SharedItemStack> &inventory, const SharedItem &item, int size) {
+  size = std::min(size, item->maxSize);
+  int result = 0;
+  SharedItemStack *firstEmptySlot = nullptr;
+  for (auto &i : inventory) {
+    if (!i) {
+      if (!firstEmptySlot)
+        firstEmptySlot = &i;
+    } else if (*i->item == *item) {
+      int toProc = std::min(size, i->item->maxSize - i->size);
+      i->size += toProc;
+      result += toProc;
+      size -= toProc;
+    }
+  }
+  if (size && firstEmptySlot) {
+    auto &stack = *(*firstEmptySlot = std::make_shared<ItemStack>());
+    stack.item = item;
+    stack.size = size;
+    return result + size;
+  } else {
+    return result;
+  }
+}
+
 namespace ItemFilters {
   bool Name::filter(const Item &item) const {
     return item.name == name;
