@@ -23,7 +23,7 @@ int main() {
     factory.addChest({2813, 143, -1272});
     factory.addChest({2813, 144, -1272});
     factory.addChest({2811, 144, -1272});
-    std::vector<Recipe<std::monostate>> recipesPlanter, recipesLeafBreaker;
+    std::vector<Recipe<int>> recipesPlanter, recipesLeafBreaker;
     auto addOreTree([&](const std::string &name) {
       auto sapling(filterName("sky_orchards:sapling_" + name));
       auto leaves(filterName("sky_orchards:leaves_" + name));

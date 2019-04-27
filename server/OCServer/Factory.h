@@ -46,16 +46,16 @@ struct RecipeOut {
   int size;
 };
 
-template<typename InData = std::monostate, typename RecipeData = std::monostate>
+template<typename RecipeData = std::monostate, typename InData = std::monostate>
 struct Recipe {
   std::vector<RecipeOut> out;
   std::vector<RecipeIn<InData>> in;
   RecipeData data;
 };
 
-template<typename InData, typename RecipeData>
+template<typename U, typename T>
 struct Demand {
-  const Recipe<InData, RecipeData> *recipe;
+  const Recipe<U, T> *recipe;
   std::vector<SharedItem> in;
   int inAvail;
   float fullness;
@@ -95,9 +95,9 @@ public:
   void log(std::string msg, uint32_t color = 0xffffffu, float beep = -1.f);
   void extract(std::vector<SharedPromise<std::monostate>> &promises, const std::string &reason,
                const SharedItem &item, int size, const XNetCoord &to, int side);
-  template<typename InData, typename RecipeData>
-  std::vector<Demand<InData, RecipeData>> getDemand(const std::vector<Recipe<InData, RecipeData>> &recipes) {
-    std::vector<Demand<InData, RecipeData>> result;
+  template<typename U, typename T>
+  std::vector<Demand<U, T>> getDemand(const std::vector<Recipe<U, T>> &recipes) {
+    std::vector<Demand<U, T>> result;
     for (auto &recipe : recipes) {
       auto &demand(result.emplace_back());
       demand.recipe = &recipe;
@@ -130,7 +130,7 @@ public:
         continue;
       }
     }
-    std::sort(result.begin(), result.end(), [](const Demand<InData, RecipeData> &x, const Demand<InData, RecipeData> &y) {
+    std::sort(result.begin(), result.end(), [](const Demand<U, T> &x, const Demand<U, T> &y) {
       return x.fullness < y.fullness;
     });
     return result;

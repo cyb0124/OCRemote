@@ -35,11 +35,26 @@ SharedPromise<std::monostate> ProcessHeterogeneous::cycle(Factory &factory) {
             continue;
         }
 
-        // Find maximum possible number of sets to process.
+        // Limit number of sets to process by total number of available input sets and total number of items already in inventory.
         int itemsInEachSet = 0;
         for (auto &item : demand.recipe->in)
           itemsInEachSet += item.size;
         int toProc = std::min(demand.inAvail, remainingMaxInProc / itemsInEachSet);
+
+        // Limit number of sets to process by recipe-specific maximum number of sets.
+        if (demand.recipe->data) {
+          int setsInInventory = std::numeric_limits<int>::max();
+          for (auto &in : demand.recipe->in) {
+            int count = 0;
+            for (auto &item : inventory)
+              if (item && in.item->filter(*item->item))
+                count += item->size;
+            setsInInventory = std::min(setsInInventory, (count + in.size - 1) / in.size);
+          }
+          toProc = std::max(0, std::min(toProc, demand.recipe->data - setsInInventory));
+        }
+
+        // Limit number of sets to process by predicting insertion failure.
         while (toProc) {
           auto newInventory(cloneInventorySizes(inventory));
           bool success = true;
