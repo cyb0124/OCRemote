@@ -16,6 +16,12 @@ struct Listener {
 };
 
 template<typename T>
+struct DummyListener : Listener<T> {
+  void onFail(std::string cause) override {}
+  void onResult(T result) override {}
+};
+
+template<typename T>
 using SharedListener = std::shared_ptr<Listener<T>>;
 
 template<typename T>

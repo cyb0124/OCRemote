@@ -26,18 +26,13 @@ int ItemInfo::getAvail(bool allowBackup) const {
 }
 
 void Factory::log(std::string msg, uint32_t color, float beep) {
-  struct DummyListener : Listener<std::monostate> {
-    void onFail(std::string cause) override {}
-    void onResult(std::monostate result) override {}
-  };
-
   std::cout << msg << std::endl;
   auto action(std::make_shared<Actions::Print>());
   action->text = std::move(msg);
   action->color = color;
   action->beep = beep;
   s.enqueueAction(baseClient, action);
-  action->listen(std::make_shared<DummyListener>());
+  action->listen(std::make_shared<DummyListener<std::monostate>>());
 }
 
 SharedItem Factory::getItem(const ItemFilters::Base &filter) {

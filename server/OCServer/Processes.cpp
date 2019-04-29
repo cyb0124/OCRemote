@@ -29,10 +29,12 @@ SharedPromise<std::monostate> ProcessSingleBlock::cycle(Factory &factory) {
           for (auto &item : inventory)
             if (item)
               inventorySet.emplace(item->item);
-          for (auto &item : demand.in)
-            recipeSet.insert(item);
-          if (inventorySet != recipeSet)
-            continue;
+          if (!inventorySet.empty()) {
+            for (auto &item : demand.in)
+              recipeSet.insert(item);
+            if (inventorySet != recipeSet)
+              continue;
+          }
         }
 
         // Limit number of sets to process by total number of available input sets and total number of items already in inventory.
