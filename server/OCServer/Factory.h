@@ -19,6 +19,7 @@ struct ItemProvider {
 
 class ItemInfo {
   std::list<ItemProvider> providers;
+  int nAvail = 0;
   int nBackup = 0;
 public:
   void addProvider(const XNetCoord &pos, int slot, int size);

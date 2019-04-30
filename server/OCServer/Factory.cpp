@@ -9,6 +9,7 @@ void ItemInfo::addProvider(const XNetCoord &pos, int slot, int size) {
   provider.pos = pos;
   provider.slot = slot;
   provider.size = size;
+  nAvail += size;
 }
 
 void ItemInfo::backup(int size) {
@@ -16,13 +17,10 @@ void ItemInfo::backup(int size) {
 }
 
 int ItemInfo::getAvail(bool allowBackup) const {
-  int result = 0;
-  for (auto &i : providers)
-    result += i.size;
   if (allowBackup)
-    return result;
+    return nAvail;
   else
-    return std::max(0, result - nBackup);
+    return std::max(0, nAvail - nBackup);
 }
 
 void Factory::log(std::string msg, uint32_t color, float beep) {
@@ -111,10 +109,14 @@ void Factory::extract(
 }
 
 ItemProvider ItemInfo::extractSome(int size) {
-  ItemProvider result(providers.back());
+  auto best = std::min_element(providers.begin(), providers.end(), [](const ItemProvider &x, const ItemProvider &y) {
+    return x.size < y.size;
+  });
+  ItemProvider result(*best);
   result.size = std::min(result.size, size);
-  if (!(providers.back().size -= result.size))
-    providers.pop_back();
+  nAvail -= result.size;
+  if (!(best->size -= result.size))
+    providers.erase(best);
   return result;
 }
 
