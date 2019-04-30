@@ -449,7 +449,7 @@ while true do
         db.clear(1)
         me.store(p.filter, dbAddr, 1, 1)
         me.setInterfaceConfiguration(1, dbAddr, 1, p.size)
-        inv.transferItem(p.fromSide, p.toSide, p.size, 1, p.slot)
+        inv.transferItem(table.unpack(p.args))
         me.setInterfaceConfiguration(1)
       elseif p.op == "call" then
         -- transferItem (OC): fromSide, toSide, [size, [fromSlot, [toSlot]]]

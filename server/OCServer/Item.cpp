@@ -27,6 +27,16 @@ size_t Item::hash() const {
   return hash;
 }
 
+void Item::serialize(nlohmann::json &j) const {
+  j = others;
+  j["name"] = name;
+  j["label"] = label;
+  j["damage"] = damage;
+  j["maxDamage"] = maxDamage;
+  j["maxSize"] = maxSize;
+  j["hasTag"] = hasTag;
+}
+
 SharedItemStack parseItemStack(nlohmann::json &j) {
   SharedItemStack result(std::make_shared<ItemStack>());
   result->item = std::make_shared<Item>();

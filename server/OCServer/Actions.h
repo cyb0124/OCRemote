@@ -230,7 +230,8 @@ namespace Actions {
   struct XferME : ImplUnit {
     std::string me, inv;
     nlohmann::json filter;
-    int fromSide, toSide, slot;
+    nlohmann::json args = nlohmann::json::array();
+    int size;
     void dump(nlohmann::json&) override;
   };
 

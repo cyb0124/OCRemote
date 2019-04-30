@@ -43,8 +43,9 @@ namespace Actions {
   }
 
   void XferME::dump(nlohmann::json &j) {
-    j = {{"op", "xferME"}, {"fromSide", fromSide}, {"toSide", toSide}, {"slot", slot}};
+    j = {{"op", "xferME"}, {"size", size}};
     j["filter"] = std::move(filter);
+    j["args"] = std::move(args);
     j["inv"] = std::move(inv);
     j["me"] = std::move(me);
   }

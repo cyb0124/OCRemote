@@ -11,6 +11,7 @@ struct Item {
   bool operator==(const Item &other) const;
   bool operator!=(const Item &other) const;
   size_t hash() const;
+  void serialize(nlohmann::json &j) const;
 };
 using SharedItem = std::shared_ptr<Item>;
 
