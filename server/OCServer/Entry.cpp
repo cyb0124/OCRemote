@@ -19,7 +19,15 @@ int main() {
     ignoreBrokenPipe();
     IOEnv io;
     Server server(io, 1847);
-    Factory factory(server, "shadownode-sf4-base", "xnet", "me_interface", {2811, 143, -1272}, {2810, 143, -1273}, 1000);
+    Factory factory(server, "shadownode-sf4-base", "xnet", {2811, 143, -1272}, 1000);
+    factory.addChest({2803, 143, -1273});
+    factory.addChest({2805, 143, -1273});
+    factory.addChest({2807, 143, -1273});
+    factory.addChest({2803, 145, -1273});
+    factory.addChest({2804, 145, -1273});
+    factory.addChest({2805, 145, -1273});
+    factory.addChest({2806, 145, -1273});
+    factory.addChest({2807, 145, -1273});
     factory.addProcess(std::make_shared<ProcessSingleBlock>(
       "furnace", XNetCoord{2813, 143, -1271}, Actions::top, 16, true, std::vector<Recipe<int>>{
         {{{filterLabel("Charcoal"), 256}}, {{filterLabel("Oak Wood"), 1}}},
