@@ -1,38 +1,26 @@
 #pragma once
-#include <memory>
-#include "json.hpp"
+#include "Serialize.h"
 
 struct Item {
   std::string name, label;
   int damage, maxDamage, maxSize;
   bool hasTag;
-  nlohmann::json others;
-
-  bool operator==(const Item &other) const;
-  bool operator!=(const Item &other) const;
-  size_t hash() const;
-  void serialize(nlohmann::json &j) const;
+  STable others;
+  void serialize(SValue &s) const;
 };
+bool operator==(const Item &x, const Item &y);
+inline bool operator!=(const Item &x, const Item &y) { return !(x == y); }
+namespace std { template<> struct hash<Item> { size_t operator()(const Item &x) const; }; }
 using SharedItem = std::shared_ptr<Item>;
-
-struct SharedItemHash {
-  size_t operator()(const SharedItem &x) const {
-    return x->hash();
-  }
-};
-
-struct SharedItemEqual {
-  bool operator()(const SharedItem &x, const SharedItem &y) const {
-    return *x == *y;
-  }
-};
+struct SharedItemHash { size_t operator()(const SharedItem &x) const { return std::hash<Item>{}(*x); } };
+struct SharedItemEqual { bool operator()(const SharedItem &x, const SharedItem &y) const { return *x == *y; } };
 
 struct ItemStack {
   SharedItem item;
   int size;
 };
 using SharedItemStack = std::shared_ptr<ItemStack>;
-SharedItemStack parseItemStack(nlohmann::json&);
+SharedItemStack parseItemStack(SValue&&);
 std::vector<SharedItemStack> cloneInventorySizes(const std::vector<SharedItemStack> &inventory);
 int insertIntoInventory(std::vector<SharedItemStack> &inventory, const SharedItem &item, int size);
 
@@ -52,21 +40,21 @@ namespace ItemFilters {
   };
 
   struct Name final : Base {
-    std::string name;
+    const std::string name;
     explicit Name(std::string name) :name(std::move(name)) {}
     bool filter(const Item&) const override;
     void accept(IndexVisitor &v) const override { v.visit(*this); }
   };
 
   struct Label final : Base {
-    std::string label;
+    const std::string label;
     explicit Label(std::string label) :label(std::move(label)) {}
     bool filter(const Item&) const override;
     void accept(IndexVisitor &v) const override { v.visit(*this); }
   };
 
   struct LabelName final : Base {
-    std::string label, name;
+    const std::string label, name;
     explicit LabelName(std::string label, std::string name)
       :label(std::move(label)), name(std::move(name)) {}
     bool filter(const Item&) const override;

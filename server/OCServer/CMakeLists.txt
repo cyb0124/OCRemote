@@ -1,9 +1,12 @@
 ﻿cmake_minimum_required(VERSION 3.14)
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
 set(CMAKE_CXX_STANDARD 17)
+project(OCServer)
 FIND_PACKAGE(Boost REQUIRED)
-INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIR})
-add_executable (OCServer Entry.cpp Server.cpp Item.cpp Actions.cpp Factory.cpp Processes.cpp)
+add_executable (OCServer Actions.cpp Actions.h Entry.cpp Factory.cpp Factory.h
+  Item.cpp Item.h Overload.h Processes.cpp Processes.h Serialize.cpp Serialize.h
+  Server.cpp Server.h Storages.cpp Storages.h ValuePtr.h WeakCallback.h)
+target_include_directories(OCServer PRIVATE ${Boost_INCLUDE_DIR})
 
 IF (WIN32)
   add_definitions(-DBOOST_ALL_NO_LIB)

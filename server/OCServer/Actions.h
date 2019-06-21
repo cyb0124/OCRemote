@@ -1,10 +1,6 @@
 #pragma once
 #include <vector>
-#include <variant>
-#include <optional>
-#include <functional>
 #include "Overload.h"
-#include "json.hpp"
 #include "Item.h"
 
 template<typename T>
@@ -26,21 +22,21 @@ using SharedListener = std::shared_ptr<Listener<T>>;
 
 template<typename T>
 class Promise : public Listener<T> {
-  SharedListener<T> listener;
+  SharedListener<T> next;
 public:
   void onFail(std::string cause) override {
-    if (!listener) throw std::logic_error("broken chain");
-    listener->onFail(std::move(cause));
+    if (!next) throw std::logic_error("broken chain");
+    next->onFail(std::move(cause));
   }
 
   void onResult(T result) override {
-    if (!listener) throw std::logic_error("broken chain");
-    listener->onResult(std::move(result));
+    if (!next) throw std::logic_error("broken chain");
+    next->onResult(std::move(result));
   }
 
   void listen(SharedListener<T> x) {
-    if (listener) throw std::logic_error("already listened");
-    listener = std::move(x);
+    if (next) throw std::logic_error("already listened");
+    next = std::move(x);
   }
 
   template<typename Fn>
@@ -185,8 +181,8 @@ namespace Actions {
     left   = 5, east  = 5, xp = 5
   };
 
-  struct Base : Listener<nlohmann::json> {
-    virtual void dump(nlohmann::json&) = 0;
+  struct Base : Listener<SValue> {
+    virtual void dump(STable&) = 0;
   };
 
   template<typename T>
@@ -197,49 +193,49 @@ namespace Actions {
   };
 
   struct ImplUnit : Impl<std::monostate> {
-    void onResult(nlohmann::json) override {
+    void onResult(SValue) override {
       Promise<std::monostate>::onResult(std::monostate());
     }
   };
 
   struct Print : ImplUnit {
     std::string text;
-    uint32_t color = 0xffffff;
-    float beep = -1.f;
-    void dump(nlohmann::json&) override;
+    uint32_t color{0xffffffu};
+    double beep{-1.};
+    void dump(STable&) override;
   };
 
   struct List : Impl<std::vector<SharedItemStack>> {
     std::string inv;
     int side;
-    void dump(nlohmann::json&) override;
-    void onResult(nlohmann::json) override;
+    void dump(STable&) override;
+    void onResult(SValue) override;
   };
 
   struct ListXN : List {
     XNetCoord pos;
-    void dump(nlohmann::json&) override;
+    void dump(STable&) override;
   };
 
   struct ListME : Impl<std::vector<SharedItemStack>> {
     std::string inv;
-    void dump(nlohmann::json&) override;
-    void onResult(nlohmann::json) override;
+    void dump(STable&) override;
+    void onResult(SValue) override;
   };
 
   struct XferME : ImplUnit {
     std::string me, inv;
-    nlohmann::json filter;
-    nlohmann::json args = nlohmann::json::array();
+    SValue filter;
+    std::vector<SValue> args;
     int size;
-    void dump(nlohmann::json&) override;
+    void dump(STable&) override;
   };
 
-  struct Call : Impl<nlohmann::json> {
+  struct Call : Impl<SValue> {
     std::string inv, fn;
-    nlohmann::json args = nlohmann::json::array();
-    void dump(nlohmann::json&) override;
-    void onResult(nlohmann::json) override;
+    std::vector<SValue> args;
+    void dump(STable&) override;
+    void onResult(SValue) override;
   };
 }
 

@@ -3,13 +3,11 @@
 #include "Factory.h"
 #include "WeakCallback.h"
 
-void ItemInfo::addProvider(const XNetCoord &pos, int slot, int size) {
-  if (!size) throw std::logic_error("empty provider");
-  auto &provider = providers.emplace_back();
-  provider.pos = pos;
-  provider.slot = slot;
-  provider.size = size;
-  nAvail += size;
+void ItemInfo::addProvider(UniqueProvider provider) {
+  if (!provider->size)
+    return;
+  nAvail += provider->size;
+  providers.emplace(std::move(provider));
 }
 
 void ItemInfo::backup(int size) {
@@ -23,21 +21,177 @@ int ItemInfo::getAvail(bool allowBackup) const {
     return std::max(0, nAvail - nBackup);
 }
 
-void Factory::log(std::string msg, uint32_t color, float beep) {
+void ItemInfo::extract(std::vector<SharedPromise<std::monostate>> &promises, int size, int slot) {
+  while (size >= 0) {
+    auto &best(*providers.top());
+    int toProc(std::min(size, best.size));
+    promises.emplace_back(best.extract(toProc, slot));
+    size -= toProc;
+    if (best.size)
+      providers.pop();
+  }
+}
+
+void Factory::endOfCycle() {
+  for (auto &i : storages)
+    i->endOfCycle();
+  items.clear();
+  nameMap.clear();
+  labelMap.clear();
+  busEverUpdated = false;
+  cycleDelayTimer = std::make_shared<boost::asio::steady_timer>(s.io.io);
+  cycleDelayTimer->expires_at(cycleStartTime + std::chrono::milliseconds(minCycleTime));
+  cycleDelayTimer->async_wait(makeWeakCallback(cycleDelayTimer, [this](const boost::system::error_code &ec) {
+    if (ec)
+      throw boost::system::system_error(ec);
+    cycleDelayTimer.reset();
+    start();
+  }));
+}
+
+SharedPromise<std::monostate> Factory::updateAndBackupItems() {
+  std::vector<SharedPromise<std::monostate>> promises;
+  for (auto &i : storages)
+    promises.emplace_back(i->update());
+  return Promise<std::monostate>::all(promises)->map([this, wk(std::weak_ptr(alive))](auto&&) -> std::monostate {
+    if (wk.expired()) return {};
+    for (auto &i : backups) {
+      auto item(getItem(*i.first));
+      if (!item)
+        continue;
+      items.at(item).backup(i.second);
+    }
+    return {};
+  });
+}
+
+void Factory::insertItem(std::vector<SharedPromise<std::monostate>> &promises, size_t slot, ItemStack stack) {
+  while (stack.size >= 0) {
+    Storage *bestStorage{};
+    int bestPriority;
+    for (auto &i : storages) {
+      auto nowPriority(i->sinkPriority(*stack.item));
+      if (!nowPriority)
+        continue;
+      if (!bestStorage || *nowPriority > bestPriority) {
+        bestStorage = i.get();
+        bestPriority = *nowPriority;
+      }
+    }
+    if (!bestStorage)
+      break;
+    auto result{bestStorage->sink(stack, slot)};
+    stack.size -= result.first;
+    promises.emplace_back(std::move(result.second));
+  }
+}
+
+void Factory::doBusUpdate() {
+  busState = BusState::RUNNING;
+  auto action(std::make_shared<Actions::List>());
+  action->inv = inv;
+  action->side = sideBus;
+  s.enqueueAction(client, action);
+
+  struct TailListener : Listener<std::monostate> {
+    Factory &rThis;
+    std::weak_ptr<std::monostate> wk;
+    TailListener(Factory &rThis) :rThis(rThis), wk(rThis.alive) {}
+    void onFail(std::string cause) override {
+      if (wk.expired())
+        return;
+      rThis.log("Bus update failed: " + cause, 0xff0000u, 880.f);
+      rThis.doBusUpdate();
+    }
+    void onResult(std::monostate) override {
+      if (wk.expired())
+        return;
+      if (rThis.busState == BusState::RESTART) {
+        rThis.doBusUpdate();
+      } else {
+        rThis.busState = BusState::IDLE;
+        if (rThis.endOfCycleAfterBusUpdate) {
+          rThis.endOfCycleAfterBusUpdate = false;
+          rThis.endOfCycle();
+        }
+      }
+    }
+  };
+
+  action->then([&io(s.io), this, wk(std::weak_ptr(alive))](std::vector<SharedItemStack> &&items) {
+    if (wk.expired())
+      return makeEmptyPromise(io);
+    std::vector<SharedPromise<std::monostate>> promises;
+    std::vector<size_t> freeSlots;
+    for (size_t i{}; i < items.size(); ++i) {
+      if (busAllocations.find(i) != busAllocations.end())
+        continue;
+      auto &stack(items[i]);
+      if (stack) {
+        log(stack->item->label + "*" + std::to_string(stack->size), 0xffa500);
+        busState = BusState::RESTART;
+        insertItem(promises, i, *stack);
+      } else {
+        freeSlots.emplace_back(i);
+      }
+    }
+    for (auto i{busWaitQueue.begin()}; !freeSlots.empty() && i != busWaitQueue.end();) {
+      if (i->n <= freeSlots.size() || i->allowPartial) {
+        size_t toProc{std::min(i->n, freeSlots.size())};
+        std::vector<size_t> allocated;
+        allocated.reserve(toProc);
+        for (size_t i{}; i < toProc; ++i) {
+          auto slot(freeSlots.back());
+          freeSlots.pop_back();
+          allocated.push_back(slot);
+          busAllocations.emplace(slot);
+        }
+        s.io([cont(std::move(i->cont)), result(std::move(allocated))]() {
+          cont->onResult(std::move(result));
+        });
+        i = busWaitQueue.erase(i);
+      } else {
+        ++i;
+      }
+    }
+    if (promises.empty())
+      return makeEmptyPromise(io);
+    return Promise<std::monostate>::all(promises)->map([](auto&&) { return std::monostate{}; });
+  })->listen(std::make_shared<TailListener>(*this));
+}
+
+void Factory::scheduleBusUpdate() {
+  busEverUpdated = true;
+  if (busState == BusState::IDLE)
+    doBusUpdate();
+  else
+    busState = BusState::RESTART;
+}
+
+void Factory::log(std::string msg, uint32_t color, double beep) {
   std::cout << msg << std::endl;
   auto action(std::make_shared<Actions::Print>());
   action->text = std::move(msg);
   action->color = color;
   action->beep = beep;
-  s.enqueueAction(baseClient, action);
+  s.enqueueAction(client, action);
   action->listen(std::make_shared<DummyListener<std::monostate>>());
+}
+
+ItemInfo &Factory::getOrAddItemInfo(const SharedItem &item) {
+  auto info(items.try_emplace(item));
+  if (info.second) {
+    nameMap.emplace(item->name, item);
+    labelMap.emplace(item->label, item);
+  }
+  return info.first->second;
 }
 
 SharedItem Factory::getItem(const ItemFilters::Base &filter) {
   struct Visitor : ItemFilters::IndexVisitor {
     Factory &rThis;
     SharedItem result;
-    explicit Visitor(Factory &rThis) :rThis(rThis) {}
+    Visitor(Factory &rThis) :rThis(rThis) {}
 
     void addResult(const SharedItem &item) {
       if (rThis.getAvail(item, true) > rThis.getAvail(result, true)) {
@@ -84,52 +238,25 @@ int Factory::getAvail(const SharedItem &item, bool allowBackup) {
 
 void Factory::extract(
   std::vector<SharedPromise<std::monostate>> &promises, const std::string &reason,
-  const SharedItem &item, int size,
-  const XNetCoord &to, int side
+  const SharedItem &item, int size, int slot
 ) {
   log(reason + ": " + item->label + "*" + std::to_string(size), 0x55abec);
-  auto &info(items.at(item));
-  while (size) {
-    auto fulfilled(info.extractSome(size));
-    auto fromPos(fulfilled.pos - basePos);
-    auto toPos(to - basePos);
-    auto action(std::make_shared<Actions::Call>());
-    action->inv = baseInv;
-    action->fn = "transferItem";
-    action->args.push_back({{"x", fromPos.x}, {"y", fromPos.y}, {"z", fromPos.z}});
-    action->args.push_back(fulfilled.slot);
-    action->args.push_back(fulfilled.size);
-    action->args.push_back({{"x", toPos.x}, {"y", toPos.y}, {"z", toPos.z}});
-    action->args.push_back(Actions::bottom);
-    if (side >= 0) action->args.push_back(side);
-    promises.emplace_back(action->map([](auto) -> std::monostate { return {}; }));
-    s.enqueueAction(baseClient, std::move(action));
-    size -= fulfilled.size;
-  }
+  items.at(item).extract(promises, size, slot);
 }
 
-ItemProvider ItemInfo::extractSome(int size) {
-  auto best = std::min_element(providers.begin(), providers.end(), [](const ItemProvider &x, const ItemProvider &y) {
-    return x.size < y.size;
-  });
-  ItemProvider result(*best);
-  result.size = std::min(result.size, size);
-  nAvail -= result.size;
-  if (!(best->size -= result.size))
-    providers.erase(best);
-  return result;
+SharedPromise<std::vector<size_t>> Factory::busAllocate(bool allowPartial, size_t n) {
+  auto &node{busWaitQueue.emplace_back()};
+  node.cont = std::make_shared<Promise<std::vector<size_t>>>();
+  node.allowPartial = allowPartial;
+  node.n = n;
+  scheduleBusUpdate();
+  return node.cont;
 }
 
-void Factory::addChest(const XNetCoord &pos) {
-  chests.emplace_back(pos);
-}
-
-void Factory::addBackup(SharedItemFilter filter, int size) {
-  backups.emplace_back(std::move(filter), size);
-}
-
-void Factory::addProcess(SharedProcess process) {
-  processes.emplace_back(std::move(process));
+void Factory::busFree(const std::vector<size_t> &slots) {
+  for (size_t i : slots)
+    busAllocations.erase(i);
+  scheduleBusUpdate();
 }
 
 void Factory::start() {
@@ -141,22 +268,34 @@ void Factory::start() {
   log(os.str());
   cycleStartTime = now;
 
-  struct ResultListener : Listener<std::monostate> {
+  struct TailListener : Listener<std::monostate> {
     Factory &rThis;
     std::weak_ptr<std::monostate> wk;
-    explicit ResultListener(Factory &rThis)
+    explicit TailListener(Factory &rThis)
         :rThis(rThis), wk(rThis.alive) {}
 
     void onFail(std::string cause) override {
       if (wk.expired()) return;
       rThis.log("Cycle failed: " + cause, 0xff0000u, 880.f);
-      rThis.endOfCycle();
+      if (rThis.busState == BusState::IDLE)
+        rThis.endOfCycle();
+      else
+        rThis.endOfCycleAfterBusUpdate = true;
     }
 
     void onResult(std::monostate result) override {
       if (wk.expired()) return;
-      rThis.endOfCycle();
       ++rThis.currentCycleNum;
+      if (rThis.busState == BusState::IDLE) {
+        if (rThis.busEverUpdated) {
+          rThis.endOfCycle();
+        } else {
+          rThis.endOfCycleAfterBusUpdate = true;
+          rThis.scheduleBusUpdate();
+        }
+      } else {
+        rThis.endOfCycleAfterBusUpdate = true;
+      }
     }
   };
 
@@ -164,66 +303,9 @@ void Factory::start() {
     std::vector<SharedPromise<std::monostate>> promises;
     if (!wk.expired())
       for (auto &i : processes)
-        promises.emplace_back(i->cycle(*this));
+        promises.emplace_back(i->cycle());
     if (promises.empty())
       return makeEmptyPromise(io);
-    return Promise<std::monostate>::all(promises)->map([](auto) -> std::monostate { return {}; });
-  })->listen(std::make_shared<ResultListener>(*this));
-}
-
-void Factory::endOfCycle() {
-  items.clear();
-  nameMap.clear();
-  labelMap.clear();
-
-  cycleDelayTimer = std::make_shared<boost::asio::steady_timer>(s.io.io);
-  cycleDelayTimer->expires_at(cycleStartTime + std::chrono::milliseconds(minCycleTime));
-  cycleDelayTimer->async_wait(makeWeakCallback(cycleDelayTimer, [this](const boost::system::error_code &e) {
-    if (e) throw boost::system::system_error(e);
-    cycleDelayTimer.reset();
-    start();
-  }));
-}
-
-ItemInfo &Factory::getOrAddInfo(const SharedItem &item) {
-  auto info(items.try_emplace(item));
-  if (info.second) {
-    nameMap.emplace(item->name, item);
-    labelMap.emplace(item->label, item);
-  }
-  return info.first->second;
-}
-
-SharedPromise<std::monostate> Factory::updateChest(const XNetCoord &pos) {
-  auto action(std::make_shared<Actions::ListXN>());
-  action->inv = baseInv;
-  action->side = Actions::bottom;
-  action->pos = pos - basePos;
-  s.enqueueAction(baseClient, action);
-  return action->map([this, pos, wk(std::weak_ptr(alive))](std::vector<SharedItemStack> xs) -> std::monostate {
-    if (wk.expired()) return {};
-    for (size_t i = 0; i < xs.size(); ++i) {
-      auto &x(xs[i]);
-      if (!x) continue;
-      getOrAddInfo(x->item).addProvider(pos, i + 1, x->size);
-    }
-    return {};
-  });
-}
-
-SharedPromise<std::monostate> Factory::updateAndBackupItems() {
-  std::vector<SharedPromise<std::monostate>> promises;
-  for (auto &i : chests) {
-    promises.emplace_back(updateChest(i));
-  }
-
-  return Promise<std::monostate>::all(promises)->map([this, wk(std::weak_ptr(alive))](auto) -> std::monostate {
-    if (wk.expired()) return {};
-    for (auto &i : backups) {
-      auto item(getItem(*i.first));
-      if (!item) continue;
-      items.at(item).backup(i.second);
-    }
-    return {};
-  });
+    return Promise<std::monostate>::all(promises)->map([](auto&&) { return std::monostate{}; });
+  })->listen(std::make_shared<TailListener>(*this));
 }

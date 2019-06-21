@@ -29,14 +29,14 @@ void Server::removeClient(Client &c) {
 }
 
 Client::Client(Server &s, boost::asio::ip::tcp::socket socket)
-  :s(s), socket(std::move(socket)) {}
+  :s(s), socket(std::move(socket)), d(std::bind(&Client::onPacket, this, std::placeholders::_1)) {}
 
 void Client::init(const Itr &x) {
   itr = x;
-  const auto &host = socket.remote_endpoint();
+  const auto &host{socket.remote_endpoint()};
   logHeader = host.address().to_string() + ":" + std::to_string(host.port());
   log("connected");
-  readLength();
+  read();
 }
 
 Client::~Client() {
@@ -46,7 +46,9 @@ Client::~Client() {
   if (!sendQueue.empty()) {
     s.io([sendQueue(std::move(sendQueue)), failureCause]() {
       for (auto &i : sendQueue) {
-        i->onFail(failureCause);
+        for (auto &j : i) {
+          j->onFail(failureCause);
+        }
       }
     });
   }
@@ -64,62 +66,37 @@ void Client::log(const std::string &message) {
   std::cout << logHeader << ": " << message << std::endl;
 }
 
-void Client::readLength() {
-  auto buffer(std::make_shared<std::array<uint8_t, 3>>());
-  boost::asio::async_read(socket, boost::asio::buffer(*buffer), makeWeakCallback(weak_from_this(), [this, buffer](
-    const boost::system::error_code &ec, size_t
+void Client::read() {
+  auto buffer(std::make_shared<std::array<char, BUFSIZ>>());
+  socket.async_read_some(boost::asio::buffer(*buffer), makeWeakCallback(weak_from_this(), [this, buffer](
+    const boost::system::error_code &ec, size_t nRead
   ) {
     if (ec) {
       log("error reading length: " + ec.message());
       s.removeClient(*this);
     } else {
-      auto &b = *buffer;
-      size_t size = static_cast<size_t>(b[0]) | static_cast<size_t>(b[1]) << 8u | static_cast<size_t>(b[2]) << 16u;
-      if (size) {
-        readContent(size);
-      } else {
-        readLength();
-        onPacket(nullptr, 0);
+      read();
+      try {
+        d(buffer->data(), nRead);
+      } catch (std::exception &e) {
+        log(std::string("error decoding packet: ") + e.what());
+        s.removeClient(*this);
       }
     }
   }));
 }
 
-void Client::readContent(size_t size) {
-  std::shared_ptr<char[]> buffer(new char[size]);
-  boost::asio::async_read(socket, boost::asio::buffer(buffer.get(), size), makeWeakCallback(weak_from_this(), [this, buffer](
-    const boost::system::error_code &ec, size_t size
-  ) {
-    if (ec) {
-      log("error reading content: " + ec.message());
-      s.removeClient(*this);
-    } else {
-      readLength();
-      onPacket(buffer.get(), size);
-    }
-  }));
-}
-
-void Client::onPacket(const char *data, size_t size) {
-  try {
-    onPacket(nlohmann::json::parse(data, data + size));
-  } catch (std::exception &e) {
-    log(std::string("error decoding packet: ") + e.what());
-    s.removeClient(*this);
-  }
-}
-
-void Client::onPacket(nlohmann::json j) {
+void Client::onPacket(SValue p) {
   if (login) {
     if (responseQueue.empty()) {
       log("unexpected packet");
       s.removeClient(*this);
     } else {
-      responseQueue.front()->onResult(std::move(j));
+      responseQueue.front()->onResult(std::move(p));
       responseQueue.pop_front();
     }
   } else {
-    login = j.get<std::string>();
+    login = std::get<std::string>(p);
     logHeader += "(" + *login + ")";
     log("logged in");
     s.updateLogin(*this);
@@ -136,49 +113,50 @@ void Server::updateLogin(Client &c) {
   }
 }
 
-void Server::enqueueAction(const std::string &client, SharedAction action) {
+void Server::enqueueActionGroup(const std::string &client, std::vector<SharedAction> actions) {
   auto itr(logins.find(client));
   if (itr == logins.end()) {
-    io([action(std::move(action)), failureCause(client + " isn't connected")]() mutable {
-      action->onFail(std::move(failureCause));
+    io([actions(std::move(actions)), failureCause(client + " isn't connected")]() mutable {
+      for (auto &i : actions) {
+        i->onFail(std::move(failureCause));
+      }
     });
   } else {
-    itr->second->enqueueAction(std::move(action));
+    itr->second->enqueueActionGroup(std::move(actions));
   }
+}
+
+void Server::enqueueAction(const std::string &client, SharedAction action) {
+  std::vector<SharedAction> actions;
+  actions.emplace_back(std::move(action));
+  enqueueActionGroup(client, std::move(actions));
 }
 
 size_t Server::countPending(const std::string &client) const {
   auto itr(logins.find(client));
   if (itr == logins.end())
-    return 0xffffffu;
+    return std::numeric_limits<size_t>::max();
   return itr->second->countPending();
 }
 
 void Client::send() {
   if (isSending || sendQueue.empty())
     return;
-  auto &head = sendQueue.front();
+  auto &head(sendQueue.front());
   auto dumped(std::make_shared<std::string>());
   {
-    nlohmann::json j;
-    head->dump(j);
-    *dumped = j.dump();
+    std::vector<SValue> p;
+    for (auto &action : head)
+      action->dump(p.emplace_back(std::in_place_type<ValuePtr<STable>>).getTable());
+    *dumped = SValue(arrayToSTable(std::move(p))).dump();
   }
-  size_t size = dumped->size();
-  if (size > 0xffffff) {
-    log("packet too large");
-    s.removeClient(*this);
-  }
-  auto len(std::make_shared<std::array<uint8_t, 3>>());
-  (*len)[0] = size & 0xffu;
-  (*len)[1] = size >> 8u & 0xffu;
-  (*len)[2] = size >> 16u & 0xffu;
-
   isSending = true;
-  responseQueue.emplace_back(std::move(head));
+  for (auto &action : head)
+    responseQueue.emplace_back(std::move(action));
+  sendQueueTotal -= head.size();
   sendQueue.pop_front();
-  boost::asio::async_write(socket, std::vector<boost::asio::mutable_buffer>{boost::asio::buffer(*len), boost::asio::buffer(*dumped)},
-    makeWeakCallback(weak_from_this(), [this, len, dumped](const boost::system::error_code &ec, size_t) {
+  boost::asio::async_write(socket, boost::asio::buffer(*dumped),
+    makeWeakCallback(weak_from_this(), [this, dumped](const boost::system::error_code &ec, size_t) {
       if (ec) {
         log("error writing: " + ec.message());
         s.removeClient(*this);
@@ -190,11 +168,12 @@ void Client::send() {
   );
 }
 
-void Client::enqueueAction(SharedAction action) {
-  sendQueue.emplace_front(std::move(action));
+void Client::enqueueActionGroup(std::vector<SharedAction> actions) {
+  sendQueue.emplace_front(std::move(actions));
+  sendQueueTotal += actions.size();
   send();
 }
 
 size_t Client::countPending() const {
-  return sendQueue.size() + responseQueue.size();
+  return sendQueueTotal + responseQueue.size();
 }

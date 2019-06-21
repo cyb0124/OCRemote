@@ -1,11 +1,7 @@
 #pragma once
-#include <map>
 #include <list>
-#include <variant>
-#include <optional>
 #include <boost/asio.hpp>
 #include <boost/noncopyable.hpp>
-#include "json.hpp"
 #include "Actions.h"
 
 struct Server;
@@ -29,22 +25,22 @@ private:
   boost::asio::ip::tcp::socket socket;
   std::optional<std::string> login;
   std::string logHeader;
-  std::list<SharedAction> sendQueue;
+  std::list<std::vector<SharedAction>> sendQueue;
   std::list<SharedAction> responseQueue;
   bool isSending = false;
-  void readLength();
-  void readContent(size_t size);
-  void onPacket(const char *data, size_t size);
-  void onPacket(nlohmann::json);
+  size_t sendQueueTotal{};
+  Deserializer d;
+  void onPacket(SValue);
+  void read();
   void send();
 public:
   ~Client();
   Client(Server &s, boost::asio::ip::tcp::socket socket);
-  const std::optional<std::string> &getLogin() const { return login; }
-  const Itr &getItr() const { return itr; }
+  const auto &getLogin() const { return login; }
+  const auto &getItr() const { return itr; }
   void init(const Itr&);
   void log(const std::string &message);
-  void enqueueAction(SharedAction action);
+  void enqueueActionGroup(std::vector<SharedAction> actions);
   size_t countPending() const;
 };
 
@@ -60,6 +56,7 @@ public:
   Server(IOEnv &io, uint16_t port);
   void updateLogin(Client &c);
   void removeClient(Client &c);
+  void enqueueActionGroup(const std::string &client, std::vector<SharedAction> actions);
   void enqueueAction(const std::string &client, SharedAction action);
   size_t countPending(const std::string &client) const;
 };

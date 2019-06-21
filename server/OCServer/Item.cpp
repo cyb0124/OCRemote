@@ -1,59 +1,66 @@
 #include <boost/container_hash/hash.hpp>
 #include "Item.h"
 
-bool Item::operator==(const Item &other) const {
-  return name == other.name
-      && label == other.label
-      && damage == other.damage
-      && maxDamage == other.maxDamage
-      && maxSize == other.maxSize
-      && hasTag == other.hasTag
-      && others == other.others;
+void Item::serialize(SValue &s) const {
+  auto &t((s = others).getTable());
+  t["name"] = name;
+  t["label"] = label;
+  t["damage"] = static_cast<double>(damage);
+  t["maxDamage"] = static_cast<double>(maxDamage);
+  t["maxSize"] = static_cast<double>(maxSize);
+  t["hasTag"] = hasTag;
 }
 
-bool Item::operator!=(const Item &other) const {
-  return !(*this == other);
+bool operator==(const Item &x, const Item &y) {
+  return x.name == y.name
+      && x.label == y.label
+      && x.damage == y.damage
+      && x.maxDamage == y.maxDamage
+      && x.maxSize == y.maxSize
+      && x.hasTag == y.hasTag
+      && x.others == y.others;
 }
 
-size_t Item::hash() const {
-  size_t hash = 0;
-  boost::hash_combine(hash, name);
-  boost::hash_combine(hash, label);
-  boost::hash_combine(hash, damage);
-  boost::hash_combine(hash, maxDamage);
-  boost::hash_combine(hash, maxSize);
-  boost::hash_combine(hash, hasTag);
-  boost::hash_combine(hash, std::hash<nlohmann::json>()(others));
-  return hash;
+namespace std {
+  size_t hash<Item>::operator()(const Item &x) const {
+    size_t result{};
+    boost::hash_combine(result, x.name);
+    boost::hash_combine(result, x.label);
+    boost::hash_combine(result, x.damage);
+    boost::hash_combine(result, x.maxDamage);
+    boost::hash_combine(result, x.maxSize);
+    boost::hash_combine(result, x.hasTag);
+    boost::hash_combine(result, x.others);
+    return result;
+  }
 }
 
-void Item::serialize(nlohmann::json &j) const {
-  j = others;
-  j["name"] = name;
-  j["label"] = label;
-  j["damage"] = damage;
-  j["maxDamage"] = maxDamage;
-  j["maxSize"] = maxSize;
-  j["hasTag"] = hasTag;
+namespace {
+  template<typename T> struct TransferHelper { void operator()(SValue &from, T &to) const { to = std::move(std::get<T>(from)); } };
+  template<> struct TransferHelper<int> { void operator()(SValue &from, int to) const { to = static_cast<int>(std::get<double>(from)); } };
+  template<typename T> void transferHelper(SValue &from, T &to) { TransferHelper<T>()(from, to); }
 }
 
-SharedItemStack parseItemStack(nlohmann::json &j) {
-  SharedItemStack result(std::make_shared<ItemStack>());
+SharedItemStack parseItemStack(SValue &&s) {
+  auto result(std::make_shared<ItemStack>());
   result->item = std::make_shared<Item>();
-
-  auto getToAndErase([&j](const std::string &key, auto &to) {
-    j.at(key).get_to(to);
-    j.erase(key);
+  auto &t(s.getTable());
+  auto transfer([&t](const std::string &key, const auto &to) {
+    auto itr(t.find(key));
+    if (itr == t.end())
+      throw std::runtime_error("key \"" + key + "\" not found");
+    transferHelper(itr->second, to);
+    t.erase(itr);
   });
-  getToAndErase("size", result->size);
-  getToAndErase("name", result->item->name);
-  getToAndErase("label", result->item->label);
-  getToAndErase("damage", result->item->damage);
-  getToAndErase("maxDamage", result->item->maxDamage);
-  getToAndErase("maxSize", result->item->maxSize);
-  getToAndErase("hasTag", result->item->hasTag);
-  result->item->others = std::move(j);
-
+  struct Int { int &to; void operator()(SValue &x) const { to = static_cast<int>(std::get<double>(x)); } };
+  transfer("size", result->size);
+  transfer("name", result->item->name);
+  transfer("label", result->item->label);
+  transfer("damage", result->item->damage);
+  transfer("maxDamage", result->item->maxDamage);
+  transfer("maxSize", result->item->maxSize);
+  transfer("hasTag", result->item->hasTag);
+  result->item->others = std::move(t);
   return result;
 }
 
@@ -71,14 +78,14 @@ std::vector<SharedItemStack> cloneInventorySizes(const std::vector<SharedItemSta
 
 int insertIntoInventory(std::vector<SharedItemStack> &inventory, const SharedItem &item, int size) {
   size = std::min(size, item->maxSize);
-  int result = 0;
+  int result{};
   SharedItemStack *firstEmptySlot = nullptr;
   for (auto &i : inventory) {
     if (!i) {
       if (!firstEmptySlot)
         firstEmptySlot = &i;
     } else if (*i->item == *item) {
-      int toProc = std::min(size, i->item->maxSize - i->size);
+      int toProc{std::min(size, i->item->maxSize - i->size)};
       i->size += toProc;
       result += toProc;
       size -= toProc;
