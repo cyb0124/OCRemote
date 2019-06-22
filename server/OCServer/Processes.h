@@ -67,11 +67,13 @@ struct ProcessInputless : ProcessSingleBlock {
     :ProcessSingleBlock(factory, std::move(client), std::move(inv), sideCrafter, sideBus),
     sourceSlot(sourceSlot), needed(std::move(needed)) {}
   SharedPromise<std::monostate> cycle() override;
+  static std::function<int()> makeNeeded(Factory &factory, SharedItemFilter item, int toStock);
 };
 
 struct ProcessHeterogeneousInputless : ProcessSingleBlock {
   int needed;
   ProcessHeterogeneousInputless(Factory &factory, std::string client, std::string inv,
-    int sideCrafter, int sideBus, int needed);
+    int sideCrafter, int sideBus, int needed) :ProcessSingleBlock(factory, std::move(client),
+    std::move(inv), sideCrafter, sideBus), needed(needed) {}
   SharedPromise<std::monostate> cycle() override;
 };

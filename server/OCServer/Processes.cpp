@@ -257,7 +257,7 @@ SharedPromise<std::monostate> ProcessHeterogeneousWorkingSet::cycle() {
         if (wk.expired())
           return makeEmptyPromise<std::monostate>(io);
         return reservation.extract(busSlot)->then([
-          &io, wk, this, toProc, busSlot
+          &io, wk, this, toProc, busSlot, toSlot
         ](auto&&) {
           if (wk.expired())
             return makeEmptyPromise<std::monostate>(io);
@@ -356,5 +356,38 @@ SharedPromise<std::monostate> ProcessInputless::cycle() {
     if (toProc <= 0)
       return makeEmptyPromise<std::monostate>(io);
     return processOutput(sourceSlot, toProc);
+  });
+}
+
+std::function<int()> ProcessInputless::makeNeeded(Factory &factory, SharedItemFilter item, int toStock) {
+  return [&factory, item(std::move(item)), toStock]() {
+    return toStock - factory.getAvail(factory.getItem(*item), true);
+  };
+}
+
+SharedPromise<std::monostate> ProcessHeterogeneousInputless::cycle() {
+  auto action(std::make_shared<Actions::List>());
+  action->inv = inv;
+  action->side = sideCrafter;
+  factory.s.enqueueAction(client, action);
+  return action->then([&io(factory.s.io), wk(std::weak_ptr(factory.alive)), this](std::vector<SharedItemStack> &&items) {
+    if (wk.expired())
+      return makeEmptyPromise<std::monostate>(io);
+    std::vector<SharedPromise<std::monostate>> promises;
+    std::unordered_map<SharedItem, int, SharedItemHash, SharedItemEqual> availMap;
+    for (size_t slot{}; slot < items.size(); ++slot) {
+      auto &stack(items[slot]);
+      if (!stack)
+        continue;
+      int &avail(availMap.try_emplace(stack->item, factory.getAvail(stack->item, true)).first->second);
+      int toProc{std::min(needed - avail, stack->size)};
+      if (toProc <= 0)
+        continue;
+      avail += toProc;
+      promises.emplace_back(processOutput(slot, toProc));
+    }
+    if (promises.empty())
+      return makeEmptyPromise<std::monostate>(io);
+    return Promise<std::monostate>::all(promises)->map([](auto&&) { return std::monostate{}; });
   });
 }

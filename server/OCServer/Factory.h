@@ -120,7 +120,7 @@ public:
   int getAvail(const SharedItem &item, bool allowBackup);
   Reservation reserve(const std::string &reason, const SharedItem &item, int size);
   template<typename T, typename U>
-  void resolveRecipeInputs(Recipe<T, U> &recipe, Demand<T, U> &demand, bool clipToMaxStackSize) {
+  void resolveRecipeInputs(const Recipe<T, U> &recipe, Demand<T, U> &demand, bool clipToMaxStackSize) {
     demand.inAvail = std::numeric_limits<int>::max();
     for (auto &in : recipe.in) {
       auto &inItem{demand.in.emplace_back(getItem(*in.item))};
