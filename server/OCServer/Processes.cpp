@@ -8,7 +8,7 @@ SharedPromise<std::monostate> ProcessSingleBlock::processOutput(int slot, int si
     static_cast<double>(sideCrafter),
     static_cast<double>(sideBus),
     static_cast<double>(size),
-    static_cast<double>(slot),
+    static_cast<double>(slot)
   };
   return factory.busAllocate()->then([
     &io(factory.s.io), wk(std::weak_ptr(factory.alive)), this, action(std::move(action))
@@ -120,6 +120,84 @@ SharedPromise<std::monostate> ProcessSlotted::cycle() {
       }));
       break;
       skip:;
+    }
+    if (promises.empty())
+      return makeEmptyPromise<std::monostate>(io);
+    return Promise<std::monostate>::all(promises)->map([](auto&&) { return std::monostate{}; });
+  });
+}
+
+SharedPromise<std::monostate> ProcessWorkingSet::cycle() {
+  if (!outFilter)
+    if (factory.getDemand(recipes, false).empty())
+      return makeEmptyPromise<std::monostate>(factory.s.io);
+  auto action(std::make_shared<Actions::List>());
+  action->inv = inv;
+  action->side = sideCrafter;
+  factory.s.enqueueAction(client, action);
+  return action->then([&io(factory.s.io), wk(std::weak_ptr(factory.alive)), this](std::vector<SharedItemStack> &&items) {
+    if (wk.expired())
+      return makeEmptyPromise<std::monostate>(io);
+    std::vector<SharedPromise<std::monostate>> promises;
+    std::unordered_map<SharedItem, int, SharedItemHash, SharedItemEqual> inProcMap;
+    auto demands(factory.getDemand(recipes, false));
+    for (auto &i : demands)
+      inProcMap.try_emplace(i.in.front(), 0);
+    for (size_t slot{}; slot < items.size(); ++slot) {
+      auto &stack(items[slot]);
+      if (!stack)
+        continue;
+      auto itr(inProcMap.find(stack->item));
+      if (itr == inProcMap.end()) {
+        if (outFilter) {
+          bool notInput{true};
+          for (auto &recipe : recipes) {
+            if (recipe.in.front().item->filter(*stack->item)) {
+              notInput = false;
+              break;
+            }
+          }
+          if (notInput && outFilter(slot, *stack))
+            promises.emplace_back(processOutput(slot, stack->item->maxSize));
+        }
+      } else {
+        itr->second += stack->size;
+      }
+    }
+    for (auto &demand : demands) {
+      auto &recipe(demand.recipe);
+      int toProc{std::min({
+        recipe.data.second - inProcMap.at(demand.in.front()),
+        factory.getAvail(demand.in.front(), recipe.in.front().allowBackup),
+        demand.in.front()->maxSize})};
+      if (toProc <= 0)
+        continue;
+      promises.emplace_back(factory.busAllocate()->then([
+        &io, wk, this, toProc, reservation(factory.reserve(recipe.data.first, demand.in.front(), toProc))
+      ](size_t busSlot) {
+        if (wk.expired())
+          return makeEmptyPromise<std::monostate>(io);
+        return reservation.extract(busSlot)->then([
+          &io, wk, this, toProc, busSlot
+        ](auto&&) {
+          if (wk.expired())
+            return makeEmptyPromise<std::monostate>(io);
+          auto action(std::make_shared<Actions::Call>());
+          action->inv = inv;
+          action->fn = "transferItem";
+          action->args = {
+            static_cast<double>(sideBus),
+            static_cast<double>(sideCrafter),
+            static_cast<double>(toProc),
+            static_cast<double>(busSlot)
+          };
+          factory.s.enqueueAction(client, action);
+          return action->map([](auto&&) { return std::monostate{}; });
+        })->finally([wk, this, busSlot]() {
+          if (!wk.expired())
+            factory.busFree(busSlot);
+        });
+      }));
     }
     if (promises.empty())
       return makeEmptyPromise<std::monostate>(io);

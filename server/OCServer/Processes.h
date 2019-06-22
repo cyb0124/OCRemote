@@ -24,7 +24,7 @@ struct ProcessSlotted : ProcessSingleBlock {
 };
 
 struct ProcessWorkingSet : ProcessSingleBlock {
-  using Recipe = ::Recipe<std::string>; // name
+  using Recipe = ::Recipe<std::pair<std::string, int>>; // name, maxInproc
   std::function<bool(size_t slot, const ItemStack&)> outFilter;
   std::vector<Recipe> recipes;
   ProcessWorkingSet(Factory &factory, std::string client,
