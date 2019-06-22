@@ -16,14 +16,14 @@ using UniqueProcess = std::unique_ptr<Process>;
 
 struct Provider {
   Factory &factory;
-  int size;
+  int avail;
   const int priority;
-  Provider(Factory &factory, int size, int priority) :factory(factory), size(size), priority(priority) {}
+  Provider(Factory &factory, int avail, int priority) :factory(factory), avail(avail), priority(priority) {}
   virtual ~Provider() = default;
-  virtual SharedPromise<std::monostate> extract(int size, int slot) = 0 { this->size -= size; }
+  virtual SharedPromise<std::monostate> extract(int size, int slot) = 0;
 };
-using UniqueProvider = std::unique_ptr<Provider>;
-struct UniqueProviderLess { bool operator()(const UniqueProvider &x, const UniqueProvider &y) const { return x->priority < y->priority; } };
+using SharedProvider = std::shared_ptr<Provider>;
+struct SharedProviderLess { bool operator()(const SharedProvider &x, const SharedProvider &y) const { return x->priority < y->priority; } };
 
 struct Storage {
   Factory &factory;
@@ -36,14 +36,19 @@ struct Storage {
 };
 using UniqueStorage = std::unique_ptr<Storage>;
 
+struct Reservation {
+  std::vector<std::pair<SharedProvider, int>> providers;
+  SharedPromise<std::monostate> extract(int slot) const;
+};
+
 class ItemInfo {
-  std::priority_queue<UniqueProvider, std::vector<UniqueProvider>, UniqueProviderLess> providers;
+  std::priority_queue<SharedProvider, std::vector<SharedProvider>, SharedProviderLess> providers;
   int nAvail{}, nBackup{};
 public:
-  void addProvider(UniqueProvider provider);
+  void addProvider(SharedProvider provider);
   void backup(int size);
   int getAvail(bool allowBackup) const;
-  void extract(std::vector<SharedPromise<std::monostate>> &promises, int size, int slot);
+  Reservation reserve(int size);
 };
 
 template<typename T = std::monostate>
@@ -81,12 +86,6 @@ struct Demand {
   Demand(const Recipe<T, U> &recipe) :recipe(recipe) {}
 };
 
-struct BusWaitNode {
-  SharedPromise<std::vector<size_t>> cont;
-  bool allowPartial;
-  size_t n;
-};
-
 struct Factory {
   Server &s;
   const std::shared_ptr<std::monostate> alive{std::make_shared<std::monostate>()};
@@ -109,7 +108,7 @@ private:
 
   int sideBus;
   std::unordered_set<size_t> busAllocations;
-  std::list<BusWaitNode> busWaitQueue;
+  std::list<SharedPromise<size_t>> busWaitQueue;
   bool endOfCycleAfterBusUpdate{}, busEverUpdated{};
   enum class BusState { IDLE, RUNNING, RESTART } busState{BusState::IDLE};
   void doBusUpdate();
@@ -119,10 +118,9 @@ public:
   ItemInfo &getOrAddItemInfo(const SharedItem &item);
   SharedItem getItem(const ItemFilters::Base &filter);
   int getAvail(const SharedItem &item, bool allowBackup);
-  void extract(std::vector<SharedPromise<std::monostate>> &promises, const std::string &reason,
-    const SharedItem &item, int size, int slot);
+  Reservation reserve(const std::string &reason, const SharedItem &item, int size);
   template<typename T, typename U>
-  std::vector<Demand<T, U>> getDemand(const std::vector<Recipe<T, U>> &recipes) {
+  std::vector<Demand<T, U>> getDemand(const std::vector<Recipe<T, U>> &recipes, bool clipToMaxStackSize = true) {
     std::vector<Demand<T, U>> result;
     for (auto &recipe : recipes) {
       auto &demand(result.emplace_back(recipe));
@@ -146,7 +144,10 @@ public:
       demand.inAvail = std::numeric_limits<int>::max();
       for (auto &in : recipe.in) {
         auto &inItem = demand.in.emplace_back(getItem(*in.item));
-        demand.inAvail = std::min(demand.inAvail, getAvail(inItem, in.allowBackup) / in.size);
+        int itemAvail(getAvail(inItem, in.allowBackup));
+        if (clipToMaxStackSize)
+          itemAvail = std::min(itemAvail, inItem->maxSize);
+        demand.inAvail = std::min(demand.inAvail, itemAvail / in.size);
         if (!demand.inAvail)
           break;
       }
@@ -160,8 +161,9 @@ public:
     });
     return result;
   }
-  SharedPromise<std::vector<size_t>> busAllocate(bool allowPartial, size_t n);
-  void busFree(const std::vector<size_t>&);
+  SharedPromise<size_t> busAllocate();
+  void busFree(size_t slot);
+  void busFree(const std::vector<size_t> &slots);
 
   Factory(Server &s, int minCycleTime, std::string client, std::string inv, int sideBus)
     :s(s), minCycleTime(minCycleTime), client(std::move(client)), inv(std::move(inv)), sideBus(sideBus) {}

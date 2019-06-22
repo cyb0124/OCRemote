@@ -1,70 +1,64 @@
 #pragma once
 #include "Factory.h"
 
-struct ProcessSlotted : Process {
-  using Recipe = ::Recipe<std::monostate, std::vector<size_t>>;
-private:
-  std::string name, client, inv;
+struct ProcessSingleBlock : Process {
+  std::string client, inv;
   int sideCrafter, sideBus;
+  ProcessSingleBlock(Factory &factory, std::string client, std::string inv, int sideCrafter, int sideBus)
+    :Process(factory), client(std::move(client)), inv(std::move(inv)), sideCrafter(sideCrafter), sideBus(sideBus) {}
+  SharedPromise<std::monostate> processOutput(int slot, int size);
+};
+
+struct ProcessSlotted : ProcessSingleBlock {
+  using Recipe = ::Recipe<int, std::vector<size_t>>; // maxInProc, slots
+  std::string name;
   std::vector<size_t> inSlots;
   std::function<bool(size_t slot, const ItemStack&)> outFilter;
   std::vector<Recipe> recipes;
-  std::function<bool()> fnSkip;
-public:
-  ProcessSlotted(Factory &factory, std::string name, std::string client, std::string inv,
-    int sideCrafter, int sideBus, decltype(inSlots) inSlots, decltype(outFilter) outFilter,
-    decltype(recipes) recipes, decltype(fnSkip) fnSkip);
+  ProcessSlotted(Factory &factory, std::string name, std::string client,
+    std::string inv, int sideCrafter, int sideBus, decltype(inSlots) inSlots,
+    decltype(outFilter) outFilter, decltype(recipes) recipes)
+    :ProcessSingleBlock(factory, std::move(client), std::move(inv), sideCrafter, sideBus),
+    name(std::move(name)), inSlots(std::move(inSlots)), outFilter(std::move(outFilter)), recipes(std::move(recipes)) {}
   SharedPromise<std::monostate> cycle() override;
 };
 
-struct ProcessWorkingSet : Process {
-  using Recipe = ::Recipe<std::string>;
-private:
-  std::string client, inv;
-  int sideWorkingSet, sideBus;
+struct ProcessWorkingSet : ProcessSingleBlock {
+  using Recipe = ::Recipe<std::string>; // name
   std::function<bool(size_t slot, const ItemStack&)> outFilter;
   std::vector<Recipe> recipes;
-  std::function<bool()> fnSkip;
-public:
-  ProcessWorkingSet(Factory &factory, std::string client, std::string inv,
-    int sideWorkingSet, int sideBus, decltype(outFilter) outFilter,
-    decltype(recipes) recipes, decltype(fnSkip) fnSkip);
+  ProcessWorkingSet(Factory &factory, std::string client,
+    std::string inv, int sideCrafter, int sideBus,
+    decltype(outFilter) outFilter, decltype(recipes) recipes)
+    :ProcessSingleBlock(factory, std::move(client), std::move(inv), sideCrafter, sideBus),
+    outFilter(std::move(outFilter)), recipes(std::move(recipes)) {}
   SharedPromise<std::monostate> cycle() override;
 };
 
-struct ProcessHeterogeneousWorkingSet : Process {
+struct ProcessHeterogeneousWorkingSet : ProcessSingleBlock {
   using Recipe = ::Recipe<>;
-private:
-  std::string name, client, inv;
-  int sideWorkingSet, sideBus;
+  std::string name;
   std::vector<SharedItemFilter> stockList;
   int recipeMaxInProc;
   std::function<bool(size_t slot, const ItemStack&)> outFilter;
   std::vector<Recipe> recipes;
-  std::function<bool()> fnSkip;
-public:
-  ProcessHeterogeneousWorkingSet(Factory &factory, std::string name, std::string client, std::string inv,
-    int sideWorkingSet, int sideBus, decltype(stockList) stockList, int recipeMaxInProc,
-    decltype(outFilter) outFilter, decltype(recipes) recipes, decltype(fnSkip) fnSkip);
+  ProcessHeterogeneousWorkingSet(Factory &factory, std::string name, std::string client,
+    std::string inv, int sideCrafter, int sideBus, decltype(stockList) stockList,
+    int recipeMaxInProc, decltype(outFilter) outFilter, decltype(recipes) recipes);
   SharedPromise<std::monostate> cycle() override;
 };
 
-class ProcessInputless : public Process {
-  std::string client, inv;
-  int sideSource, sideBus;
+struct ProcessInputless : ProcessSingleBlock {
   size_t sourceSlot;
   std::function<int()> needed;
-public:
   ProcessInputless(Factory &factory, std::string client, std::string inv,
-    int sideSource, int sideBus, size_t sourceSlot, decltype(needed) needed);
+    int sideCrafter, int sideBus, size_t sourceSlot, decltype(needed) needed);
   SharedPromise<std::monostate> cycle() override;
 };
 
-class ProcessHeterogeneousInputless : public Process {
-  std::string client, inv;
-  int sideSource, sideBus, needed;
-public:
+struct ProcessHeterogeneousInputless : ProcessSingleBlock {
+  int needed;
   ProcessHeterogeneousInputless(Factory &factory, std::string client, std::string inv,
-    int sideSource, int sideBus, int needed);
+    int sideCrafter, int sideBus, int needed);
   SharedPromise<std::monostate> cycle() override;
 };

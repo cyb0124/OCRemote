@@ -38,7 +38,6 @@ std::pair<int, SharedPromise<std::monostate>> StorageDrawer::sink(const ItemStac
 }
 
 SharedPromise<std::monostate> ProviderDrawer::extract(int size, int slot) {
-  Provider::extract(size, slot);
   auto action(std::make_shared<Actions::Call>());
   action->inv = drawer.inv;
   action->fn = "transferItem";
@@ -121,7 +120,6 @@ std::pair<int, SharedPromise<std::monostate>> StorageChest::sink(const ItemStack
 }
 
 SharedPromise<std::monostate> ProviderChest::extract(int size, int slot) {
-  Provider::extract(size, slot);
   auto action(std::make_shared<Actions::Call>());
   action->inv = chest.inv;
   action->fn = "transferItem";
@@ -188,7 +186,6 @@ std::pair<int, SharedPromise<std::monostate>> StorageME::sink(const ItemStack &s
 }
 
 SharedPromise<std::monostate> ProviderME::extract(int size, int slot) {
-  Provider::extract(size, slot);
   auto &access(me.getBestAccess());
   auto action(std::make_shared<Actions::XferME>());
   item->serialize(action->filter);

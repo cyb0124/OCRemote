@@ -85,6 +85,30 @@ public:
     return result;
   }
 
+  template<typename Fn>
+  SharedPromise<T> finally(Fn fn) {
+    auto result(std::make_shared<Promise<T>>());
+
+    struct Impl : Listener<T> {
+      SharedListener<To> to;
+      Fn fn;
+      Impl(SharedListener<To> to, Fn fn) :to(std::move(to)), fn(std::move(fn)) {}
+
+      void onFail(std::string cause) override {
+        fn();
+        to->onFail(std::move(cause));
+      }
+
+      void onResult(T result) override {
+        fn();
+        to->onResult(std::move(result));
+      }
+    };
+
+    listen(std::make_shared<Impl>(result, std::move(fn)));
+    return result;
+  }
+
   static std::shared_ptr<Promise<std::vector<T>>> all(const std::vector<std::shared_ptr<Promise<T>>> &xs) {
     if (xs.empty()) throw std::runtime_error("waiting for nothing");
 
@@ -157,10 +181,10 @@ public:
 template<typename T>
 using SharedPromise = std::shared_ptr<Promise<T>>;
 
-template<typename T>
-inline SharedPromise<std::monostate> makeEmptyPromise(T &dispatcher) {
+template<typename T, typename F>
+inline SharedPromise<T> makeEmptyPromise(F &dispatcher) {
   auto result(std::make_shared<Promise<std::monostate>>());
-  dispatcher([result]() { result->onResult({}); });
+  dispatcher([result]() { result->onFail("Node died"); });
   return result;
 }
 

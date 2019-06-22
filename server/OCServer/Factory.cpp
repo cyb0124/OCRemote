@@ -3,10 +3,17 @@
 #include "Factory.h"
 #include "WeakCallback.h"
 
-void ItemInfo::addProvider(UniqueProvider provider) {
-  if (!provider->size)
+SharedPromise<std::monostate> Reservation::extract(int slot) const {
+  std::vector<SharedPromise<std::monostate>> promises;
+  for (auto &i : providers)
+    promises.emplace_back(i.first->extract(i.second, slot));
+  return Promise<std::monostate>::all(promises)->map([](auto&&) { return std::monostate{}; });
+}
+
+void ItemInfo::addProvider(SharedProvider provider) {
+  if (!provider->avail)
     return;
-  nAvail += provider->size;
+  nAvail += provider->avail;
   providers.emplace(std::move(provider));
 }
 
@@ -21,15 +28,18 @@ int ItemInfo::getAvail(bool allowBackup) const {
     return std::max(0, nAvail - nBackup);
 }
 
-void ItemInfo::extract(std::vector<SharedPromise<std::monostate>> &promises, int size, int slot) {
+Reservation ItemInfo::reserve(int size) {
+  Reservation result;
   while (size >= 0) {
-    auto &best(*providers.top());
-    int toProc(std::min(size, best.size));
-    promises.emplace_back(best.extract(toProc, slot));
+    auto &best(providers.top());
+    int toProc(std::min(size, best->avail));
+    result.providers.emplace_back(best, toProc);
+    best->avail -= toProc;
     size -= toProc;
-    if (best.size)
+    if (best->avail <= 0)
       providers.pop();
   }
+  return result;
 }
 
 void Factory::endOfCycle() {
@@ -120,7 +130,7 @@ void Factory::doBusUpdate() {
 
   action->then([&io(s.io), this, wk(std::weak_ptr(alive))](std::vector<SharedItemStack> &&items) {
     if (wk.expired())
-      return makeEmptyPromise(io);
+      return makeEmptyPromise<std::monostate>(io);
     std::vector<SharedPromise<std::monostate>> promises;
     std::vector<size_t> freeSlots;
     for (size_t i{}; i < items.size(); ++i) {
@@ -135,27 +145,15 @@ void Factory::doBusUpdate() {
         freeSlots.emplace_back(i);
       }
     }
-    for (auto i{busWaitQueue.begin()}; !freeSlots.empty() && i != busWaitQueue.end();) {
-      if (i->n <= freeSlots.size() || i->allowPartial) {
-        size_t toProc{std::min(i->n, freeSlots.size())};
-        std::vector<size_t> allocated;
-        allocated.reserve(toProc);
-        for (size_t i{}; i < toProc; ++i) {
-          auto slot(freeSlots.back());
-          freeSlots.pop_back();
-          allocated.push_back(slot);
-          busAllocations.emplace(slot);
-        }
-        s.io([cont(std::move(i->cont)), result(std::move(allocated))]() {
-          cont->onResult(std::move(result));
-        });
-        i = busWaitQueue.erase(i);
-      } else {
-        ++i;
-      }
+    while (!freeSlots.empty() && !busWaitQueue.empty()) {
+      auto slot(freeSlots.back());
+      freeSlots.pop_back();
+      busAllocations.emplace(slot);
+      s.io([cont(std::move(busWaitQueue.front())), slot]() { cont->onResult(slot); });
+      busWaitQueue.pop_front();
     }
     if (promises.empty())
-      return makeEmptyPromise(io);
+      return makeEmptyPromise<std::monostate>(io);
     return Promise<std::monostate>::all(promises)->map([](auto&&) { return std::monostate{}; });
   })->listen(std::make_shared<TailListener>(*this));
 }
@@ -236,26 +234,26 @@ int Factory::getAvail(const SharedItem &item, bool allowBackup) {
   return items.at(item).getAvail(allowBackup);
 }
 
-void Factory::extract(
-  std::vector<SharedPromise<std::monostate>> &promises, const std::string &reason,
-  const SharedItem &item, int size, int slot
-) {
+Reservation Factory::reserve(const std::string &reason, const SharedItem &item, int size) {
   log(reason + ": " + item->label + "*" + std::to_string(size), 0x55abec);
-  items.at(item).extract(promises, size, slot);
+  return items.at(item).reserve(size);
 }
 
-SharedPromise<std::vector<size_t>> Factory::busAllocate(bool allowPartial, size_t n) {
-  auto &node{busWaitQueue.emplace_back()};
-  node.cont = std::make_shared<Promise<std::vector<size_t>>>();
-  node.allowPartial = allowPartial;
-  node.n = n;
+SharedPromise<size_t> Factory::busAllocate() {
+  auto promise(std::make_shared<Promise<size_t>>());
+  busWaitQueue.emplace_back(promise);
   scheduleBusUpdate();
-  return node.cont;
+  return promise;
+}
+
+void Factory::busFree(size_t slot) {
+  busAllocations.erase(slot);
+  scheduleBusUpdate();
 }
 
 void Factory::busFree(const std::vector<size_t> &slots) {
-  for (size_t i : slots)
-    busAllocations.erase(i);
+  for (size_t slot : slots)
+    busAllocations.erase(slot);
   scheduleBusUpdate();
 }
 
@@ -305,7 +303,7 @@ void Factory::start() {
       for (auto &i : processes)
         promises.emplace_back(i->cycle());
     if (promises.empty())
-      return makeEmptyPromise(io);
+      return makeEmptyPromise<std::monostate>(io);
     return Promise<std::monostate>::all(promises)->map([](auto&&) { return std::monostate{}; });
   })->listen(std::make_shared<TailListener>(*this));
 }
