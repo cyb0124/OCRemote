@@ -120,6 +120,19 @@ public:
   int getAvail(const SharedItem &item, bool allowBackup);
   Reservation reserve(const std::string &reason, const SharedItem &item, int size);
   template<typename T, typename U>
+  void resolveRecipeInputs(Recipe<T, U> &recipe, Demand<T, U> &demand, bool clipToMaxStackSize) {
+    demand.inAvail = std::numeric_limits<int>::max();
+    for (auto &in : recipe.in) {
+      auto &inItem{demand.in.emplace_back(getItem(*in.item))};
+      int itemAvail(getAvail(inItem, in.allowBackup));
+      if (clipToMaxStackSize)
+        itemAvail = std::min(itemAvail, inItem->maxSize);
+      demand.inAvail = std::min(demand.inAvail, itemAvail / in.size);
+      if (demand.inAvail <= 0)
+        break;
+    }
+  }
+  template<typename T, typename U>
   std::vector<Demand<T, U>> getDemand(const std::vector<Recipe<T, U>> &recipes, bool clipToMaxStackSize = true) {
     std::vector<Demand<T, U>> result;
     for (auto &recipe : recipes) {
@@ -141,16 +154,7 @@ public:
           continue;
         }
       }
-      demand.inAvail = std::numeric_limits<int>::max();
-      for (auto &in : recipe.in) {
-        auto &inItem = demand.in.emplace_back(getItem(*in.item));
-        int itemAvail(getAvail(inItem, in.allowBackup));
-        if (clipToMaxStackSize)
-          itemAvail = std::min(itemAvail, inItem->maxSize);
-        demand.inAvail = std::min(demand.inAvail, itemAvail / in.size);
-        if (!demand.inAvail)
-          break;
-      }
+      resolveRecipeInputs(recipe, demand, clipToMaxStackSize);
       if (!demand.inAvail) {
         result.pop_back();
         continue;

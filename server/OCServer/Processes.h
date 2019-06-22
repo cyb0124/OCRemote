@@ -35,16 +35,27 @@ struct ProcessWorkingSet : ProcessSingleBlock {
   SharedPromise<std::monostate> cycle() override;
 };
 
+struct StockEntry {
+  SharedItemFilter item;
+  int toStock;
+  bool allowBackup;
+  StockEntry(SharedItemFilter item, int toStock, bool allowBackup)
+    :item(std::move(item)), toStock(toStock), allowBackup(allowBackup) {}
+};
+
 struct ProcessHeterogeneousWorkingSet : ProcessSingleBlock {
   using Recipe = ::Recipe<>;
   std::string name;
-  std::vector<SharedItemFilter> stockList;
+  std::vector<StockEntry> stockList;
   int recipeMaxInProc;
   std::function<bool(size_t slot, const ItemStack&)> outFilter;
   std::vector<Recipe> recipes;
   ProcessHeterogeneousWorkingSet(Factory &factory, std::string name, std::string client,
     std::string inv, int sideCrafter, int sideBus, decltype(stockList) stockList,
-    int recipeMaxInProc, decltype(outFilter) outFilter, decltype(recipes) recipes);
+    int recipeMaxInProc, decltype(outFilter) outFilter, decltype(recipes) recipes)
+    :ProcessSingleBlock(factory, std::move(client), std::move(inv), sideCrafter, sideBus),
+    name(std::move(name)), stockList(std::move(stockList)), recipeMaxInProc(recipeMaxInProc),
+    outFilter(std::move(outFilter)), recipes(std::move(recipes)) {}
   SharedPromise<std::monostate> cycle() override;
 };
 
