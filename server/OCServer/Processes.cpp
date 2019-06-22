@@ -340,3 +340,21 @@ SharedPromise<std::monostate> ProcessHeterogeneousWorkingSet::cycle() {
     return Promise<std::monostate>::all(promises)->map([](auto&&) { return std::monostate{}; });
   });
 }
+
+SharedPromise<std::monostate> ProcessInputless::cycle() {
+  auto needed(this->needed());
+  if (needed <= 0)
+    return makeEmptyPromise<std::monostate>(factory.s.io);
+  auto action(std::make_shared<Actions::List>());
+  action->inv = inv;
+  action->side = sideCrafter;
+  factory.s.enqueueAction(client, action);
+  return action->then([&io(factory.s.io), wk(std::weak_ptr(factory.alive)), this, needed](std::vector<SharedItemStack> &&items) {
+    if (wk.expired() || sourceSlot >= items.size() || !items[sourceSlot])
+      return makeEmptyPromise<std::monostate>(io);
+    int toProc{std::min(needed, items[sourceSlot]->size)};
+    if (toProc <= 0)
+      return makeEmptyPromise<std::monostate>(io);
+    return processOutput(sourceSlot, toProc);
+  });
+}

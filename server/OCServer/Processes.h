@@ -63,7 +63,9 @@ struct ProcessInputless : ProcessSingleBlock {
   size_t sourceSlot;
   std::function<int()> needed;
   ProcessInputless(Factory &factory, std::string client, std::string inv,
-    int sideCrafter, int sideBus, size_t sourceSlot, decltype(needed) needed);
+    int sideCrafter, int sideBus, size_t sourceSlot, decltype(needed) needed)
+    :ProcessSingleBlock(factory, std::move(client), std::move(inv), sideCrafter, sideBus),
+    sourceSlot(sourceSlot), needed(std::move(needed)) {}
   SharedPromise<std::monostate> cycle() override;
 };
 
