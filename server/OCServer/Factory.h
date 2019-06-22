@@ -20,7 +20,7 @@ struct Provider {
   const int priority;
   Provider(Factory &factory, int avail, int priority) :factory(factory), avail(avail), priority(priority) {}
   virtual ~Provider() = default;
-  virtual SharedPromise<std::monostate> extract(int size, int slot) = 0;
+  virtual SharedPromise<std::monostate> extract(int size, size_t slot) = 0;
 };
 using SharedProvider = std::shared_ptr<Provider>;
 struct SharedProviderLess { bool operator()(const SharedProvider &x, const SharedProvider &y) const { return x->priority < y->priority; } };
@@ -38,7 +38,7 @@ using UniqueStorage = std::unique_ptr<Storage>;
 
 struct Reservation {
   std::vector<std::pair<SharedProvider, int>> providers;
-  SharedPromise<std::monostate> extract(int slot) const;
+  SharedPromise<std::monostate> extract(size_t slot) const;
 };
 
 class ItemInfo {
@@ -79,11 +79,11 @@ struct Recipe {
 
 template<typename T, typename U>
 struct Demand {
-  const Recipe<T, U> &recipe;
+  const Recipe<T, U> *recipe;
   std::vector<SharedItem> in;
   int inAvail;
   float fullness;
-  Demand(const Recipe<T, U> &recipe) :recipe(recipe) {}
+  Demand(const Recipe<T, U> *recipe) :recipe(recipe) {}
 };
 
 struct Factory {
@@ -136,7 +136,7 @@ public:
   std::vector<Demand<T, U>> getDemand(const std::vector<Recipe<T, U>> &recipes, bool clipToMaxStackSize = true) {
     std::vector<Demand<T, U>> result;
     for (auto &recipe : recipes) {
-      auto &demand(result.emplace_back(recipe));
+      auto &demand(result.emplace_back(&recipe));
       demand.fullness = 2.f;
       if (!recipe.out.empty()) {
         bool full{true};
@@ -160,7 +160,7 @@ public:
         continue;
       }
     }
-    std::sort(result.begin(), result.end(), [](const Demand<U, T> &x, const Demand<U, T> &y) {
+    std::sort(result.begin(), result.end(), [](const Demand<T, U> &x, const Demand<T, U> &y) {
       return x.fullness < y.fullness;
     });
     return result;

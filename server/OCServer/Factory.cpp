@@ -3,7 +3,7 @@
 #include "Factory.h"
 #include "WeakCallback.h"
 
-SharedPromise<std::monostate> Reservation::extract(int slot) const {
+SharedPromise<std::monostate> Reservation::extract(size_t slot) const {
   std::vector<SharedPromise<std::monostate>> promises;
   for (auto &i : providers)
     promises.emplace_back(i.first->extract(i.second, slot));

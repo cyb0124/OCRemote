@@ -10,9 +10,9 @@ struct Item {
 };
 bool operator==(const Item &x, const Item &y);
 inline bool operator!=(const Item &x, const Item &y) { return !(x == y); }
-namespace std { template<> struct hash<Item> { size_t operator()(const Item &x) const; }; }
+size_t hash_value(const Item&);
 using SharedItem = std::shared_ptr<Item>;
-struct SharedItemHash { size_t operator()(const SharedItem &x) const { return std::hash<Item>{}(*x); } };
+struct SharedItemHash { size_t operator()(const SharedItem &x) const { return hash_value(*x); } };
 struct SharedItemEqual { bool operator()(const SharedItem &x, const SharedItem &y) const { return *x == *y; } };
 
 struct ItemStack {

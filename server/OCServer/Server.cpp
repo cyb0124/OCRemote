@@ -147,8 +147,8 @@ void Client::send() {
   {
     std::vector<SValue> p;
     for (auto &action : head)
-      action->dump(p.emplace_back(std::in_place_type<ValuePtr<STable>>).getTable());
-    *dumped = SValue(arrayToSTable(std::move(p))).dump();
+      action->dump(std::get<STable>(p.emplace_back(std::in_place_type<STable>)));
+    *dumped = serialize(arrayToSTable(std::move(p)));
   }
   isSending = true;
   for (auto &action : head)

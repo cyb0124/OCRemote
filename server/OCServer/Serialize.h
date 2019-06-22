@@ -5,19 +5,15 @@
 #include <variant>
 #include <string>
 #include <map>
-#include "ValuePtr.h"
 
 using SKey = std::variant<double, std::string, bool>;
 using STable = std::map<SKey, struct SValue>;
-using SValueBase = std::variant<std::monostate, double, std::string, bool, ValuePtr<STable>>;
-struct SValue : SValueBase {
-  using SValueBase::variant;
-  bool isNull() const { return std::holds_alternative<std::monostate>(*this); }
-  STable &getTable() { return *std::get<ValuePtr<STable>>(*this); }
-  std::string dump() const;
-};
+using SValueBase = std::variant<std::monostate, double, std::string, bool, STable>;
+struct SValue : SValueBase { using SValueBase::variant; };
 STable arrayToSTable(std::vector<SValue>&&);
 std::vector<SValue> sTableToArray(STable&&);
+std::string serialize(const SValue&);
+std::string serialize(const STable&);
 
 class Deserializer {
   struct State {
@@ -31,14 +27,14 @@ class Deserializer {
     void init() {}
   };
 
-  class Number : State {
+  class Number : public State {
     std::string buffer;
   public:
     using State::State;
     void shift(const char *data, size_t size) override;
   };
 
-  class String : State {
+  class String : public State {
     std::string buffer;
     bool escape{};
   public:
@@ -51,7 +47,7 @@ class Deserializer {
     void shift(const char *data, size_t size) override;
   };
 
-  class Table : State {
+  class Table : public State {
     STable result;
     std::optional<SKey> key;
   public:
@@ -68,8 +64,7 @@ class Deserializer {
 
   std::function<void(SValue)> cb;
   std::unique_ptr<State> s;
-  template<typename T>
-  void enter() {
+  template<typename T> void enter() {
     s = std::make_unique<T>(*this);
     static_cast<T&>(*s).init();
   }

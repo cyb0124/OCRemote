@@ -2,7 +2,7 @@
 #include "Item.h"
 
 void Item::serialize(SValue &s) const {
-  auto &t((s = others).getTable());
+  auto &t(std::get<STable>(s = others));
   t["name"] = name;
   t["label"] = label;
   t["damage"] = static_cast<double>(damage);
@@ -21,18 +21,16 @@ bool operator==(const Item &x, const Item &y) {
       && x.others == y.others;
 }
 
-namespace std {
-  size_t hash<Item>::operator()(const Item &x) const {
-    size_t result{};
-    boost::hash_combine(result, x.name);
-    boost::hash_combine(result, x.label);
-    boost::hash_combine(result, x.damage);
-    boost::hash_combine(result, x.maxDamage);
-    boost::hash_combine(result, x.maxSize);
-    boost::hash_combine(result, x.hasTag);
-    boost::hash_combine(result, x.others);
-    return result;
-  }
+size_t hash_value(const Item &x) {
+  size_t result{};
+  boost::hash_combine(result, x.name);
+  boost::hash_combine(result, x.label);
+  boost::hash_combine(result, x.damage);
+  boost::hash_combine(result, x.maxDamage);
+  boost::hash_combine(result, x.maxSize);
+  boost::hash_combine(result, x.hasTag);
+  boost::hash_combine(result, serialize(x.others));
+  return result;
 }
 
 namespace {
@@ -44,8 +42,8 @@ namespace {
 SharedItemStack parseItemStack(SValue &&s) {
   auto result(std::make_shared<ItemStack>());
   result->item = std::make_shared<Item>();
-  auto &t(s.getTable());
-  auto transfer([&t](const std::string &key, const auto &to) {
+  auto &t(std::get<STable>(s));
+  auto transfer([&t](const std::string &key, auto &to) {
     auto itr(t.find(key));
     if (itr == t.end())
       throw std::runtime_error("key \"" + key + "\" not found");

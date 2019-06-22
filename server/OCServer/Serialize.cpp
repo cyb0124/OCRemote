@@ -4,7 +4,7 @@
 STable arrayToSTable(std::vector<SValue> &&array) {
   STable result;
   for (size_t i{}; i < array.size(); ++i) {
-    if (!array[i].isNull())
+    if (!std::holds_alternative<std::monostate>(array[i]))
       result[static_cast<double>(i)] = std::move(array[i]);
   }
   return result;
@@ -49,19 +49,23 @@ namespace {
       return x ? "+" : "-";
     }
 
-    std::string operator()(const ValuePtr<STable> &x) const {
+    std::string operator()(const STable &x) const {
       std::string result{"="};
-      for (auto &i : *x) {
+      for (auto &i : x) {
         result += std::visit(*this, i.first);
-        result += i.second.dump();
+        result += serialize(i.second);
       }
       return result;
     }
   };
 }
 
-std::string SValue::dump() const {
-  return std::visit(Serializer{}, *this);
+std::string serialize(const SValue &x) {
+  return std::visit(Serializer{}, x);
+}
+
+std::string serialize(const STable &x) {
+  return Serializer{}(x);
 }
 
 std::unique_ptr<Deserializer::State> Deserializer::State::yield() {
@@ -131,15 +135,29 @@ void Deserializer::Root::shift(const char *data, size_t size) {
   }
 }
 
+namespace {
+  template<typename T, typename ...Ts> struct Contains {};
+  template<typename T> struct Contains<T> : std::false_type {};
+  template<typename T, typename U, typename ...Ts> struct Contains<T, U, Ts...> :
+    std::bool_constant<std::is_same_v<T, U> || Contains<T, Ts...>::value> {};
+  template<typename T, typename U> struct VariantContains {};
+  template<typename T, typename ...Ts> struct VariantContains<T, std::variant<Ts...>> : Contains<T, Ts...> {};
+}
+
 void Deserializer::Table::reduce(SValue x, const char *data, size_t size) {
   if (key.has_value()) {
     result.emplace(std::move(*key), std::move(x));
     key.reset();
-  } else if (x.isNull()) {
+  } else if (std::holds_alternative<std::monostate>(x)) {
     auto s(yield());
     return env.s->reduce(std::move(result), data, size);
   } else {
-    key.emplace(std::move(x));
+    std::visit([this](auto &x) {
+      if constexpr (VariantContains<std::remove_reference_t<decltype(x)>, SKey>::value)
+        key.emplace(std::move(x));
+      else
+        throw std::runtime_error("invalid table key");
+    }, x);
   }
   env.enter<Root>();
   env.s->shift(data, size);

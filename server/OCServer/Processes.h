@@ -6,7 +6,7 @@ struct ProcessSingleBlock : Process {
   int sideCrafter, sideBus;
   ProcessSingleBlock(Factory &factory, std::string client, std::string inv, int sideCrafter, int sideBus)
     :Process(factory), client(std::move(client)), inv(std::move(inv)), sideCrafter(sideCrafter), sideBus(sideBus) {}
-  SharedPromise<std::monostate> processOutput(int slot, int size);
+  SharedPromise<std::monostate> processOutput(size_t slot, int size);
 };
 
 struct ProcessSlotted : ProcessSingleBlock {

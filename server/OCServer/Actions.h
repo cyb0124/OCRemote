@@ -86,13 +86,13 @@ public:
   }
 
   template<typename Fn>
-  SharedPromise<T> finally(Fn fn) {
+  std::shared_ptr<Promise<T>> finally(Fn fn) {
     auto result(std::make_shared<Promise<T>>());
 
     struct Impl : Listener<T> {
-      SharedListener<To> to;
+      SharedListener<T> to;
       Fn fn;
-      Impl(SharedListener<To> to, Fn fn) :to(std::move(to)), fn(std::move(fn)) {}
+      Impl(SharedListener<T> to, Fn fn) :to(std::move(to)), fn(std::move(fn)) {}
 
       void onFail(std::string cause) override {
         fn();
@@ -183,7 +183,7 @@ using SharedPromise = std::shared_ptr<Promise<T>>;
 
 template<typename T, typename F>
 inline SharedPromise<T> makeEmptyPromise(F &dispatcher) {
-  auto result(std::make_shared<Promise<std::monostate>>());
+  auto result(std::make_shared<Promise<T>>());
   dispatcher([result]() { result->onFail("Node died"); });
   return result;
 }

@@ -19,7 +19,7 @@ struct ProviderDrawer : Provider {
   size_t slot;
   ProviderDrawer(StorageDrawer &drawer, size_t slot, int size)
     :Provider(drawer.factory, size, std::numeric_limits<int>::min()), drawer(drawer), slot(slot) {}
-  SharedPromise<std::monostate> extract(int size, int slot) override;
+  SharedPromise<std::monostate> extract(int size, size_t slot) override;
 };
 
 struct StorageChest : Storage {
@@ -40,7 +40,7 @@ struct ProviderChest : Provider {
   size_t slot;
   ProviderChest(StorageChest &chest, size_t slot, int size)
     :Provider(chest.factory, size, -size), chest(chest), slot(slot) {}
-  SharedPromise<std::monostate> extract(int size, int slot) override;
+  SharedPromise<std::monostate> extract(int size, size_t slot) override;
 };
 
 struct AccessME {
@@ -64,5 +64,5 @@ struct ProviderME : Provider {
   SharedItem item;
   ProviderME(StorageME &me, SharedItem item, int size)
     :Provider(me.factory, size, -std::numeric_limits<int>::max()), me(me), item(std::move(item)) {}
-  SharedPromise<std::monostate> extract(int size, int slot) override;
+  SharedPromise<std::monostate> extract(int size, size_t slot) override;
 };

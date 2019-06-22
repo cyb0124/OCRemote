@@ -15,7 +15,7 @@ namespace Actions {
   }
 
   void List::onResult(SValue s) {
-    auto sItems(sTableToArray(std::move(s.getTable())));
+    auto sItems(sTableToArray(std::move(std::get<STable>(s))));
     std::vector<SharedItemStack> items;
     items.reserve(sItems.size());
     for (size_t i{}; i < sItems.size(); ++i) {
@@ -41,7 +41,7 @@ namespace Actions {
   }
 
   void ListME::onResult(SValue s) {
-    auto sItems(sTableToArray(std::move(s.getTable())));
+    auto sItems(sTableToArray(std::move(std::get<STable>(s))));
     std::vector<SharedItemStack> items;
     items.reserve(sItems.size());
     for (size_t i{}; i < sItems.size(); ++i)

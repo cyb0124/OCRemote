@@ -13,6 +13,7 @@ SharedPromise<std::monostate> StorageDrawer::update() {
         factory.getOrAddItemInfo(stack->item).addProvider(
           std::make_unique<ProviderDrawer>(*this, slot, stack->size));
     }
+    return {};
   });
 }
 
@@ -31,13 +32,13 @@ std::pair<int, SharedPromise<std::monostate>> StorageDrawer::sink(const ItemStac
     static_cast<double>(sideBus),
     static_cast<double>(sideDrawer),
     static_cast<double>(stack.size),
-    static_cast<double>(slot)
+    static_cast<double>(slot + 1)
   };
   factory.s.enqueueAction(client, action);
   return {stack.size, action->map([](auto&&) { return std::monostate{}; })};
 }
 
-SharedPromise<std::monostate> ProviderDrawer::extract(int size, int slot) {
+SharedPromise<std::monostate> ProviderDrawer::extract(int size, size_t slot) {
   auto action(std::make_shared<Actions::Call>());
   action->inv = drawer.inv;
   action->fn = "transferItem";
@@ -45,8 +46,8 @@ SharedPromise<std::monostate> ProviderDrawer::extract(int size, int slot) {
     static_cast<double>(drawer.sideDrawer),
     static_cast<double>(drawer.sideBus),
     static_cast<double>(size),
-    static_cast<double>(this->slot),
-    static_cast<double>(slot)
+    static_cast<double>(this->slot + 1),
+    static_cast<double>(slot + 1)
   };
   factory.s.enqueueAction(drawer.client, action);
   return action->map([](auto&&) { return std::monostate{}; });
@@ -66,6 +67,7 @@ SharedPromise<std::monostate> StorageChest::update() {
         factory.getOrAddItemInfo(stack->item).addProvider(
           std::make_unique<ProviderChest>(*this, slot, stack->size));
     }
+    return {};
   });
 }
 
@@ -112,14 +114,14 @@ std::pair<int, SharedPromise<std::monostate>> StorageChest::sink(const ItemStack
     static_cast<double>(sideBus),
     static_cast<double>(sideChest),
     static_cast<double>(toProc),
-    static_cast<double>(slot),
-    static_cast<double>(slotToSink)
+    static_cast<double>(slot + 1),
+    static_cast<double>(slotToSink + 1)
   };
   factory.s.enqueueAction(client, action);
   return {toProc, action->map([](auto&&) { return std::monostate{}; })};
 }
 
-SharedPromise<std::monostate> ProviderChest::extract(int size, int slot) {
+SharedPromise<std::monostate> ProviderChest::extract(int size, size_t slot) {
   auto action(std::make_shared<Actions::Call>());
   action->inv = chest.inv;
   action->fn = "transferItem";
@@ -127,8 +129,8 @@ SharedPromise<std::monostate> ProviderChest::extract(int size, int slot) {
     static_cast<double>(chest.sideChest),
     static_cast<double>(chest.sideBus),
     static_cast<double>(size),
-    static_cast<double>(this->slot),
-    static_cast<double>(slot)
+    static_cast<double>(this->slot + 1),
+    static_cast<double>(slot + 1)
   };
   factory.s.enqueueAction(chest.client, action);
   return action->map([wk(std::weak_ptr(factory.alive)), &chest(chest), size, slot](auto&&) -> std::monostate {
@@ -178,14 +180,14 @@ std::pair<int, SharedPromise<std::monostate>> StorageME::sink(const ItemStack &s
     static_cast<double>(access.sideBus),
     static_cast<double>(access.sideME),
     static_cast<double>(stack.size),
-    static_cast<double>(slot),
+    static_cast<double>(slot + 1),
     9.0
   };
   factory.s.enqueueAction(access.client, action);
   return {stack.size, action->map([](auto&&) { return std::monostate{}; })};
 }
 
-SharedPromise<std::monostate> ProviderME::extract(int size, int slot) {
+SharedPromise<std::monostate> ProviderME::extract(int size, size_t slot) {
   auto &access(me.getBestAccess());
   auto action(std::make_shared<Actions::XferME>());
   item->serialize(action->filter);
@@ -197,7 +199,7 @@ SharedPromise<std::monostate> ProviderME::extract(int size, int slot) {
     static_cast<double>(access.sideBus),
     static_cast<double>(size),
     1.0,
-    static_cast<double>(slot)
+    static_cast<double>(slot + 1)
   };
   factory.s.enqueueAction(access.client, action);
   return action->map([](auto&&) { return std::monostate{}; });
