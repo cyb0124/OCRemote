@@ -193,12 +193,13 @@ while true do
           print(p)
         elseif p.op == "list" then
           local stacks = inv.getAllStacks(p.side)
+          local count = stacks.count()
           result = {}
-          for slot = 1, stacks.count() do
+          for slot = 1, count do
             local item = stacks()
             if item and item.name and item.size > 0 then
               result[slot] = item
-            else
+            elseif slot == count then
               result[slot] = ''
             end
           end
@@ -221,7 +222,7 @@ while true do
             local item = stacks[slot]
             if item and item.name and item.size > 0 then
               result[slot] = item
-            else
+            elseif slot == stacks.n then
               result[slot] = ''
             end
           end

@@ -19,7 +19,7 @@ namespace Actions {
     std::vector<SharedItemStack> items;
     items.reserve(sItems.size());
     for (size_t i{}; i < sItems.size(); ++i) {
-      if (std::holds_alternative<std::string>(sItems[i]))
+      if (!std::holds_alternative<STable>(sItems[i]))
         items.emplace_back();
       else
         items.emplace_back(parseItemStack(std::move(sItems[i])));
