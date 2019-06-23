@@ -1,3 +1,4 @@
+#include <sstream>
 #include "Serialize.h"
 #include "Overload.h"
 
@@ -31,7 +32,9 @@ namespace {
     }
 
     std::string operator()(double x) const {
-      return "#" + std::to_string(x) + "@";
+      std::ostringstream os;
+      os << "#" << x << "@";
+      return os.str();
     }
 
     std::string operator()(const std::string &x) const {
