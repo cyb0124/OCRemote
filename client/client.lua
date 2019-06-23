@@ -255,9 +255,7 @@ while true do
       end
       local data = socket.read()
       if data then
-        if data[1] then
-          onRead(string.char(table.unpack(data)))
-        end
+        onRead(data)
       else
         print{text = "Connection closed (read)", color = 0xFF0000, beep = 880}
         socket.close()
