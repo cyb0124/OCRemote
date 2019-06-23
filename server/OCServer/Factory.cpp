@@ -106,11 +106,24 @@ void Factory::doBusUpdate() {
     Factory &rThis;
     std::weak_ptr<std::monostate> wk;
     TailListener(Factory &rThis) :rThis(rThis), wk(rThis.alive) {}
+
+    void endOfBusUpdate() {
+      rThis.busState = BusState::IDLE;
+      if (rThis.endOfCycleAfterBusUpdate) {
+        rThis.endOfCycleAfterBusUpdate = false;
+        rThis.endOfCycle();
+      }
+    }
+
     void onFail(std::string cause) override {
       if (wk.expired())
         return;
-      rThis.log("Bus update failed: " + cause, 0xff0000u, 880.f);
-      rThis.doBusUpdate();
+      cause = "bus update failed: " + cause;
+      rThis.log(cause, 0xff0000u, 880.f);
+      for (auto &i : rThis.busWaitQueue)
+        rThis.s.io([cont(std::move(i)), cause]() { cont->onFail(std::move(cause)); });
+      rThis.busWaitQueue.clear();
+      endOfBusUpdate();
     }
     void onResult(std::monostate) override {
       if (wk.expired())
@@ -118,11 +131,7 @@ void Factory::doBusUpdate() {
       if (rThis.busState == BusState::RESTART) {
         rThis.doBusUpdate();
       } else {
-        rThis.busState = BusState::IDLE;
-        if (rThis.endOfCycleAfterBusUpdate) {
-          rThis.endOfCycleAfterBusUpdate = false;
-          rThis.endOfCycle();
-        }
+        endOfBusUpdate();
       }
     }
   };
