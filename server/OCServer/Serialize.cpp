@@ -59,6 +59,7 @@ namespace {
         result += std::visit(*this, i.first);
         result += serialize(i.second);
       }
+      result.push_back('!');
       return result;
     }
   };
