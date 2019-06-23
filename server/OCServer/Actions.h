@@ -40,72 +40,113 @@ public:
   }
 
   template<typename Fn>
-  auto map(Fn fn) {
+  auto map(std::weak_ptr<std::monostate> alive, Fn fn) {
     using To = std::invoke_result_t<Fn, T>;
     auto result(std::make_shared<Promise<To>>());
 
     struct Impl : Listener<T> {
       SharedListener<To> to;
+      std::weak_ptr<std::monostate> alive;
       Fn fn;
-      Impl(SharedListener<To> to, Fn fn) :to(std::move(to)), fn(std::move(fn)) {}
+
+      Impl(SharedListener<To> to, std::weak_ptr<std::monostate> alive, Fn fn)
+        :to(std::move(to)), alive(std::move(alive)), fn(std::move(fn)) {}
 
       void onFail(std::string cause) override {
         to->onFail(std::move(cause));
       }
 
       void onResult(T result) override {
-        to->onResult(fn(std::move(result)));
+        if (alive.expired())
+          to->onFail("node died");
+        else
+          to->onResult(fn(std::move(result)));
       }
     };
 
-    listen(std::make_shared<Impl>(result, std::move(fn)));
+    listen(std::make_shared<Impl>(result, std::move(alive), std::move(fn)));
+    return result;
+  }
+
+  template<typename To>
+  auto mapTo(To value) {
+    auto result(std::make_shared<Promise<To>>());
+
+    struct Impl : Listener<T> {
+      SharedListener<To> to;
+      To value;
+
+      Impl(SharedListener<To> to, To value)
+        :to(std::move(to)), value(std::move(value)) {}
+
+      void onFail(std::string cause) override {
+        to->onFail(std::move(cause));
+      }
+
+      void onResult(T) override {
+        to->onResult(std::move(value));
+      }
+    };
+
+    listen(std::make_shared<Impl>(result, std::move(value)));
     return result;
   }
 
   template<typename Fn>
-  auto then(Fn fn) {
+  auto then(std::weak_ptr<std::monostate> alive, Fn fn) {
     using To = typename std::invoke_result_t<Fn, T>::element_type::Result;
     auto result(std::make_shared<Promise<To>>());
 
     struct Impl : Listener<T> {
       SharedListener<To> to;
+      std::weak_ptr<std::monostate> alive;
       Fn fn;
-      Impl(SharedListener<To> to, Fn fn) :to(std::move(to)), fn(std::move(fn)) {}
+
+      Impl(SharedListener<To> to, std::weak_ptr<std::monostate> alive, Fn fn)
+        :to(std::move(to)), alive(std::move(alive)), fn(std::move(fn)) {}
 
       void onFail(std::string cause) override {
         to->onFail(std::move(cause));
       }
 
       void onResult(T result) override {
-        fn(std::move(result))->listen(std::move(to));
+        if (alive.expired())
+          to->onFail("node died");
+        else
+          fn(std::move(result))->listen(std::move(to));
       }
     };
 
-    listen(std::make_shared<Impl>(result, std::move(fn)));
+    listen(std::make_shared<Impl>(result, std::move(alive), std::move(fn)));
     return result;
   }
 
   template<typename Fn>
-  std::shared_ptr<Promise<T>> finally(Fn fn) {
+  std::shared_ptr<Promise<T>> finally(std::weak_ptr<std::monostate> alive, Fn fn) {
     auto result(std::make_shared<Promise<T>>());
 
     struct Impl : Listener<T> {
       SharedListener<T> to;
+      std::weak_ptr<std::monostate> alive;
       Fn fn;
-      Impl(SharedListener<T> to, Fn fn) :to(std::move(to)), fn(std::move(fn)) {}
+
+      Impl(SharedListener<T> to, std::weak_ptr<std::monostate> alive, Fn fn)
+        :to(std::move(to)), alive(std::move(alive)), fn(std::move(fn)) {}
 
       void onFail(std::string cause) override {
-        fn();
+        if (!alive.expired())
+          fn();
         to->onFail(std::move(cause));
       }
 
       void onResult(T result) override {
-        fn();
+        if (!alive.expired())
+          fn();
         to->onResult(std::move(result));
       }
     };
 
-    listen(std::make_shared<Impl>(result, std::move(fn)));
+    listen(std::make_shared<Impl>(result, std::move(alive), std::move(fn)));
     return result;
   }
 
@@ -159,6 +200,7 @@ public:
     struct Impl : Listener<T> {
       std::shared_ptr<Context> context;
       size_t index;
+
       Impl(const std::shared_ptr<Context> &context, size_t index)
         :context(context), index(index) {}
 
@@ -181,10 +223,10 @@ public:
 template<typename T>
 using SharedPromise = std::shared_ptr<Promise<T>>;
 
-template<typename T, typename F>
-inline SharedPromise<T> makeEmptyPromise(F &dispatcher) {
-  auto result(std::make_shared<Promise<T>>());
-  dispatcher([result]() { result->onFail("Node died"); });
+template<typename F>
+inline SharedPromise<std::monostate> scheduleTrivialPromise(F &dispatcher) {
+  auto result(std::make_shared<Promise<std::monostate>>());
+  dispatcher([result]() { result->onResult({}); });
   return result;
 }
 

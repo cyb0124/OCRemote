@@ -7,7 +7,7 @@ SharedPromise<std::monostate> Reservation::extract(size_t slot) const {
   std::vector<SharedPromise<std::monostate>> promises;
   for (auto &i : providers)
     promises.emplace_back(i.first->extract(i.second, slot));
-  return Promise<std::monostate>::all(promises)->map([](auto&&) { return std::monostate{}; });
+  return Promise<std::monostate>::all(promises)->mapTo(std::monostate{});
 }
 
 void ItemInfo::addProvider(SharedProvider provider) {
@@ -63,15 +63,14 @@ SharedPromise<std::monostate> Factory::updateAndBackupItems() {
   std::vector<SharedPromise<std::monostate>> promises;
   for (auto &i : storages)
     promises.emplace_back(i->update());
-  return Promise<std::monostate>::all(promises)->map([this, wk(std::weak_ptr(alive))](auto&&) -> std::monostate {
-    if (wk.expired()) return {};
+  return Promise<std::monostate>::all(promises)->map(alive, [this](auto&&) {
     for (auto &i : backups) {
       auto item(getItem(*i.first));
       if (!item)
         continue;
       items.at(item).backup(i.second);
     }
-    return {};
+    return std::monostate{};
   });
 }
 
@@ -128,9 +127,7 @@ void Factory::doBusUpdate() {
     }
   };
 
-  action->then([&io(s.io), this, wk(std::weak_ptr(alive))](std::vector<SharedItemStack> &&items) {
-    if (wk.expired())
-      return makeEmptyPromise<std::monostate>(io);
+  action->then(alive, [this](std::vector<SharedItemStack> &&items) {
     std::vector<SharedPromise<std::monostate>> promises;
     std::vector<size_t> freeSlots;
     for (size_t i{}; i < items.size(); ++i) {
@@ -153,8 +150,8 @@ void Factory::doBusUpdate() {
       busWaitQueue.pop_front();
     }
     if (promises.empty())
-      return makeEmptyPromise<std::monostate>(io);
-    return Promise<std::monostate>::all(promises)->map([](auto&&) { return std::monostate{}; });
+      return scheduleTrivialPromise(s.io);
+    return Promise<std::monostate>::all(promises)->mapTo(std::monostate{});
   })->listen(std::make_shared<TailListener>(*this));
 }
 
@@ -297,13 +294,12 @@ void Factory::start() {
     }
   };
 
-  updateAndBackupItems()->then([wk(std::weak_ptr(alive)), &io(s.io), this](std::monostate) {
+  updateAndBackupItems()->then(alive, [this](std::monostate) {
     std::vector<SharedPromise<std::monostate>> promises;
-    if (!wk.expired())
-      for (auto &i : processes)
-        promises.emplace_back(i->cycle());
+    for (auto &i : processes)
+      promises.emplace_back(i->cycle());
     if (promises.empty())
-      return makeEmptyPromise<std::monostate>(io);
-    return Promise<std::monostate>::all(promises)->map([](auto&&) { return std::monostate{}; });
+      return scheduleTrivialPromise(s.io);
+    return Promise<std::monostate>::all(promises)->mapTo(std::monostate{});
   })->listen(std::make_shared<TailListener>(*this));
 }
