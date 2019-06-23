@@ -6,10 +6,17 @@
 #include <string>
 #include <map>
 
-using SKey = std::variant<double, std::string, bool>;
+using SKeyBase = std::variant<double, std::string, bool>;
+struct SKey : SKeyBase {
+  using SKeyBase::variant;
+  SKey(const char *x) :SKeyBase(std::in_place_type<std::string>, x) {}
+};
 using STable = std::map<SKey, struct SValue>;
 using SValueBase = std::variant<std::monostate, double, std::string, bool, STable>;
-struct SValue : SValueBase { using SValueBase::variant; };
+struct SValue : SValueBase {
+  using SValueBase::variant;
+  SValue(const char *x) :SValueBase(std::in_place_type<std::string>, x) {}
+};
 STable arrayToSTable(std::vector<SValue>&&);
 std::vector<SValue> sTableToArray(STable&&);
 std::string serialize(const SValue&);

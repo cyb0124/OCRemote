@@ -156,7 +156,7 @@ void Deserializer::Table::reduce(SValue x, const char *data, size_t size) {
     return env.s->reduce(std::move(result), data, size);
   } else {
     std::visit([this](auto &x) {
-      if constexpr (VariantContains<std::remove_reference_t<decltype(x)>, SKey>::value)
+      if constexpr (VariantContains<std::remove_reference_t<decltype(x)>, SKeyBase>::value)
         key.emplace(std::move(x));
       else
         throw std::runtime_error("invalid table key");
