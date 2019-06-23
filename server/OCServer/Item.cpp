@@ -35,7 +35,7 @@ size_t hash_value(const Item &x) {
 
 namespace {
   template<typename T> struct TransferHelper { void operator()(SValue &from, T &to) const { to = std::move(std::get<T>(from)); } };
-  template<> struct TransferHelper<int> { void operator()(SValue &from, int to) const { to = static_cast<int>(std::get<double>(from)); } };
+  template<> struct TransferHelper<int> { void operator()(SValue &from, int &to) const { to = static_cast<int>(std::get<double>(from)); } };
   template<typename T> void transferHelper(SValue &from, T &to) { TransferHelper<T>()(from, to); }
 }
 
