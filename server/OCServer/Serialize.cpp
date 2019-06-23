@@ -1,4 +1,5 @@
 #include <sstream>
+#include <iomanip>
 #include "Serialize.h"
 #include "Overload.h"
 
@@ -33,7 +34,7 @@ namespace {
 
     std::string operator()(double x) const {
       std::ostringstream os;
-      os << "#" << x << "@";
+      os << "#" << std::setprecision(std::numeric_limits<double>::max_digits10) << x << "@";
       return os.str();
     }
 

@@ -10,7 +10,7 @@ local encode
       return '!'
     end,
     number = function(x)
-      return '#' .. x .. '@'
+      return string.format("#%.17g@", x)
     end,
     string = function(x)
       return '@' .. string.gsub(x, '@', '@.') .. '@~'
