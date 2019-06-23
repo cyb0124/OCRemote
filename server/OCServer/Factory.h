@@ -96,7 +96,7 @@ private:
   std::vector<UniqueProcess> processes;
 
   size_t currentCycleNum{};
-  std::chrono::steady_clock::time_point cycleStartTime;
+  std::chrono::steady_clock::time_point cycleStartTime{std::chrono::steady_clock::now()};
   std::shared_ptr<boost::asio::steady_timer> cycleDelayTimer;
   void endOfCycle();
 

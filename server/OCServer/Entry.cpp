@@ -3,6 +3,7 @@
 #include <csignal>
 #include "Server.h"
 #include "Factory.h"
+#include "Storages.h"
 #include "Processes.h"
 
 static void ignoreBrokenPipe() {
@@ -19,7 +20,8 @@ int main() {
     ignoreBrokenPipe();
     IOEnv io;
     Server server(io, 1847);
-    Factory factory(server, 1000, "testFactory", "aaa", Actions::up);
+    Factory factory(server, 1000, "center", "33d", Actions::up);
+    factory.addStorage(std::make_unique<StorageChest>(factory, "center", "33d", Actions::down, Actions::up));
     factory.start();
     io.io.run();
     return EXIT_SUCCESS;
