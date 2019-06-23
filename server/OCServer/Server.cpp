@@ -177,7 +177,7 @@ void Client::send() {
 }
 
 void Client::enqueueActionGroup(std::vector<SharedAction> actions) {
-  sendQueue.emplace_front(std::move(actions));
+  sendQueue.emplace_back(std::move(actions));
   sendQueueTotal += actions.size();
   send();
 }

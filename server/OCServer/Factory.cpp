@@ -75,7 +75,7 @@ SharedPromise<std::monostate> Factory::updateAndBackupItems() {
 }
 
 void Factory::insertItem(std::vector<SharedPromise<std::monostate>> &promises, size_t slot, ItemStack stack) {
-  while (stack.size >= 0) {
+  while (stack.size > 0) {
     Storage *bestStorage{};
     int bestPriority;
     for (auto &i : storages) {

@@ -82,7 +82,7 @@ std::optional<int> StorageChest::sinkPriority(const Item &item) {
         }
       }
     } else {
-      emptySlot = slot;
+      emptySlot.emplace(slot);
     }
   }
   if (maxSize.has_value()) {
