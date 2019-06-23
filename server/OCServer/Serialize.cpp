@@ -7,7 +7,7 @@ STable arrayToSTable(std::vector<SValue> &&array) {
   STable result;
   for (size_t i{}; i < array.size(); ++i) {
     if (!std::holds_alternative<std::monostate>(array[i]))
-      result[static_cast<double>(i)] = std::move(array[i]);
+      result[static_cast<double>(i + 1)] = std::move(array[i]);
   }
   return result;
 }
@@ -15,7 +15,7 @@ STable arrayToSTable(std::vector<SValue> &&array) {
 std::vector<SValue> sTableToArray(STable&& table) {
   std::vector<SValue> result;
   for (auto &entry : table) {
-    auto key(std::get<double>(entry.first));
+    auto key(std::get<double>(entry.first) - 1);
     auto iKey(static_cast<size_t>(key));
     if (iKey != key)
       throw std::runtime_error("non-integer key");
