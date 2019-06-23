@@ -76,6 +76,9 @@ void Client::read() {
       s.removeClient(*this);
     } else {
       read();
+      std::cout << logHeader << " >=> ";
+      std::cout.write(buffer->data(), nRead);
+      std::cout << std::endl;
       try {
         d(buffer->data(), nRead);
       } catch (std::exception &e) {
@@ -155,6 +158,7 @@ void Client::send() {
     responseQueue.emplace_back(std::move(action));
   sendQueueTotal -= head.size();
   sendQueue.pop_front();
+  std::cout << logHeader << " <=< " << *dumped << std::endl;
   boost::asio::async_write(socket, boost::asio::buffer(*dumped),
     makeWeakCallback(weak_from_this(), [this, dumped](const boost::system::error_code &ec, size_t) {
       if (ec) {
