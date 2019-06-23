@@ -71,3 +71,12 @@ using SharedItemFilter = std::shared_ptr<ItemFilters::Base>;
 DEF_FILTER_SHORTCUT(Name)
 DEF_FILTER_SHORTCUT(Label)
 DEF_FILTER_SHORTCUT(LabelName)
+
+template<typename F> SharedItemFilter inline filterFn(F fn) {
+  struct Impl : ItemFilters::Base {
+    F fn;
+    Impl(F fn) :fn(std::move(fn)) {}
+    virtual bool filter(const Item x&) const { return fn(x); }
+  };
+  return std::make_shared<Impl>(std::move(fn));
+}
