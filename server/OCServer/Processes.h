@@ -35,6 +35,24 @@ struct ProcessWorkingSet : ProcessSingleBlock {
   SharedPromise<std::monostate> cycle() override;
 };
 
+struct ProcessScatteringWorkingSet : ProcessSingleBlock {
+  using Recipe = ::Recipe<>;
+  std::string name;
+  int eachSlotMaxInProc;
+  std::vector<size_t> inSlots;
+  std::function<bool(size_t slot, const ItemStack&)> outFilter;
+  std::vector<Recipe> recipes;
+  ProcessScatteringWorkingSet(Factory &factory, std::string name, std::string client,
+    std::string inv, int sideCrafter, int sideBus, int eachSlotMaxInProc,
+    decltype(inSlots) inSlots, decltype(outFilter) outFilter, decltype(recipes) recipes)
+    :ProcessSingleBlock(factory, std::move(client), std::move(inv), sideCrafter, sideBus),
+    name(std::move(name)), eachSlotMaxInProc(eachSlotMaxInProc), inSlots(std::move(inSlots)),
+    outFilter(std::move(outFilter)), recipes(std::move(recipes)) {}
+  SharedPromise<std::monostate> cycle() override;
+};
+
+inline std::vector<size_t> plantSowerInSlots() { return {6, 7, 8, 9, 10, 11, 12, 13, 14}; }
+
 struct StockEntry {
   SharedItemFilter item;
   int toStock;
