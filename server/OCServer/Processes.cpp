@@ -316,7 +316,7 @@ SharedPromise<std::monostate> ProcessScatteringWorkingSet::cycle() {
           if (stack) {
             max = std::max(max, items[slot]->size);
             if (*stack->item == *demand.in.front())
-              if(!min || stack->size < min->first)
+              if (!min || stack->size < min->first)
                 min.emplace(stack->size, slot);
             continue;
           }
