@@ -131,7 +131,7 @@ SharedPromise<std::monostate> ProviderChest::extract(int size, size_t slot) {
     static_cast<double>(slot + 1)
   };
   factory.s.enqueueAction(chest.client, action);
-  return action->map(factory.alive, [&chest(chest), size, slot](auto&&) {
+  return action->map(factory.alive, [&chest(chest), size, slot(this->slot)](auto&&) {
     auto &stack(chest.content[slot]);
     stack->size -= size;
     if (stack->size <= 0)
