@@ -12,6 +12,8 @@ void Item::serialize(SValue &s) const {
 }
 
 bool operator==(const Item &x, const Item &y) {
+  if (&x == &y)
+    return true;
   return x.name == y.name
       && x.label == y.label
       && x.damage == y.damage
