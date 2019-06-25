@@ -48,11 +48,9 @@ SharedPromise<std::monostate> ProcessSlotted::cycle() {
       auto &recipe(*demand.recipe);
       int sets{demand.inAvail};
       std::unordered_set<size_t> usedSlots;
-      std::vector<int> eachSize;
-      eachSize.reserve(recipe.in.size());
       for (size_t i{}; i < recipe.in.size(); ++i) {
         auto &in(recipe.in[i]);
-        eachSize.emplace_back(in.size / static_cast<int>(in.data.size()));
+        auto eachSize(in.size / static_cast<int>(in.data.size()));
         for (size_t slot : in.data) {
           auto &info(slotInfos.at(slot));
           if (info && *info->item != *demand.in[i]) {
@@ -60,7 +58,7 @@ SharedPromise<std::monostate> ProcessSlotted::cycle() {
           } else {
             usedSlots.emplace(slot);
             int inProc{info ? info->size : 0};
-            sets = std::min(sets, (recipe.data - inProc) / eachSize.back());
+            sets = std::min(sets, (recipe.data - inProc) / eachSize);
             if (sets <= 0)
               goto skip;
           }
@@ -81,20 +79,20 @@ SharedPromise<std::monostate> ProcessSlotted::cycle() {
             return reservation.extract(busSlot)->mapTo(busSlot);
           }));
         }
-        promises.emplace_back(Promise<size_t>::all(extractions)->then(factory.alive, [
-          this, sets, eachSize(std::move(eachSize)), &recipe
-        ](std::vector<size_t> &&busSlots) {
+        promises.emplace_back(Promise<size_t>::all(extractions)->then(factory.alive, [this, sets, &recipe](std::vector<size_t> &&busSlots) {
           std::vector<SharedPromise<std::monostate>> promises;
           std::vector<SharedAction> actions;
           for (size_t i{}; i < recipe.in.size(); ++i) {
-            for (size_t toSlot : recipe.in[i].data) {
+            auto &in(recipe.in[i]);
+            auto eachSize(in.size / static_cast<int>(in.data.size()));
+            for (size_t toSlot : in.data) {
               auto action(std::make_shared<Actions::Call>());
               action->inv = inv;
               action->fn = "transferItem";
               action->args = {
                 static_cast<double>(sideBus),
                 static_cast<double>(sideCrafter),
-                static_cast<double>(sets * eachSize[i]),
+                static_cast<double>(sets * eachSize),
                 static_cast<double>(busSlots[i] + 1),
                 static_cast<double>(toSlot + 1)
               };
@@ -115,6 +113,95 @@ SharedPromise<std::monostate> ProcessSlotted::cycle() {
       return scheduleTrivialPromise(factory.s.io);
     return Promise<std::monostate>::all(promises)->mapTo(std::monostate{});
   });
+}
+
+SharedPromise<std::monostate> ProcessCraftingRobot::cycle() {
+  std::vector<SharedPromise<std::monostate>> promises;
+  auto demands(factory.getDemand(recipes));
+  for (auto &demand : demands) {
+    auto &recipe(*demand.recipe);
+    demand.in.clear();
+    factory.resolveRecipeInputs(recipe, demand, true);
+    demand.inAvail = std::min(demand.inAvail, recipe.data);
+    if (demand.inAvail <= 0)
+      continue;
+    auto slotsToFree(std::make_shared<std::vector<size_t>>());
+    std::vector<SharedPromise<size_t>> allocatedSlots;
+    for (size_t i{}; i < recipe.in.size(); ++i) {
+      allocatedSlots.emplace_back(factory.busAllocate()->then(factory.alive, [
+        this, slotsToFree, reservation(factory.reserve(name, demand.in[i], demand.inAvail * recipe.in[i].size))
+      ](size_t busSlot) {
+        slotsToFree->emplace_back(busSlot);
+        return reservation.extract(busSlot)->mapTo(busSlot);
+      }));
+    }
+    allocatedSlots.emplace_back(factory.busAllocate()->map(factory.alive, [this, slotsToFree](size_t busSlot) {
+      slotsToFree->emplace_back(busSlot);
+      return busSlot;
+    }));
+    promises.emplace_back(Promise<size_t>::all(allocatedSlots)->then(factory.alive, [this, sets(demand.inAvail), &recipe](std::vector<size_t> &&busSlots) {
+      std::vector<SharedPromise<std::monostate>> promises;
+      std::vector<SharedAction> actions;
+      for (size_t i{}; i < recipe.in.size(); ++i) {
+        auto &in(recipe.in[i]);
+        auto eachSize(in.size / static_cast<int>(in.data.size()));
+        for (size_t toSlot : in.data) {
+          /* select in */ {
+            auto action(std::make_shared<Actions::Call>());
+            action->inv = "robot";
+            action->fn = "select";
+            if (toSlot >= 7)
+              toSlot += 2;
+            else if (toSlot >= 4)
+              toSlot += 1;
+            action->args = { static_cast<double>(toSlot) };
+            promises.emplace_back(action);
+            actions.emplace_back(std::move(action));
+          }
+          /* transfer in */ {
+            auto action(std::make_shared<Actions::Call>());
+            action->inv = "inventory_controller";
+            action->fn = "suckFromSlot";
+            action->args = {
+              static_cast<double>(sideBus),
+              static_cast<double>(busSlots[i] + 1),
+              static_cast<double>(eachSize * sets)
+            };
+            promises.emplace_back(action);
+            actions.emplace_back(std::move(action));
+          }
+        }
+      }
+      /* select out */ {
+        auto action(std::make_shared<Actions::Call>());
+        action->inv = "robot";
+        action->fn = "select";
+        action->args = { 13.0 };
+        promises.emplace_back(action);
+        actions.emplace_back(std::move(action));
+      }
+      /* craft */ {
+        auto action(std::make_shared<Actions::Call>());
+        action->inv = "crafting";
+        action->fn = "craft";
+        promises.emplace_back(action);
+        actions.emplace_back(std::move(action));
+      }
+      /* transfer out */ {
+        auto action(std::make_shared<Actions::Call>());
+        action->inv = "inventory_controller";
+        action->fn = "dropIntoSlot";
+        action->args = { static_cast<double>(sideBus), static_cast<double>(busSlots.back() + 1) };
+      }
+      factory.s.enqueueActionGroup(client, std::move(actions));
+      return Promise<std::monostate>::all(promises)->mapTo(std::monostate{});
+    })->finally(factory.alive, [this, slotsToFree(std::move(slotsToFree))]() {
+      factory.busFree(*slotsToFree);
+    }));
+  }
+  if (promises.empty())
+    return scheduleTrivialPromise(factory.s.io);
+  return Promise<std::monostate>::all(promises)->mapTo(std::monostate{});
 }
 
 SharedPromise<std::monostate> ProcessWorkingSet::cycle() {

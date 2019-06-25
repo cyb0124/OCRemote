@@ -10,7 +10,7 @@ struct ProcessSingleBlock : Process {
 };
 
 struct ProcessSlotted : ProcessSingleBlock {
-  using Recipe = ::Recipe<int, std::vector<size_t>>; // maxInProc, slots
+  using Recipe = ::Recipe<int, std::vector<size_t>>; // eachSlotMaxInProc, slots
   std::string name;
   std::vector<size_t> inSlots;
   std::function<bool(size_t slot, const ItemStack&)> outFilter;
@@ -23,7 +23,23 @@ struct ProcessSlotted : ProcessSingleBlock {
   SharedPromise<std::monostate> cycle() override;
 };
 
+struct ProcessCraftingRobot : Process {
+  // Note: can't craft more than one stack at a time.
+  // Slots: 1, 2, 3
+  //        4, 5, 6
+  //        7, 8, 9
+  using Recipe = ::Recipe<int, std::vector<size_t>>; // maxSets, slots
+  std::string name, client;
+  int sideBus;
+  std::vector<Recipe> recipes;
+  ProcessCraftingRobot(Factory &factory, std::string name, std::string client,
+    int sideBus, std::vector<Recipe> recipes) :Process(factory), name(std::move(name)),
+    client(std::move(client)), sideBus(sideBus), recipes(std::move(recipes)) {}
+  SharedPromise<std::monostate> cycle() override;
+};
+
 struct ProcessWorkingSet : ProcessSingleBlock {
+  // Note: single input only.
   using Recipe = ::Recipe<std::pair<std::string, int>>; // name, maxInproc
   std::function<bool(size_t slot, const ItemStack&)> outFilter;
   std::vector<Recipe> recipes;
@@ -36,6 +52,7 @@ struct ProcessWorkingSet : ProcessSingleBlock {
 };
 
 struct ProcessScatteringWorkingSet : ProcessSingleBlock {
+  // Note: single input only.
   using Recipe = ::Recipe<>;
   std::string name;
   int eachSlotMaxInProc;
