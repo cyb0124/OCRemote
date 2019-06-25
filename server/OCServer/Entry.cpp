@@ -23,7 +23,9 @@ int main() {
     Factory factory(server, 1000, "center", "e69", Actions::up);
     factory.addStorage(std::make_unique<StorageChest>(factory, "center", "e69", Actions::east, Actions::up));
     factory.addStorage(std::make_unique<StorageDrawer>(factory, "center", "e69", Actions::down, Actions::up, std::vector<SharedItemFilter>{
-      filterLabel("Cobblestone"), filterLabel("Flint"), filterLabel("Lapis Lazuli"),
+      filterLabel("Cobblestone"), filterLabel("Flint"), filterLabel("Lapis Lazuli"), filterLabel("Sky Stone Dust"),
+      filterLabel("item.projectred.core.itemResource.electrotine_dust.name"),
+      filterLabel("Crushed Quartz"), filterLabel("Certus Quartz Dust"), filterLabel("Bone Meal"), filterLabel("Coal"),
       filterLabel("Birch Sapling"), filterLabel("Birch Wood"),
       filterLabel("Oak Sapling"), filterLabel("Oak Wood"), filterLabel("Apple"),
       filterLabel("Iron Ore Piece"), filterLabel("Gold Ore Piece"), filterLabel("Aluminum Ore Piece"), filterLabel("Nickel Ore Piece"),
@@ -45,6 +47,11 @@ int main() {
       }));
     factory.addProcess(std::make_unique<ProcessInputless>(factory, "center", "fc3", Actions::north, Actions::south,
       0, ProcessInputless::makeNeeded(factory, filterLabel("Cobblestone"), 1024)));
+    factory.addProcess(std::make_unique<ProcessHeterogeneousWorkingSet>(factory, "reactorOut", "reactor", "010", Actions::west, Actions::up,
+      std::vector<StockEntry>{}, 0, [](auto&&...) { return true; }, std::vector<Recipe<>>{}));
+    factory.addProcess(std::make_unique<ProcessHeterogeneousWorkingSet>(factory, "reactorIn", "reactor", "010", Actions::north, Actions::up,
+      std::vector<StockEntry>{{filterLabel("Yellorium Ingot"), 8}}, 0, [](auto&&...) { return true; }, std::vector<Recipe<>>{}));
+    factory.addProcess(std::make_unique<ProcessReactorHysteresis>(factory, "reactor", "reactor"));
     factory.start();
     io.io.run();
     return EXIT_SUCCESS;

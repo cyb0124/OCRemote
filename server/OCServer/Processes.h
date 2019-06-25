@@ -76,7 +76,7 @@ struct StockEntry {
   SharedItemFilter item;
   int toStock;
   bool allowBackup;
-  StockEntry(SharedItemFilter item, int toStock, bool allowBackup)
+  StockEntry(SharedItemFilter item, int toStock, bool allowBackup = false)
     :item(std::move(item)), toStock(toStock), allowBackup(allowBackup) {}
 };
 
@@ -112,5 +112,14 @@ struct ProcessHeterogeneousInputless : ProcessSingleBlock {
   ProcessHeterogeneousInputless(Factory &factory, std::string client, std::string inv,
     int sideCrafter, int sideBus, int needed) :ProcessSingleBlock(factory, std::move(client),
     std::move(inv), sideCrafter, sideBus), needed(needed) {}
+  SharedPromise<std::monostate> cycle() override;
+};
+
+struct ProcessReactorHysteresis : Process {
+  std::string name, client, inv;
+  int lowerBound, upperBound;
+  ProcessReactorHysteresis(Factory &factory, std::string name, std::string client, std::string inv = "br_reactor",
+    int lowerBound = 3000000, int upperBound = 7000000) : Process(factory), name(std::move(name)), client(std::move(client)),
+    inv(std::move(inv)), lowerBound(lowerBound), upperBound(upperBound) {}
   SharedPromise<std::monostate> cycle() override;
 };

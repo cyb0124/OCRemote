@@ -547,3 +547,50 @@ SharedPromise<std::monostate> ProcessHeterogeneousInputless::cycle() {
     return Promise<std::monostate>::all(promises)->mapTo(std::monostate{});
   });
 }
+
+SharedPromise<std::monostate> ProcessReactorHysteresis::cycle() {
+  std::vector<SharedPromise<SValue>> promises;
+  std::vector<SharedAction> actions;
+  {
+    auto action(std::make_shared<Actions::Call>());
+    action->inv = inv;
+    action->fn = "getActive";
+    promises.emplace_back(action);
+    actions.emplace_back(std::move(action));
+  }
+  {
+    auto action(std::make_shared<Actions::Call>());
+    action->inv = inv;
+    action->fn = "getEnergyStored";
+    promises.emplace_back(action);
+    actions.emplace_back(std::move(action));
+  }
+  factory.s.enqueueActionGroup(client, actions);
+  return Promise<SValue>::all(promises)->then(factory.alive, [this](std::vector<SValue> &&args) {
+    bool wasOn;
+    int level;
+    try {
+      wasOn = std::get<bool>(std::get<STable>(args.front()).at(1.0));
+      level = static_cast<int>(std::get<double>(std::get<STable>(args.back()).at(1.0)));
+    } catch (std::exception &e) {
+      return scheduleFailingPromise<std::monostate>(factory.s.io, name + ": " + e.what());
+    }
+    std::optional<bool> on;
+    if (wasOn) {
+      if (level > upperBound)
+        on.emplace(false);
+    } else {
+      if (level < lowerBound)
+        on.emplace(true);
+    }
+    if (!on.has_value())
+      return scheduleTrivialPromise(factory.s.io);
+    factory.log(name + ": " + (*on ? "on" : "off"), 0xb8ff4fu);
+    auto action(std::make_shared<Actions::Call>());
+    action->inv = inv;
+    action->fn = "setActive";
+    action->args = { *on };
+    factory.s.enqueueAction(client, action);
+    return action->mapTo(std::monostate{});
+  });
+}
