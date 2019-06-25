@@ -155,7 +155,7 @@ SharedPromise<std::monostate> ProcessCraftingRobot::cycle() {
             else if (toSlot >= 4)
               toSlot += 1;
             action->args = { static_cast<double>(toSlot) };
-            promises.emplace_back(action);
+            promises.emplace_back(action->mapTo(std::monostate{}));
             actions.emplace_back(std::move(action));
           }
           /* transfer in */ {
@@ -167,7 +167,7 @@ SharedPromise<std::monostate> ProcessCraftingRobot::cycle() {
               static_cast<double>(busSlots[i] + 1),
               static_cast<double>(eachSize * sets)
             };
-            promises.emplace_back(action);
+            promises.emplace_back(action->mapTo(std::monostate{}));
             actions.emplace_back(std::move(action));
           }
         }
@@ -177,14 +177,14 @@ SharedPromise<std::monostate> ProcessCraftingRobot::cycle() {
         action->inv = "robot";
         action->fn = "select";
         action->args = { 13.0 };
-        promises.emplace_back(action);
+        promises.emplace_back(action->mapTo(std::monostate{}));
         actions.emplace_back(std::move(action));
       }
       /* craft */ {
         auto action(std::make_shared<Actions::Call>());
         action->inv = "crafting";
         action->fn = "craft";
-        promises.emplace_back(action);
+        promises.emplace_back(action->mapTo(std::monostate{}));
         actions.emplace_back(std::move(action));
       }
       /* transfer out */ {
@@ -192,6 +192,8 @@ SharedPromise<std::monostate> ProcessCraftingRobot::cycle() {
         action->inv = "inventory_controller";
         action->fn = "dropIntoSlot";
         action->args = { static_cast<double>(sideBus), static_cast<double>(busSlots.back() + 1) };
+        promises.emplace_back(action->mapTo(std::monostate{}));
+        actions.emplace_back(std::move(action));
       }
       factory.s.enqueueActionGroup(client, std::move(actions));
       return Promise<std::monostate>::all(promises)->mapTo(std::monostate{});
