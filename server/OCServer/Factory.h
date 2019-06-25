@@ -62,7 +62,7 @@ struct RecipeIn {
   RecipeIn(SharedItemFilter item, int size, bool allowBackup, Arg &&...xs)
       :item(std::move(item)), size(size), allowBackup(allowBackup), data(std::forward<Arg>(xs)...) {}
   RecipeIn(SharedItemFilter item, int size) :item(std::move(item)), size(size) {}
-  explicit RecipeIn(SharedItemFilter item) :item(std::move(item)) {}
+  RecipeIn(SharedItemFilter item) :item(std::move(item)) {}
 };
 
 struct RecipeOut {

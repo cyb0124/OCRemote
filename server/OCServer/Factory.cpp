@@ -35,6 +35,7 @@ Reservation ItemInfo::reserve(int size) {
     int toProc(std::min(size, best->avail));
     result.providers.emplace_back(best, toProc);
     best->avail -= toProc;
+    nAvail -= toProc;
     size -= toProc;
     if (best->avail <= 0)
       providers.pop();

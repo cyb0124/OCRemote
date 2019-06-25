@@ -9,15 +9,17 @@ struct ProcessSingleBlock : Process {
   SharedPromise<std::monostate> processOutput(size_t slot, int size);
 };
 
+using OutFilter = std::function<bool(size_t slot, const ItemStack&)>;
+
 struct ProcessSlotted : ProcessSingleBlock {
   using Recipe = ::Recipe<int, std::vector<size_t>>; // eachSlotMaxInProc, slots
   std::string name;
   std::vector<size_t> inSlots;
-  std::function<bool(size_t slot, const ItemStack&)> outFilter;
+  OutFilter outFilter;
   std::vector<Recipe> recipes;
   ProcessSlotted(Factory &factory, std::string name, std::string client,
     std::string inv, int sideCrafter, int sideBus, decltype(inSlots) inSlots,
-    decltype(outFilter) outFilter, decltype(recipes) recipes)
+    OutFilter outFilter, decltype(recipes) recipes)
     :ProcessSingleBlock(factory, std::move(client), std::move(inv), sideCrafter, sideBus),
     name(std::move(name)), inSlots(std::move(inSlots)), outFilter(std::move(outFilter)), recipes(std::move(recipes)) {}
   SharedPromise<std::monostate> cycle() override;
@@ -41,11 +43,11 @@ struct ProcessCraftingRobot : Process {
 struct ProcessWorkingSet : ProcessSingleBlock {
   // Note: single input only.
   using Recipe = ::Recipe<std::pair<std::string, int>>; // name, maxInproc
-  std::function<bool(size_t slot, const ItemStack&)> outFilter;
+  OutFilter outFilter;
   std::vector<Recipe> recipes;
   ProcessWorkingSet(Factory &factory, std::string client,
     std::string inv, int sideCrafter, int sideBus,
-    decltype(outFilter) outFilter, decltype(recipes) recipes)
+    OutFilter outFilter, decltype(recipes) recipes)
     :ProcessSingleBlock(factory, std::move(client), std::move(inv), sideCrafter, sideBus),
     outFilter(std::move(outFilter)), recipes(std::move(recipes)) {}
   SharedPromise<std::monostate> cycle() override;
@@ -57,11 +59,11 @@ struct ProcessScatteringWorkingSet : ProcessSingleBlock {
   std::string name;
   int eachSlotMaxInProc;
   std::vector<size_t> inSlots;
-  std::function<bool(size_t slot, const ItemStack&)> outFilter;
+  OutFilter outFilter;
   std::vector<Recipe> recipes;
   ProcessScatteringWorkingSet(Factory &factory, std::string name, std::string client,
     std::string inv, int sideCrafter, int sideBus, int eachSlotMaxInProc,
-    decltype(inSlots) inSlots, decltype(outFilter) outFilter, decltype(recipes) recipes)
+    decltype(inSlots) inSlots, OutFilter outFilter, decltype(recipes) recipes)
     :ProcessSingleBlock(factory, std::move(client), std::move(inv), sideCrafter, sideBus),
     name(std::move(name)), eachSlotMaxInProc(eachSlotMaxInProc), inSlots(std::move(inSlots)),
     outFilter(std::move(outFilter)), recipes(std::move(recipes)) {}
@@ -83,11 +85,11 @@ struct ProcessHeterogeneousWorkingSet : ProcessSingleBlock {
   std::string name;
   std::vector<StockEntry> stockList;
   int recipeMaxInProc;
-  std::function<bool(size_t slot, const ItemStack&)> outFilter;
+  OutFilter outFilter;
   std::vector<Recipe> recipes;
   ProcessHeterogeneousWorkingSet(Factory &factory, std::string name, std::string client,
     std::string inv, int sideCrafter, int sideBus, decltype(stockList) stockList,
-    int recipeMaxInProc, decltype(outFilter) outFilter, decltype(recipes) recipes)
+    int recipeMaxInProc, OutFilter outFilter, decltype(recipes) recipes)
     :ProcessSingleBlock(factory, std::move(client), std::move(inv), sideCrafter, sideBus),
     name(std::move(name)), stockList(std::move(stockList)), recipeMaxInProc(recipeMaxInProc),
     outFilter(std::move(outFilter)), recipes(std::move(recipes)) {}
