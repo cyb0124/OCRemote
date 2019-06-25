@@ -30,7 +30,7 @@ int ItemInfo::getAvail(bool allowBackup) const {
 
 Reservation ItemInfo::reserve(int size) {
   Reservation result;
-  while (size >= 0) {
+  while (size > 0) {
     auto &best(providers.top());
     int toProc(std::min(size, best->avail));
     result.providers.emplace_back(best, toProc);
