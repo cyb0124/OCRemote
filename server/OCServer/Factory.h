@@ -125,7 +125,7 @@ public:
     for (auto &in : recipe.in) {
       auto &inItem{demand.in.emplace_back(getItem(*in.item))};
       int itemAvail(getAvail(inItem, in.allowBackup));
-      if (clipToMaxStackSize)
+      if (itemAvail > 0 && clipToMaxStackSize)
         itemAvail = std::min(itemAvail, inItem->maxSize);
       demand.inAvail = std::min(demand.inAvail, itemAvail / in.size);
       if (demand.inAvail <= 0)
