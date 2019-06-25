@@ -56,7 +56,7 @@ namespace {
     std::string operator()(const STable &x) const {
       std::string result{"="};
       for (auto &i : x) {
-        result += std::visit(*this, i.first);
+        result += std::visit(*this, static_cast<const SKeyBase&>(i.first));
         result += serialize(i.second);
       }
       result.push_back('!');
@@ -66,7 +66,7 @@ namespace {
 }
 
 std::string serialize(const SValue &x) {
-  return std::visit(Serializer{}, x);
+  return std::visit(Serializer{}, static_cast<const SValueBase&>(x));
 }
 
 std::string serialize(const STable &x) {
@@ -162,7 +162,7 @@ void Deserializer::Table::reduce(SValue x, const char *data, size_t size) {
         key.emplace(std::move(x));
       else
         throw std::runtime_error("invalid table key");
-    }, x);
+    }, static_cast<SValueBase&>(x));
   }
   env.enter<Root>();
   env.s->shift(data, size);
