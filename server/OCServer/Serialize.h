@@ -3,6 +3,7 @@
 #include <stdexcept>
 #include <optional>
 #include <variant>
+#include <memory>
 #include <string>
 #include <map>
 
