@@ -49,6 +49,7 @@ SharedPromise<std::monostate> ProcessSlotted::cycle() {
       int sets{demand.inAvail};
       std::unordered_set<size_t> usedSlots;
       std::vector<int> eachSize;
+      eachSize.reserve(recipe.in.size());
       for (size_t i{}; i < recipe.in.size(); ++i) {
         auto &in(recipe.in[i]);
         eachSize.emplace_back(in.size / static_cast<int>(in.data.size()));
@@ -59,7 +60,7 @@ SharedPromise<std::monostate> ProcessSlotted::cycle() {
           } else {
             usedSlots.emplace(slot);
             int inProc{info ? info->size : 0};
-            sets = std::min(sets, (recipe.data - inProc) / recipe.data);
+            sets = std::min(sets, (recipe.data - inProc) / eachSize.back());
             if (sets <= 0)
               goto skip;
           }
