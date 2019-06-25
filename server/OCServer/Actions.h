@@ -230,6 +230,13 @@ inline SharedPromise<std::monostate> scheduleTrivialPromise(F &dispatcher) {
   return result;
 }
 
+template<typename T, typename F>
+inline SharedPromise<T> scheduleFailingPromise(F &dispatcher, std::string reason) {
+  auto result(std::make_shared<Promise<T>>());
+  dispatcher([result, reason(std::move(reason))]() { result->onFail(std::move(reason)); });
+  return result;
+}
+
 struct XNetCoord {
   int x, y, z;
   XNetCoord operator-(const XNetCoord &other) const {

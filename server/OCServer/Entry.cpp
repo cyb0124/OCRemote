@@ -23,7 +23,7 @@ int main() {
     Factory factory(server, 1000, "center", "e69", Actions::up);
     factory.addStorage(std::make_unique<StorageChest>(factory, "center", "e69", Actions::east, Actions::up));
     factory.addStorage(std::make_unique<StorageDrawer>(factory, "center", "e69", Actions::down, Actions::up, std::vector<SharedItemFilter>{
-      filterLabel("Cobblestone"),
+      filterLabel("Cobblestone"), filterLabel("Flint"), filterLabel("Lapis Lazuli"),
       filterLabel("Birch Sapling"), filterLabel("Birch Wood"),
       filterLabel("Oak Sapling"), filterLabel("Oak Wood"), filterLabel("Apple"),
       filterLabel("Iron Ore Piece"), filterLabel("Gold Ore Piece"), filterLabel("Aluminum Ore Piece"), filterLabel("Nickel Ore Piece"),

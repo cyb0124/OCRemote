@@ -88,8 +88,10 @@ void Factory::insertItem(std::vector<SharedPromise<std::monostate>> &promises, s
         bestPriority = *nowPriority;
       }
     }
-    if (!bestStorage)
+    if (!bestStorage) {
+      promises.emplace_back(scheduleFailingPromise<std::monostate>(s.io, "Storage is full"));
       break;
+    }
     auto result{bestStorage->sink(stack, slot)};
     stack.size -= result.first;
     promises.emplace_back(std::move(result.second));
