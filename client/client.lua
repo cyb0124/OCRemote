@@ -141,6 +141,7 @@ end
 local gpu = resolve("gpu")
 if gpu then
   gpu = component.proxy(gpu)
+  gpu.bind(resolve("screen"))
   gpu.setResolution(resX, resY)
   gpu.setDepth(gpu.maxDepth())
   gpu.setBackground(0)

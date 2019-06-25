@@ -585,7 +585,7 @@ SharedPromise<std::monostate> ProcessReactorHysteresis::cycle() {
     }
     if (!on.has_value())
       return scheduleTrivialPromise(factory.s.io);
-    factory.log(name + ": " + (*on ? "on" : "off"), 0xb8ff4fu);
+    factory.log(name + ": " + (*on ? "on" : "off"), 0xff4fff);
     auto action(std::make_shared<Actions::Call>());
     action->inv = inv;
     action->fn = "setActive";
