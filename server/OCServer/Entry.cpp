@@ -32,21 +32,8 @@ int main() {
       filterLabel("Silver Ore Piece"), filterLabel("Osmium Ore Piece"), filterLabel("Lead Ore Piece"), filterLabel("Tin Ore Piece"),
       filterLabel("Copper Ore Piece"), filterLabel("Platinum Ore Piece"), filterLabel("Yellorium Ore Piece"), filterLabel("Zinc Ore Piece")
     }));
-    factory.addBackup(filterLabel("Oak Sapling"), 8);
-    factory.addBackup(filterLabel("Birch Sapling"), 8);
-    factory.addProcess(std::make_unique<ProcessHeterogeneousWorkingSet>(factory, "plantGatherer", "center", "c6f", Actions::north, Actions::south,
-      std::vector<StockEntry>{}, 0, [](size_t, const ItemStack &stack) { return stack.item->label != "Range Addon"; }, std::vector<Recipe<>>{}));
-    factory.addProcess(std::make_unique<ProcessHeterogeneousWorkingSet>(factory, "plantHopper", "center", "fc3", Actions::down, Actions::south,
-      std::vector<StockEntry>{}, 0, [](auto&&...) { return true; }, std::vector<Recipe<>>{}));
-    factory.addProcess(std::make_unique<ProcessScatteringWorkingSet>(factory, "plantSower", "center", "fc3",
-      Actions::up, Actions::south, 8, plantSowerInSlots(), nullptr, std::vector<Recipe<>>{
-        {{{filterLabel("Oak Sapling"), 256}, {filterLabel("Oak Wood"), 1024}, {filterLabel("Apple"), 256}},
-          {{filterLabel("Oak Sapling"), 1, true}}},
-        {{{filterLabel("Birch Sapling"), 64}, {filterLabel("Birch Wood"), 1024}},
-          {{filterLabel("Birch Sapling"), 1, true}}}
-      }));
-    factory.addProcess(std::make_unique<ProcessInputless>(factory, "center", "fc3", Actions::north, Actions::south,
-      0, ProcessInputless::makeNeeded(factory, filterLabel("Cobblestone"), 1024)));
+    // factory.addProcess(std::make_unique<ProcessInputless>(factory, "center", "fc3", Actions::north, Actions::south,
+    //  0, ProcessInputless::makeNeeded(factory, filterLabel("Cobblestone"), 1024)));
     factory.addProcess(std::make_unique<ProcessHeterogeneousWorkingSet>(factory, "reactorOut", "reactor", "010", Actions::west, Actions::up,
       std::vector<StockEntry>{}, 0, [](auto&&...) { return true; }, std::vector<Recipe<>>{}));
     factory.addProcess(std::make_unique<ProcessHeterogeneousWorkingSet>(factory, "reactorIn", "reactor", "010", Actions::north, Actions::up,

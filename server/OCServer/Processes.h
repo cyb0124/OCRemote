@@ -25,15 +25,25 @@ struct ProcessSlotted : ProcessSingleBlock {
   SharedPromise<std::monostate> cycle() override;
 };
 
+struct NonConsumableInfo {
+  // Slots: 4, 8, 12, 13, 14, 15
+  int storageSlot;
+  int craftingGridSlot;
+  NonConsumableInfo(int storageSlot, int craftingGridSlot)
+    :storageSlot(storageSlot), craftingGridSlot(craftingGridSlot) {}
+};
+
 struct ProcessCraftingRobot : Process {
   // Note: can't craft more than one stack at a time.
   // Slots: 1, 2, 3
   //        4, 5, 6
   //        7, 8, 9
-  using Recipe = ::Recipe<int, std::vector<size_t>>; // maxSets, slots
+  // (maxSets, nonConsumableInfo), slots
+  using Recipe = ::Recipe<std::pair<int, std::optional<NonConsumableInfo>>, std::vector<size_t>>;
   std::string name, client;
   int sideBus;
   std::vector<Recipe> recipes;
+  int mapCraftingGridSlot(int slot);
   ProcessCraftingRobot(Factory &factory, std::string name, std::string client,
     int sideBus, std::vector<Recipe> recipes) :Process(factory), name(std::move(name)),
     client(std::move(client)), sideBus(sideBus), recipes(std::move(recipes)) {}

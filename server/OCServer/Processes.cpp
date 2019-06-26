@@ -115,6 +115,14 @@ SharedPromise<std::monostate> ProcessSlotted::cycle() {
   });
 }
 
+int ProcessCraftingRobot::mapCraftingGridSlot(int slot) {
+  if (slot >= 7)
+    slot += 2;
+  else if (slot >= 4)
+    slot += 1;
+  return slot;
+}
+
 SharedPromise<std::monostate> ProcessCraftingRobot::cycle() {
   std::vector<SharedPromise<std::monostate>> promises;
   auto demands(factory.getDemand(recipes));
@@ -122,7 +130,7 @@ SharedPromise<std::monostate> ProcessCraftingRobot::cycle() {
     auto &recipe(*demand.recipe);
     demand.in.clear();
     factory.resolveRecipeInputs(recipe, demand, true);
-    demand.inAvail = std::min(demand.inAvail, recipe.data);
+    demand.inAvail = std::min(demand.inAvail, recipe.data.first);
     if (demand.inAvail <= 0)
       continue;
     auto slotsToFree(std::make_shared<std::vector<size_t>>());
@@ -150,11 +158,7 @@ SharedPromise<std::monostate> ProcessCraftingRobot::cycle() {
             auto action(std::make_shared<Actions::Call>());
             action->inv = "robot";
             action->fn = "select";
-            if (toSlot >= 7)
-              toSlot += 2;
-            else if (toSlot >= 4)
-              toSlot += 1;
-            action->args = { static_cast<double>(toSlot) };
+            action->args = { static_cast<double>(mapCraftingGridSlot(toSlot)) };
             promises.emplace_back(action->mapTo(std::monostate{}));
             actions.emplace_back(std::move(action));
           }
@@ -172,11 +176,30 @@ SharedPromise<std::monostate> ProcessCraftingRobot::cycle() {
           }
         }
       }
+      if (recipe.data.second.has_value()) {
+        auto &info(*recipe.data.second);
+        /* select nonConsumable */ {
+          auto action(std::make_shared<Actions::Call>());
+          action->inv = "robot";
+          action->fn = "select";
+          action->args = { static_cast<double>(info.storageSlot) };
+          promises.emplace_back(action->mapTo(std::monostate{}));
+          actions.emplace_back(std::move(action));
+        }
+        /* load nonConsumable */ {
+          auto action(std::make_shared<Actions::Call>());
+          action->inv = "robot";
+          action->fn = "transferTo";
+          action->args = { static_cast<double>(mapCraftingGridSlot(info.craftingGridSlot)) };
+          promises.emplace_back(action->mapTo(std::monostate{}));
+          actions.emplace_back(std::move(action));
+        }
+      }
       /* select out */ {
         auto action(std::make_shared<Actions::Call>());
         action->inv = "robot";
         action->fn = "select";
-        action->args = { 13.0 };
+        action->args = { 16.0 };
         promises.emplace_back(action->mapTo(std::monostate{}));
         actions.emplace_back(std::move(action));
       }
@@ -194,6 +217,25 @@ SharedPromise<std::monostate> ProcessCraftingRobot::cycle() {
         action->args = { static_cast<double>(sideBus), static_cast<double>(busSlots.back() + 1) };
         promises.emplace_back(action->mapTo(std::monostate{}));
         actions.emplace_back(std::move(action));
+      }
+      if (recipe.data.second.has_value()) {
+        auto &info(*recipe.data.second);
+        /* select nonConsumable */ {
+          auto action(std::make_shared<Actions::Call>());
+          action->inv = "robot";
+          action->fn = "select";
+          action->args = { static_cast<double>(mapCraftingGridSlot(info.craftingGridSlot)) };
+          promises.emplace_back(action->mapTo(std::monostate{}));
+          actions.emplace_back(std::move(action));
+        }
+        /* store nonConsumable */ {
+          auto action(std::make_shared<Actions::Call>());
+          action->inv = "robot";
+          action->fn = "transferTo";
+          action->args = { static_cast<double>(info.storageSlot) };
+          promises.emplace_back(action->mapTo(std::monostate{}));
+          actions.emplace_back(std::move(action));
+        }
       }
       factory.s.enqueueActionGroup(client, std::move(actions));
       return Promise<std::monostate>::all(promises)->mapTo(std::monostate{});
