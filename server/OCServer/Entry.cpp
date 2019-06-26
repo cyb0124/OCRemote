@@ -22,7 +22,7 @@ int main() {
     Server server(io, 1847);
     Factory factory(server, 1000, "center", {{"center", "377", Actions::west}, {"reactor", "010", Actions::up}});
     factory.addStorage(std::make_unique<StorageME>(factory, std::vector<AccessME>{{"center", "377", Actions::down, Actions::west}}));
-    factory.addBackup(filterLabel("Fluxed Phyto-Gro"), 32);
+    factory.addBackup(filterLabel("Fluxed Phyto-Gro"), 64);
     factory.addProcess(std::make_unique<ProcessInputless>(factory, "center", "377", Actions::south, Actions::west,
       0, ProcessInputless::makeNeeded(factory, filterLabel("Cobblestone"), 32)));
     factory.addProcess(std::make_unique<ProcessSlotted>(factory, "pulverizer", "center", "377", Actions::north, Actions::west, std::vector<size_t>{0},
@@ -48,6 +48,8 @@ int main() {
           {filterLabel("Diamond Seeds"), 1, {1}}}, 16},
         {{{filterLabel("Redstone Essence"), 32}}, {{filterLabel("Fluxed Phyto-Gro"), 1, {0}},
           {filterLabel("Redstone Seeds"), 1, {1}}}, 16},
+        {{{filterLabel("Yellorium Essence"), 32}}, {{filterLabel("Fluxed Phyto-Gro"), 1, {0}},
+          {filterLabel("Yellorium Seeds"), 1, {1}}}, 16},
         {{{filterLabel("Seeds"), 32}}, {{filterLabel("Fluxed Phyto-Gro"), 1, {0}},
           {filterLabel("Seeds"), 1, {1}}}, 16}
       }));
@@ -58,7 +60,7 @@ int main() {
       }));
     factory.addProcess(std::make_unique<ProcessSlotted>(factory, "charger", "center", "80c", Actions::south, Actions::east, std::vector<size_t>{0},
       [](auto&&...) { return true; }, std::vector<Recipe<int, std::vector<size_t>>>{
-        {{{filterLabel("Fluxed Phyto-Gro"), 64}}, {{filterLabel("Rich Phyto-Gro"), 1, {0}}}, 16}
+        {{{filterLabel("Fluxed Phyto-Gro"), 256}}, {{filterLabel("Rich Phyto-Gro"), 1, {0}}}, 16}
       }));
     factory.addProcess(std::make_unique<ProcessSlotted>(factory, "furnace", "center", "80c", Actions::west, Actions::east, std::vector<size_t>{0},
       [](auto&&...) { return true; }, std::vector<Recipe<int, std::vector<size_t>>>{
@@ -78,7 +80,8 @@ int main() {
         {{{filterLabel("Oak Wood"), 32}}, {{filterLabel("Wood Essence"), 3, {6, 7, 8}}}, 16},
         {{{filterLabel("Lead Ingot"), 32}}, {{filterLabel("Lead Essence"), 8, {0, 1, 2, 3, 5, 6, 7, 8}}}, 8},
         {{{filterLabel("Diamond"), 32}}, {{filterLabel("Diamond Essence"), 9, {0, 1, 2, 3, 4, 5, 6, 7, 8}}}, 7},
-        {{{filterLabel("Redstone"), 32}}, {{filterLabel("Redstone Essence"), 9, {0, 1, 2, 3, 4, 5, 6, 7, 8}}}, 7}
+        {{{filterLabel("Redstone"), 32}}, {{filterLabel("Redstone Essence"), 9, {0, 1, 2, 3, 4, 5, 6, 7, 8}}}, 7},
+        {{{filterLabel("Yellorium Ingot"), 32}}, {{filterLabel("Yellorium Essence"), 8, {0, 1, 2, 3, 5, 6, 7, 8}}}, 8}
       }));
     factory.start();
     io.io.run();
