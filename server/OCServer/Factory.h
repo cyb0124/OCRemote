@@ -58,9 +58,8 @@ struct RecipeIn {
   bool allowBackup = false;
   T data;
 
-  template<typename ...Arg>
-  RecipeIn(SharedItemFilter item, int size, bool allowBackup, Arg &&...xs)
-      :item(std::move(item)), size(size), allowBackup(allowBackup), data(std::forward<Arg>(xs)...) {}
+  RecipeIn(SharedItemFilter item, int size, T data, bool allowBackup = false)
+      :item(std::move(item)), size(size), allowBackup(allowBackup), data(std::move(data)) {}
   RecipeIn(SharedItemFilter item, int size) :item(std::move(item)), size(size) {}
   RecipeIn(SharedItemFilter item) :item(std::move(item)) {}
 };
