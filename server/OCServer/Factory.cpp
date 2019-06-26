@@ -239,8 +239,12 @@ SharedItem Factory::getItem(const ItemFilters::Base &filter) {
 }
 
 int Factory::getAvail(const SharedItem &item, bool allowBackup) {
-  if (!item) return 0;
-  return items.at(item).getAvail(allowBackup);
+  if (!item)
+    return 0;
+  auto info(items.find(item));
+  if (info == items.end())
+    return 0;
+  return info->second.getAvail(allowBackup);
 }
 
 Reservation Factory::reserve(const std::string &reason, const SharedItem &item, int size) {
