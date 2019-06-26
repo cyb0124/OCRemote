@@ -184,7 +184,7 @@ std::pair<int, SharedPromise<std::monostate>> StorageME::sink(const ItemStack &s
 
 SharedPromise<std::monostate> ProviderME::extract(int size, size_t slot) {
   auto itr(me.accessForItem.try_emplace(item));
-  if (!itr.second)
+  if (itr.second)
     itr.first->second = &me.getBestAccess();
   auto &access(*itr.first->second);
   auto action(std::make_shared<Actions::XferME>());
