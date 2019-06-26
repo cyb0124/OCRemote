@@ -20,7 +20,7 @@ int main() {
     ignoreBrokenPipe();
     IOEnv io;
     Server server(io, 1847);
-    Factory factory(server, 1000, "center", "377", Actions::west);
+    Factory factory(server, 1000, "center", {{"center", "377", Actions::west}, {"reactor", "010", Actions::up}});
     factory.addStorage(std::make_unique<StorageME>(factory, std::vector<AccessME>{{"center", "377", Actions::down, Actions::west}}));
     factory.addBackup(filterLabel("Fluxed Phyto-Gro"), 32);
     factory.addProcess(std::make_unique<ProcessInputless>(factory, "center", "377", Actions::south, Actions::west,
@@ -39,13 +39,15 @@ int main() {
     factory.addProcess(std::make_unique<ProcessSlotted>(factory, "phyto", "center", "80c", Actions::north, Actions::east, std::vector<size_t>{0, 1},
       [](auto&&...) { return true; }, std::vector<Recipe<int, std::vector<size_t>>>{
         {{{filterLabel(u8"§eInferium Essence"), 4096}}, {{filterLabel("Fluxed Phyto-Gro"), 1, {0}},
-          {filterLabel("Inferium Seeds"), 1, {1}}}, 16},
+          {filterName("mysticalagriculture:tier5_inferium_seeds"), 1, {1}}}, 16},
         {{{filterLabel("Wood Essence"), 32}}, {{filterLabel("Fluxed Phyto-Gro"), 1, {0}, true},
           {filterLabel("Wood Seeds"), 1, {1}}}, 16},
         {{{filterLabel("Lead Essence"), 32}}, {{filterLabel("Fluxed Phyto-Gro"), 1, {0}, true},
           {filterLabel("Lead Seeds"), 1, {1}}}, 16},
         {{{filterLabel("Diamond Essence"), 32}}, {{filterLabel("Fluxed Phyto-Gro"), 1, {0}},
           {filterLabel("Diamond Seeds"), 1, {1}}}, 16},
+        {{{filterLabel("Redstone Essence"), 32}}, {{filterLabel("Fluxed Phyto-Gro"), 1, {0}},
+          {filterLabel("Redstone Seeds"), 1, {1}}}, 16},
         {{{filterLabel("Seeds"), 32}}, {{filterLabel("Fluxed Phyto-Gro"), 1, {0}},
           {filterLabel("Seeds"), 1, {1}}}, 16}
       }));
@@ -75,7 +77,8 @@ int main() {
           {filterLabel("Pulverized Charcoal"), 1, {2}}}, 16},
         {{{filterLabel("Oak Wood"), 32}}, {{filterLabel("Wood Essence"), 3, {6, 7, 8}}}, 16},
         {{{filterLabel("Lead Ingot"), 32}}, {{filterLabel("Lead Essence"), 8, {0, 1, 2, 3, 5, 6, 7, 8}}}, 8},
-        {{{filterLabel("Diamond"), 32}}, {{filterLabel("Diamond Essence"), 9, {0, 1, 2, 3, 4, 5, 6, 7, 8}}}, 7}
+        {{{filterLabel("Diamond"), 32}}, {{filterLabel("Diamond Essence"), 9, {0, 1, 2, 3, 4, 5, 6, 7, 8}}}, 7},
+        {{{filterLabel("Redstone"), 32}}, {{filterLabel("Redstone Essence"), 9, {0, 1, 2, 3, 4, 5, 6, 7, 8}}}, 7}
       }));
     factory.start();
     io.io.run();

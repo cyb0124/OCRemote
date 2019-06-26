@@ -100,10 +100,11 @@ void Factory::insertItem(std::vector<SharedPromise<std::monostate>> &promises, s
 
 void Factory::doBusUpdate() {
   busState = BusState::RUNNING;
+  auto &access(s.getBestAccess(busAccesses));
   auto action(std::make_shared<Actions::List>());
-  action->inv = inv;
-  action->side = sideBus;
-  s.enqueueAction(client, action);
+  action->inv = access.inv;
+  action->side = access.sideBus;
+  s.enqueueAction(access.client, action);
 
   struct TailListener : Listener<std::monostate> {
     Factory &rThis;
@@ -181,7 +182,7 @@ void Factory::log(std::string msg, uint32_t color, double beep) {
   action->text = std::move(msg);
   action->color = color;
   action->beep = beep;
-  s.enqueueAction(client, action);
+  s.enqueueAction(logClient, action);
   action->listen(std::make_shared<DummyListener<std::monostate>>());
 }
 

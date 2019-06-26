@@ -85,12 +85,20 @@ struct Demand {
   Demand(const Recipe<T, U> *recipe) :recipe(recipe) {}
 };
 
+struct BusAccess {
+  std::string client;
+  std::string inv;
+  int sideBus;
+  BusAccess(std::string client, std::string inv, int sideBus)
+    :client(std::move(client)), inv(std::move(inv)), sideBus(sideBus) {}
+};
+
 struct Factory {
   Server &s;
   const std::shared_ptr<std::monostate> alive{std::make_shared<std::monostate>()};
 private:
   int minCycleTime;
-  const std::string client, inv;
+  const std::string logClient;
   std::vector<std::pair<SharedItemFilter, int>> backups;
   std::vector<UniqueProcess> processes;
 
@@ -105,7 +113,7 @@ private:
   SharedPromise<std::monostate> updateAndBackupItems();
   void insertItem(std::vector<SharedPromise<std::monostate>> &promises, size_t slot, ItemStack stack);
 
-  int sideBus;
+  std::vector<BusAccess> busAccesses;
   std::unordered_set<size_t> busAllocations;
   std::list<SharedPromise<size_t>> busWaitQueue;
   bool endOfCycleAfterBusUpdate{}, busEverUpdated{};
@@ -168,8 +176,8 @@ public:
   void busFree(size_t slot);
   void busFree(const std::vector<size_t> &slots);
 
-  Factory(Server &s, int minCycleTime, std::string client, std::string inv, int sideBus)
-    :s(s), minCycleTime(minCycleTime), client(std::move(client)), inv(std::move(inv)), sideBus(sideBus) {}
+  Factory(Server &s, int minCycleTime, std::string logClient, std::vector<BusAccess> busAccesses)
+    :s(s), minCycleTime(minCycleTime), logClient(std::move(logClient)), busAccesses(std::move(busAccesses)) {}
   void addStorage(UniqueStorage storage) { storages.emplace_back(std::move(storage)); }
   void addBackup(SharedItemFilter filter, int size) { backups.emplace_back(std::move(filter), size); }
   void addProcess(UniqueProcess process) { processes.emplace_back(std::move(process)); }

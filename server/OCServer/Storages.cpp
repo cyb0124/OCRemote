@@ -140,21 +140,8 @@ SharedPromise<std::monostate> ProviderChest::extract(int size, size_t slot) {
   });
 }
 
-AccessME &StorageME::getBestAccess() {
-  AccessME *bestAccess{&accesses.front()};
-  size_t bestCount{std::numeric_limits<size_t>::max()};
-  for (auto &access : accesses) {
-    size_t count{factory.s.countPending(access.client)};
-    if (count < bestCount) {
-      bestCount = count;
-      bestAccess = &access;
-    }
-  }
-  return *bestAccess;
-}
-
 SharedPromise<std::monostate> StorageME::update() {
-  auto &access(getBestAccess());
+  auto &access(factory.s.getBestAccess(accesses));
   auto action(std::make_shared<Actions::ListME>());
   action->inv = access.me;
   factory.s.enqueueAction(access.client, action);
@@ -169,7 +156,7 @@ SharedPromise<std::monostate> StorageME::update() {
 }
 
 std::pair<int, SharedPromise<std::monostate>> StorageME::sink(const ItemStack &stack, size_t slot) {
-  auto &access(getBestAccess());
+  auto &access(factory.s.getBestAccess(accesses));
   auto action(std::make_shared<Actions::Call>());
   action->inv = access.inv;
   action->fn = "transferItem";
@@ -187,7 +174,7 @@ std::pair<int, SharedPromise<std::monostate>> StorageME::sink(const ItemStack &s
 SharedPromise<std::monostate> ProviderME::extract(int size, size_t slot) {
   auto itr(me.accessForItem.try_emplace(item));
   if (itr.second)
-    itr.first->second = &me.getBestAccess();
+    itr.first->second = &factory.s.getBestAccess(me.accesses);
   auto &access(*itr.first->second);
   auto action(std::make_shared<Actions::XferME>());
   item->serialize(action->filter);

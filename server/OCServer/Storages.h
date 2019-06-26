@@ -52,9 +52,8 @@ struct AccessME {
 
 struct StorageME : Storage {
   std::vector<AccessME> accesses;
-  std::unordered_map<std::shared_ptr<Item>, AccessME*, SharedItemHash, SharedItemEqual> accessForItem;
+  std::unordered_map<std::shared_ptr<Item>, const AccessME*, SharedItemHash, SharedItemEqual> accessForItem;
   StorageME(Factory &factory, std::vector<AccessME> accesses) :Storage(factory), accesses(std::move(accesses)) {}
-  AccessME &getBestAccess();
   void endOfCycle() override { accessForItem.clear(); }
   SharedPromise<std::monostate> update() override;
   std::optional<int> sinkPriority(const Item&) override { return std::numeric_limits<int>::max(); }

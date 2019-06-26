@@ -59,4 +59,16 @@ public:
   void enqueueActionGroup(const std::string &client, std::vector<SharedAction> actions);
   void enqueueAction(const std::string &client, SharedAction action);
   size_t countPending(const std::string &client) const;
+  template<typename T> const T &getBestAccess(const std::vector<T> &accesses) {
+    const T *bestAccess{&accesses.front()};
+    size_t bestCount{std::numeric_limits<size_t>::max()};
+    for (auto &access : accesses) {
+      size_t count{countPending(access.client)};
+      if (count < bestCount) {
+        bestCount = count;
+        bestAccess = &access;
+      }
+    }
+    return *bestAccess;
+  }
 };
