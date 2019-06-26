@@ -159,9 +159,11 @@ SharedPromise<std::monostate> StorageME::update() {
   action->inv = access.me;
   factory.s.enqueueAction(access.client, action);
   return action->map(factory.alive, [this](std::vector<SharedItemStack> &&items) {
-    for (auto &stack : items)
+    for (auto &stack : items) {
+      stack->item->others.erase("isCraftable");
       factory.getOrAddItemInfo(stack->item).addProvider(
         std::make_unique<ProviderME>(*this, stack->item, stack->size));
+    }
     return std::monostate{};
   });
 }

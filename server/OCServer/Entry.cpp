@@ -29,11 +29,19 @@ int main() {
         {{{filterLabel("Gravel"), 32}}, {{filterLabel("Cobblestone"), 1, false, std::vector<size_t>{0}}}, 8},
         {{{filterLabel("Sand"), 32}}, {{filterLabel("Gravel"), 1, false, std::vector<size_t>{0}}}, 8}
       }));
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "manufactory", "center", "377", Actions::up, Actions::west, std::vector<size_t>{0},
+      [](size_t slot, auto&&) { return 1 == slot; }, std::vector<Recipe<int, std::vector<size_t>>>{
+        {{{filterLabel("Niter"), 32}}, {{filterLabel("Sandstone"), 1, false, std::vector<size_t>{0}}}, 8}
+      }));
     factory.addProcess(std::make_unique<ProcessHeterogeneousWorkingSet>(factory, "reactorOut", "reactor", "010", Actions::west, Actions::up,
       std::vector<StockEntry>{}, 0, [](auto&&...) { return true; }, std::vector<Recipe<>>{}));
     factory.addProcess(std::make_unique<ProcessHeterogeneousWorkingSet>(factory, "reactorIn", "reactor", "010", Actions::north, Actions::up,
       std::vector<StockEntry>{{filterLabel("Yellorium Ingot"), 8}}, 0, [](auto&&...) { return true; }, std::vector<Recipe<>>{}));
     factory.addProcess(std::make_unique<ProcessReactorHysteresis>(factory, "reactor", "reactor"));
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "analogCrafter", "reactor", "010", Actions::east, Actions::up,
+      std::vector<size_t>{0, 1, 2, 3, 4, 5, 6, 7, 8}, [](auto&&...) { return true; }, std::vector<Recipe<int, std::vector<size_t>>>{
+        {{{filterLabel("Sandstone"), 32}}, {{filterLabel("Sand"), 4, false, std::vector<size_t>{0, 1, 3, 4}}}, 8}
+      }));
     factory.start();
     io.io.run();
     return EXIT_SUCCESS;
