@@ -20,10 +20,15 @@ int main() {
     ignoreBrokenPipe();
     IOEnv io;
     Server server(io, 1847);
-    Factory factory(server, 1000, "center", "377", Actions::up);
-    factory.addStorage(std::make_unique<StorageME>(factory, std::vector<AccessME>{{"center", "377", Actions::down, Actions::up}}));
-    factory.addProcess(std::make_unique<ProcessInputless>(factory, "center", "377", Actions::south, Actions::up,
+    Factory factory(server, 1000, "center", "377", Actions::west);
+    factory.addStorage(std::make_unique<StorageME>(factory, std::vector<AccessME>{{"center", "377", Actions::down, Actions::west}}));
+    factory.addProcess(std::make_unique<ProcessInputless>(factory, "center", "377", Actions::south, Actions::west,
       0, ProcessInputless::makeNeeded(factory, filterLabel("Cobblestone"), 32)));
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "pulverizer", "center", "377", Actions::north, Actions::west, std::vector<size_t>{0},
+      [](auto&&...) { return true; }, std::vector<Recipe<int, std::vector<size_t>>>{
+        {{{filterLabel("Gravel"), 32}}, {{filterLabel("Cobblestone"), 1, false, std::vector<size_t>{0}}}, 8},
+        {{{filterLabel("Sand"), 32}}, {{filterLabel("Gravel"), 1, false, std::vector<size_t>{0}}}, 8}
+      }));
     factory.addProcess(std::make_unique<ProcessHeterogeneousWorkingSet>(factory, "reactorOut", "reactor", "010", Actions::west, Actions::up,
       std::vector<StockEntry>{}, 0, [](auto&&...) { return true; }, std::vector<Recipe<>>{}));
     factory.addProcess(std::make_unique<ProcessHeterogeneousWorkingSet>(factory, "reactorIn", "reactor", "010", Actions::north, Actions::up,
