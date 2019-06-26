@@ -27,9 +27,9 @@ struct ProcessSlotted : ProcessSingleBlock {
 
 struct NonConsumableInfo {
   // Slots: 4, 8, 12, 13, 14, 15
-  int storageSlot;
-  int craftingGridSlot;
-  NonConsumableInfo(int storageSlot, int craftingGridSlot)
+  size_t storageSlot;
+  size_t craftingGridSlot;
+  NonConsumableInfo(size_t storageSlot, size_t craftingGridSlot)
     :storageSlot(storageSlot), craftingGridSlot(craftingGridSlot) {}
 };
 
@@ -43,7 +43,7 @@ struct ProcessCraftingRobot : Process {
   std::string name, client;
   int sideBus;
   std::vector<Recipe> recipes;
-  int mapCraftingGridSlot(int slot);
+  size_t mapCraftingGridSlot(size_t slot);
   ProcessCraftingRobot(Factory &factory, std::string name, std::string client,
     int sideBus, std::vector<Recipe> recipes) :Process(factory), name(std::move(name)),
     client(std::move(client)), sideBus(sideBus), recipes(std::move(recipes)) {}

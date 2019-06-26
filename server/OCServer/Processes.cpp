@@ -115,7 +115,7 @@ SharedPromise<std::monostate> ProcessSlotted::cycle() {
   });
 }
 
-int ProcessCraftingRobot::mapCraftingGridSlot(int slot) {
+size_t ProcessCraftingRobot::mapCraftingGridSlot(size_t slot) {
   if (slot >= 7)
     slot += 2;
   else if (slot >= 4)
