@@ -52,6 +52,7 @@ int main() {
         {{{filterLabel("Diamond Essence"), 64}}, {{filterLabel("Diamond Seeds"), 1}}},
         {{{filterLabel("Redstone Essence"), 64}}, {{filterLabel("Redstone Seeds"), 1}}},
         {{{filterLabel("Yellorium Essence"), 64}}, {{filterLabel("Yellorium Seeds"), 1}}},
+        {{{filterLabel("Certus Quartz Essence"), 64}}, {{filterLabel("Certus Quartz Seeds"), 1}}},
         {{{filterLabel("Seeds"), 64}}, {{filterLabel("Seeds"), 1}}}
       }));
 
@@ -83,7 +84,7 @@ int main() {
       std::vector<StockEntry>{}, 0, [](auto&&...) { return true; }, std::vector<Recipe<>>{}));
     factory.addProcess(std::make_unique<ProcessHeterogeneousWorkingSet>(factory, "reactorIn", "reactor", "010", Actions::north, Actions::up,
       std::vector<StockEntry>{{filterLabel("Yellorium Ingot"), 16}}, 0, [](auto&&...) { return true; }, std::vector<Recipe<>>{}));
-    factory.addProcess(std::make_unique<ProcessReactorHysteresis>(factory, "reactor", "reactor"));
+    factory.addProcess(std::make_unique<ProcessReactorProportional>(factory, "reactor", "reactor"));
 
     // analogCrafter
     factory.addProcess(std::make_unique<ProcessSlotted>(factory, "analogCrafter", "reactor", "010", Actions::east, Actions::up,
@@ -96,7 +97,8 @@ int main() {
         {{{filterLabel("Lead Ingot"), 64}}, {{filterLabel("Lead Essence"), 8, {0, 1, 2, 3, 5, 6, 7, 8}}}, 8},
         {{{filterLabel("Diamond"), 64}}, {{filterLabel("Diamond Essence"), 9, {0, 1, 2, 3, 4, 5, 6, 7, 8}}}, 7},
         {{{filterLabel("Redstone"), 64}}, {{filterLabel("Redstone Essence"), 9, {0, 1, 2, 3, 4, 5, 6, 7, 8}}}, 7},
-        {{{filterLabel("Yellorium Ingot"), 64}}, {{filterLabel("Yellorium Essence"), 8, {0, 1, 2, 3, 5, 6, 7, 8}}}, 8}
+        {{{filterLabel("Yellorium Ingot"), 64}}, {{filterLabel("Yellorium Essence"), 8, {0, 1, 2, 3, 5, 6, 7, 8}}}, 8},
+        {{{filterLabel("Certus Quartz Crystal"), 64}}, {{filterLabel("Certus Quartz Essence"), 8, {0, 1, 2, 3, 5, 6, 7, 8}}}, 8}
       }));
     factory.start();
     io.io.run();

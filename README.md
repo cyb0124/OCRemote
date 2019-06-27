@@ -33,3 +33,5 @@ OCRemote currently supports the following types of auto-crafting processes:
     These processes are for machines that passively generate outputs (e.g. cobblestone generators).
   - **ProcessReactorHysteresis**\
     This process is a simple hysteresis feedback controller for big/extreme reactors.
+  - **ProcessReactorProportional**\
+    This process is a simple proportional feedback controller for big/extreme reactors.

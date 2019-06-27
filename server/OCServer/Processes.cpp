@@ -636,3 +636,26 @@ SharedPromise<std::monostate> ProcessReactorHysteresis::cycle() {
     return action->mapTo(std::monostate{});
   });
 }
+
+SharedPromise<std::monostate> ProcessReactorProportional::cycle() {
+  auto action(std::make_shared<Actions::Call>());
+  action->inv = inv;
+  action->fn = "getEnergyStored";
+  factory.s.enqueueAction(client, action);
+  return action->then(factory.alive, [this](SValue &&arg) {
+    double level;
+    try {
+      level = std::get<double>(std::get<STable>(arg).at(1.0));
+    } catch (std::exception &e) {
+      return scheduleFailingPromise<std::monostate>(factory.s.io, name + ": " + e.what());
+    }
+    double rod{std::round(100 * level / 10000000)};
+    factory.log(name + ": " + std::to_string(static_cast<int>(rod)) + "%", 0xff4fff);
+    auto action(std::make_shared<Actions::Call>());
+    action->inv = inv;
+    action->fn = "setAllControlRodLevels";
+    action->args = {rod};
+    factory.s.enqueueAction(client, action);
+    return action->mapTo(std::monostate{});
+  });
+}

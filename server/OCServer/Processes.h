@@ -129,7 +129,14 @@ struct ProcessReactorHysteresis : Process {
   std::string name, client, inv;
   int lowerBound, upperBound;
   ProcessReactorHysteresis(Factory &factory, std::string name, std::string client, std::string inv = "br_reactor",
-    int lowerBound = 3000000, int upperBound = 7000000) : Process(factory), name(std::move(name)), client(std::move(client)),
+    int lowerBound = 3000000, int upperBound = 7000000) :Process(factory), name(std::move(name)), client(std::move(client)),
     inv(std::move(inv)), lowerBound(lowerBound), upperBound(upperBound) {}
+  SharedPromise<std::monostate> cycle() override;
+};
+
+struct ProcessReactorProportional : Process {
+  std::string name, client, inv;
+  ProcessReactorProportional(Factory &factory, std::string name, std::string client, std::string inv = "br_reactor")
+    :Process(factory), name(std::move(name)), client(std::move(client)), inv(std::move(inv)) {}
   SharedPromise<std::monostate> cycle() override;
 };
