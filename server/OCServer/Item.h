@@ -21,8 +21,13 @@ struct ItemStack {
 };
 using SharedItemStack = std::shared_ptr<ItemStack>;
 SharedItemStack parseItemStack(SValue&&);
-std::vector<SharedItemStack> cloneInventorySizes(const std::vector<SharedItemStack> &inventory);
-int insertIntoInventory(std::vector<SharedItemStack> &inventory, const SharedItem &item, int size);
+std::vector<SharedItemStack> cloneInventory(const std::vector<SharedItemStack> &inventory);
+
+struct InsertResult {
+  int totalSize{};
+  std::vector<std::pair<size_t, int>> actions;
+};
+InsertResult insertIntoInventory(std::vector<SharedItemStack> &inventory, const SharedItem &item, int size);
 
 namespace ItemFilters {
   struct IndexVisitor {

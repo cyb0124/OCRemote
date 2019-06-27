@@ -64,7 +64,7 @@ SharedItemStack parseItemStack(SValue &&s) {
   return result;
 }
 
-std::vector<SharedItemStack> cloneInventorySizes(const std::vector<SharedItemStack> &inventory) {
+std::vector<SharedItemStack> cloneInventory(const std::vector<SharedItemStack> &inventory) {
   std::vector<SharedItemStack> result;
   result.reserve(inventory.size());
   for (auto &i : inventory) {
@@ -76,29 +76,31 @@ std::vector<SharedItemStack> cloneInventorySizes(const std::vector<SharedItemSta
   return result;
 }
 
-int insertIntoInventory(std::vector<SharedItemStack> &inventory, const SharedItem &item, int size) {
+InsertResult insertIntoInventory(std::vector<SharedItemStack> &inventory, const SharedItem &item, int size) {
+  InsertResult result;
   size = std::min(size, item->maxSize);
-  int result{};
-  SharedItemStack *firstEmptySlot = nullptr;
-  for (auto &i : inventory) {
-    if (!i) {
-      if (!firstEmptySlot)
-        firstEmptySlot = &i;
-    } else if (*i->item == *item) {
-      int toProc{std::min(size, i->item->maxSize - i->size)};
-      i->size += toProc;
-      result += toProc;
+  std::optional<size_t> firstEmptySlot;
+  for (size_t slot{}; slot < inventory.size(); ++slot) {
+    auto &stack(inventory[slot]);
+    if (!stack) {
+      if (!firstEmptySlot.has_value())
+        firstEmptySlot.emplace(slot);
+    } else if (*stack->item == *item) {
+      int toProc{std::min(size, item->maxSize - stack->size)};
+      stack->size += toProc;
+      result.totalSize += toProc;
+      result.actions.emplace_back(slot, toProc);
       size -= toProc;
     }
   }
-  if (size && firstEmptySlot) {
-    auto &stack = *(*firstEmptySlot = std::make_shared<ItemStack>());
+  if (size && firstEmptySlot.has_value()) {
+    auto &stack{*(inventory[*firstEmptySlot] = std::make_shared<ItemStack>())};
     stack.item = item;
     stack.size = size;
-    return result + size;
-  } else {
-    return result;
+    result.totalSize += size;
+    result.actions.emplace_back(*firstEmptySlot, size);
   }
+  return result;
 }
 
 namespace ItemFilters {
