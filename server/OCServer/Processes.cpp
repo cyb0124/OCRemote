@@ -451,7 +451,7 @@ SharedPromise<std::monostate> ProcessHeterogeneousWorkingSet::cycle() {
           goto isStockItem;
         }
       }
-      recipeMaxInProc -= stack->size;
+      recipeInProc -= stack->size;
       if (outFilter && outFilter(slot, *stack))
         promises.emplace_back(processOutput(slot, stack->item->maxSize));
       isStockItem:;
@@ -485,7 +485,7 @@ SharedPromise<std::monostate> ProcessHeterogeneousWorkingSet::cycle() {
         });
       }));
     }
-    if (recipeMaxInProc > 0) {
+    if (recipeInProc > 0) {
       auto demands(factory.getDemand(recipes));
       for (auto &demand : demands) {
         auto &recipe(*demand.recipe);
@@ -494,7 +494,7 @@ SharedPromise<std::monostate> ProcessHeterogeneousWorkingSet::cycle() {
         int listSum{};
         for (auto &ingredient : recipe.in)
           listSum += ingredient.size;
-        int sets{std::min(demand.inAvail, recipeMaxInProc / listSum)};
+        int sets{std::min(demand.inAvail, recipeInProc / listSum)};
         if (sets <= 0)
           continue;
         auto slotsToFree(std::make_shared<std::vector<size_t>>());
@@ -530,8 +530,8 @@ SharedPromise<std::monostate> ProcessHeterogeneousWorkingSet::cycle() {
         })->finally(factory.alive, [this, slotsToFree(std::move(slotsToFree))]() {
           factory.busFree(*slotsToFree);
         }));
-        recipeMaxInProc -= sets * listSum;
-        if (recipeMaxInProc <= 0)
+        recipeInProc -= sets * listSum;
+        if (recipeInProc <= 0)
           break;
       }
     }
