@@ -45,9 +45,9 @@ struct ProviderChest : Provider {
 
 struct AccessME {
   std::string client, inv, me;
-  int sideME, sideBus;
-  AccessME(std::string client, std::string inv, int sideME, int sideBus, std::string me = "me_interface")
-    :client(std::move(client)), inv(std::move(inv)), me(std::move(me)), sideME(sideME), sideBus(sideBus) {}
+  int sideME, sideBus, entry;
+  AccessME(std::string client, std::string inv, int sideME, int sideBus, int entry, std::string me = "me_interface")
+    :client(std::move(client)), inv(std::move(inv)), me(std::move(me)), sideME(sideME), sideBus(sideBus), entry(entry) {}
 };
 
 struct StorageME : Storage {

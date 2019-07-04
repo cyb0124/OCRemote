@@ -230,8 +230,8 @@ while true do
         elseif p.op == "xferME" then
           local me = getInv(p.me)
           db.clear(1)
-          me.store(p.filter, dbAddr, 1, 1)
-          me.setInterfaceConfiguration(1, dbAddr, 1, p.size)
+          me.store(p.filter, dbAddr, p.entry, 1)
+          me.setInterfaceConfiguration(p.entry, dbAddr, p.entry, p.size)
           inv.transferItem(table.unpack(p.args))
           me.setInterfaceConfiguration(1)
         elseif p.op == "call" then

@@ -300,7 +300,7 @@ namespace Actions {
     std::string me, inv;
     SValue filter;
     std::vector<SValue> args;
-    int size;
+    int size, entry;
     void dump(STable&) override;
   };
 

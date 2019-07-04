@@ -181,11 +181,12 @@ SharedPromise<std::monostate> ProviderME::extract(int size, size_t slot) {
   action->size = size;
   action->inv = access.inv;
   action->me = access.me;
+  action->entry = access.entry;
   action->args = {
     static_cast<double>(access.sideME),
     static_cast<double>(access.sideBus),
     static_cast<double>(size),
-    1.0,
+    static_cast<double>(access.entry),
     static_cast<double>(slot + 1)
   };
   factory.s.enqueueAction(access.client, action);

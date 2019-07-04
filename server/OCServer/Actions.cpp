@@ -52,6 +52,7 @@ namespace Actions {
   void XferME::dump(STable &t) {
     t["op"] = "xferME";
     t["size"] = static_cast<double>(size);
+    t["entry"] = static_cast<double>(entry);
     t["filter"] = std::move(filter);
     t["args"] = arrayToSTable(std::move(args));
     t["inv"] = std::move(inv);

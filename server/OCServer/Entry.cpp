@@ -21,7 +21,7 @@ int main() {
     IOEnv io;
     Server server(io, 1847);
     Factory factory(server, 1000, "center", {{"center", "377", Actions::west}, {"reactor", "010", Actions::up}});
-    factory.addStorage(std::make_unique<StorageME>(factory, std::vector<AccessME>{{"center", "377", Actions::down, Actions::west}}));
+    factory.addStorage(std::make_unique<StorageME>(factory, std::vector<AccessME>{{"center", "377", Actions::down, Actions::west, 1}}));
 
     // cobbleGen
     factory.addProcess(std::make_unique<ProcessInputless>(factory, "center", "377", Actions::south, Actions::west,
@@ -63,6 +63,7 @@ int main() {
         {{{filterLabel("Nether Quartz Essence"), 64}}, {{filterLabel("Nether Quartz Seeds"), 1}}},
         {{{filterLabel("Fluix Essence"), 64}}, {{filterLabel("Fluix Seeds"), 1}}},
         {{{filterLabel("Gold Essence"), 64}}, {{filterLabel("Gold Seeds"), 1}}},
+        {{{filterLabel("Glowstone Essence"), 64}}, {{filterLabel("Glowstone Seeds"), 1}}},
         {{{filterLabel("Seeds"), 64}}, {{filterLabel("Seeds"), 1}}},
         {{{filterLabel("Cotton"), 64}}, {{filterLabel("Cotton Seeds"), 1}}}
       }));
@@ -105,10 +106,20 @@ int main() {
         {{{filterLabel("Printed Logic Circuit"), 16}}, {{filterLabel("Gold Ingot"), 1, {1}}}, 16}
       }));
 
+    // inscriberCalculation
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "inscriberCalculation", "center", "e05", Actions::north, Actions::east, std::vector<size_t>{1},
+      nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
+        {{{filterLabel("Printed Calculation Circuit"), 16}}, {{filterLabel("Pure Certus Quartz Crystal"), 1, {1}}}, 16}
+      }));
+
     // inscriberProcessor
     factory.addProcess(std::make_unique<ProcessSlotted>(factory, "inscriberProcessor", "center", "e05", Actions::west, Actions::east, std::vector<size_t>{0, 1, 2},
       nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{{filterLabel("Logic Processor"), 64}}, {{filterLabel("Printed Logic Circuit"), 1, {0}},
+          {filterLabel("Redstone"), 1, {1}}, {filterLabel("Printed Silicon"), 1, {2}}}, 16},
+        {{{filterLabel("Engineering Processor"), 64}}, {{filterLabel("Printed Engineering Circuit"), 1, {0}},
+          {filterLabel("Redstone"), 1, {1}}, {filterLabel("Printed Silicon"), 1, {2}}}, 16},
+        {{{filterLabel("Calculation Processor"), 64}}, {{filterLabel("Printed Calculation Circuit"), 1, {0}},
           {filterLabel("Redstone"), 1, {1}}, {filterLabel("Printed Silicon"), 1, {2}}}, 16}
       }));
 
@@ -136,7 +147,9 @@ int main() {
           {filterLabel("Niter"), 1, {1}},
           {filterLabel("Pulverized Charcoal"), 1, {2}}}, 16},
         {{{filterLabel("Oak Wood"), 64}}, {{filterLabel("Wood Essence"), 3, {6, 7, 8}}}, 16},
+        {{{filterLabel("Birch Wood"), 64}}, {{filterLabel("Wood Essence"), 3, {0, 4, 8}}}, 16},
         {{{filterLabel("Lead Ingot"), 64}}, {{filterLabel("Lead Essence"), 8, {0, 1, 2, 3, 5, 6, 7, 8}}}, 8},
+        {{{filterLabel("Glowstone Dust"), 64}}, {{filterLabel("Glowstone Essence"), 8, {0, 1, 2, 3, 5, 6, 7, 8}}}, 8},
         {{{filterLabel("Diamond"), 64}}, {{filterLabel("Diamond Essence"), 9, {0, 1, 2, 3, 4, 5, 6, 7, 8}}}, 7},
         {{{filterLabel("Redstone"), 64}}, {{filterLabel("Redstone Essence"), 9, {0, 1, 2, 3, 4, 5, 6, 7, 8}}}, 7},
         {{{filterLabel("Yellorium Ingot"), 64}}, {{filterLabel("Yellorium Essence"), 8, {0, 1, 2, 3, 5, 6, 7, 8}}}, 8},
@@ -155,7 +168,19 @@ int main() {
           {filterLabel("Crushed Quartz"), 5, {0, 2, 4, 6, 8}}}, 7},
         {{{filterLabel("1k ME Storage Component"), 3}}, {{filterLabel("Logic Processor"), 1, {4}},
           {filterLabel("Redstone"), 4, {0, 2, 6, 8}},
-          {filterLabel("Pure Certus Quartz Crystal"), 4, {1, 3, 5, 7}}}, 16}
+          {filterLabel("Pure Certus Quartz Crystal"), 4, {1, 3, 5, 7}}}, 16},
+        {{{filterLabel("4k ME Storage Component"), 3}}, {{filterLabel("Calculation Processor"), 1, {7}},
+          {filterLabel("Redstone"), 4, {0, 2, 6, 8}},
+          {filterLabel("Quartz Glass"), 1, {4}},
+          {filterLabel("1k ME Storage Component"), 3, {1, 3, 5}}}, 16},
+        {{{filterLabel("16k ME Storage Component"), 3}}, {{filterLabel("Calculation Processor"), 1, {7}},
+          {filterLabel("Glowstone Dust"), 4, {0, 2, 6, 8}},
+          {filterLabel("Quartz Glass"), 1, {4}},
+          {filterLabel("4k ME Storage Component"), 3, {1, 3, 5}}}, 16},
+        {{{filterLabel("64k ME Storage Component"), 3}}, {{filterLabel("Calculation Processor"), 1, {7}},
+          {filterLabel("Glowstone Dust"), 4, {0, 2, 6, 8}},
+          {filterLabel("Quartz Glass"), 1, {4}},
+          {filterLabel("16k ME Storage Component"), 3, {1, 3, 5}}}, 16}
       }));
 
     factory.start();
