@@ -26,7 +26,6 @@ struct ProcessSlotted : ProcessSingleBlock {
 };
 
 struct NonConsumableInfo {
-  // Slots: 4, 8, 12, 13, 14, 15
   size_t storageSlot;
   size_t craftingGridSlot;
   NonConsumableInfo(size_t storageSlot, size_t craftingGridSlot)
@@ -38,6 +37,9 @@ struct ProcessCraftingRobot : Process {
   // Slots: 1, 2, 3
   //        4, 5, 6
   //        7, 8, 9
+  // NonConsumableSlots:
+  //   4, 8, 12, 13, 14, 15
+  //   with extra inventory: 17, 18, ...
   // (maxSets, nonConsumableInfo), slots
   using Recipe = ::Recipe<std::pair<int, std::optional<NonConsumableInfo>>, std::vector<size_t>>;
   std::string name, client;
