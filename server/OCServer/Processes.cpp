@@ -312,19 +312,21 @@ SharedPromise<std::monostate> ProcessRFToolsControlWorkbench::cycle() {
           actions.emplace_back(std::move(action));
         }
       }
-      /* transfer out */ {
-        auto action(std::make_shared<Actions::Call>());
-        action->inv = invOut;
-        action->fn = "transferItem";
-        action->args = {
-          static_cast<double>(Actions::up),
-          static_cast<double>(sideBusOut),
-          64.0,
-          1.0,
-          static_cast<double>(busSlots.back() + 1)
-        };
-        promises.emplace_back(action->mapTo(std::monostate{}));
-        actions.emplace_back(std::move(action));
+      for (int i{}; i < sets; ++i) {
+        /* transfer out */ {
+          auto action(std::make_shared<Actions::Call>());
+          action->inv = invOut;
+          action->fn = "transferItem";
+          action->args = {
+            static_cast<double>(Actions::up),
+            static_cast<double>(sideBusOut),
+            64.0,
+            1.0,
+            static_cast<double>(busSlots.back() + 1)
+          };
+          promises.emplace_back(action->mapTo(std::monostate{}));
+          actions.emplace_back(std::move(action));
+        }
       }
       if (recipe.data.second.has_value()) {
         auto &info(*recipe.data.second);

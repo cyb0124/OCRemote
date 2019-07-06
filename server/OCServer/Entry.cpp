@@ -20,9 +20,7 @@ int main() {
     ignoreBrokenPipe();
     IOEnv io;
     Server server(io, 1847);
-    Factory factory(server, 1000, "center", {
-      {"center", "5cb", Actions::south},
-      {"crafter", "inventory_controller", Actions::front}});
+    Factory factory(server, 1000, "center", {{"center", "5cb", Actions::south}});
     factory.addStorage(std::make_unique<StorageChest>(factory, "center", "5cb", Actions::east, Actions::south));
     factory.addStorage(std::make_unique<StorageChest>(factory, "center", "a12", Actions::east, Actions::north));
 
@@ -30,32 +28,38 @@ int main() {
     factory.addProcess(std::make_unique<ProcessWorkingSet>(factory, "center", "5cb", Actions::north, Actions::south,
       [](auto&&...) { return true; }, std::vector<Recipe<std::pair<std::string, int>>>{}));
 
-    // analogCrafter
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "analogCrafter", "center", "a12", Actions::south, Actions::north,
-      std::vector<size_t>{0, 1, 2, 3, 4, 5, 6, 7, 8}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
-        {{{filterLabel("Sandstone"), 64}}, {{filterLabel("Sand"), 4, {0, 1, 3, 4}}}, 16},
-        {{}, {{filterLabel("Tin Ore Piece"), 4, {0, 1, 3, 4}}}, 16},
-        {{}, {{filterLabel("Iron Ore Piece"), 4, {0, 1, 3, 4}}}, 16},
-        {{}, {{filterLabel("Gold Ore Piece"), 4, {0, 1, 3, 4}}}, 16},
-        {{}, {{filterLabel("Zinc Ore Piece"), 4, {0, 1, 3, 4}}}, 16},
-        {{}, {{filterLabel("Lead Ore Piece"), 4, {0, 1, 3, 4}}}, 16},
-        {{}, {{filterLabel("Copper Ore Piece"), 4, {0, 1, 3, 4}}}, 16},
-        {{}, {{filterLabel("Silver Ore Piece"), 4, {0, 1, 3, 4}}}, 16},
-        {{}, {{filterLabel("Osmium Ore Piece"), 4, {0, 1, 3, 4}}}, 16},
-        {{}, {{filterLabel("Nickel Ore Piece"), 4, {0, 1, 3, 4}}}, 16},
-        {{}, {{filterLabel("Aluminum Ore Piece"), 4, {0, 1, 3, 4}}}, 16},
-        {{}, {{filterLabel("Platinum Ore Piece"), 4, {0, 1, 3, 4}}}, 16},
+    // workbench
+    factory.addProcess(std::make_unique<ProcessRFToolsControlWorkbench>(factory, "workbench", "center", "f80", "a12",
+      Actions::east, Actions::north, -1, std::vector<Recipe<std::pair<int, std::optional<NonConsumableInfo>>, std::vector<size_t>>>{
+        {{{filterLabel("Sandstone"), 64}}, {{filterLabel("Sand"), 4, {1, 2, 4, 5}}}, {16, std::nullopt}},
+        {{}, {{filterLabel("Tin Ore Piece"), 4, {1, 2, 4, 5}}}, {16, std::nullopt}},
+        {{}, {{filterLabel("Iron Ore Piece"), 4, {1, 2, 4, 5}}}, {16, std::nullopt}},
+        {{}, {{filterLabel("Gold Ore Piece"), 4, {1, 2, 4, 5}}}, {16, std::nullopt}},
+        {{}, {{filterLabel("Zinc Ore Piece"), 4, {1, 2, 4, 5}}}, {16, std::nullopt}},
+        {{}, {{filterLabel("Lead Ore Piece"), 4, {1, 2, 4, 5}}}, {16, std::nullopt}},
+        {{}, {{filterLabel("Copper Ore Piece"), 4, {1, 2, 4, 5}}}, {16, std::nullopt}},
+        {{}, {{filterLabel("Silver Ore Piece"), 4, {1, 2, 4, 5}}}, {16, std::nullopt}},
+        {{}, {{filterLabel("Osmium Ore Piece"), 4, {1, 2, 4, 5}}}, {16, std::nullopt}},
+        {{}, {{filterLabel("Nickel Ore Piece"), 4, {1, 2, 4, 5}}}, {16, std::nullopt}},
+        {{}, {{filterLabel("Aluminum Ore Piece"), 4, {1, 2, 4, 5}}}, {16, std::nullopt}},
+        {{}, {{filterLabel("Platinum Ore Piece"), 4, {1, 2, 4, 5}}}, {16, std::nullopt}},
       }));
 
     // cobbleGen
     factory.addProcess(std::make_unique<ProcessInputless>(factory, "center", "5cb", Actions::up, Actions::south,
-      0, ProcessInputless::makeNeeded(factory, filterLabel("Cobblestone"), 64)));
+      0, ProcessInputless::makeNeeded(factory, filterLabel("Cobblestone"), 640)));
 
     // manufactory
     factory.addProcess(std::make_unique<ProcessHeterogeneousWorkingSet>(factory, "manufactory", "center", "5cb", Actions::west, Actions::south,
       std::vector<StockEntry>{}, 27, nullptr, std::vector<Recipe<>>{
         {{{filterLabel("Sand"), 64}}, {{filterLabel("Cobblestone"), 1}}},
         {{{filterLabel("Niter"), 64}}, {{filterLabel("Sandstone"), 1}}}
+      }));
+
+    // furnace
+    factory.addProcess(std::make_unique<ProcessHeterogeneousWorkingSet>(factory, "furnace", "center", "a12", Actions::west, Actions::north,
+      std::vector<StockEntry>{}, 27, nullptr, std::vector<Recipe<>>{
+        {{{filterLabel("Glass"), 64}}, {{filterLabel("Sand"), 1}}}
       }));
 
     factory.start();
