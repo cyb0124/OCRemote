@@ -248,6 +248,112 @@ SharedPromise<std::monostate> ProcessCraftingRobot::cycle() {
   return Promise<std::monostate>::all(promises)->mapTo(std::monostate{});
 }
 
+SharedPromise<std::monostate> ProcessRFToolsControlWorkbench::cycle() {
+  std::vector<SharedPromise<std::monostate>> promises;
+  auto demands(factory.getDemand(recipes));
+  for (auto &demand : demands) {
+    auto &recipe(*demand.recipe);
+    demand.in.clear();
+    factory.resolveRecipeInputs(recipe, demand, true);
+    demand.inAvail = std::min(demand.inAvail, recipe.data.first);
+    if (demand.inAvail <= 0)
+      continue;
+    auto slotsToFree(std::make_shared<std::vector<size_t>>());
+    std::vector<SharedPromise<size_t>> allocatedSlots;
+    for (size_t i{}; i < recipe.in.size(); ++i) {
+      allocatedSlots.emplace_back(factory.busAllocate()->then(factory.alive, [
+        this, slotsToFree, reservation(factory.reserve(name, demand.in[i], demand.inAvail * recipe.in[i].size))
+      ](size_t busSlot) {
+        slotsToFree->emplace_back(busSlot);
+        return reservation.extract(busSlot)->mapTo(busSlot);
+      }));
+    }
+    allocatedSlots.emplace_back(factory.busAllocate()->map(factory.alive, [this, slotsToFree](size_t busSlot) {
+      slotsToFree->emplace_back(busSlot);
+      return busSlot;
+    }));
+    promises.emplace_back(Promise<size_t>::all(allocatedSlots)->then(factory.alive, [this, sets(demand.inAvail), &recipe](std::vector<size_t> &&busSlots) {
+      std::vector<SharedPromise<std::monostate>> promises;
+      std::vector<SharedAction> actions;
+      for (size_t i{}; i < recipe.in.size(); ++i) {
+        auto &in(recipe.in[i]);
+        auto eachSize(in.size / static_cast<int>(in.data.size()));
+        for (size_t toSlot : in.data) {
+          /* transfer in */ {
+            auto action(std::make_shared<Actions::Call>());
+            action->inv = invIn;
+            action->fn = "transferItem";
+            action->args = {
+              static_cast<double>(sideBusIn),
+              static_cast<double>(Actions::down),
+              static_cast<double>(eachSize * sets),
+              static_cast<double>(busSlots[i] + 1),
+              static_cast<double>(toSlot)
+            };
+            promises.emplace_back(action->mapTo(std::monostate{}));
+            actions.emplace_back(std::move(action));
+          }
+        }
+      }
+      if (recipe.data.second.has_value()) {
+        auto &info(*recipe.data.second);
+        /* load nonConsumable */ {
+          auto action(std::make_shared<Actions::Call>());
+          action->inv = invIn;
+          action->fn = "transferItem";
+          action->args = {
+            static_cast<double>(sideNonConsumable),
+            static_cast<double>(Actions::down),
+            64.0,
+            static_cast<double>(info.storageSlot),
+            static_cast<double>(info.craftingGridSlot)
+          };
+          promises.emplace_back(action->mapTo(std::monostate{}));
+          actions.emplace_back(std::move(action));
+        }
+      }
+      /* transfer out */ {
+        auto action(std::make_shared<Actions::Call>());
+        action->inv = invOut;
+        action->fn = "transferItem";
+        action->args = {
+          static_cast<double>(Actions::up),
+          static_cast<double>(sideBusOut),
+          64.0,
+          1.0,
+          static_cast<double>(busSlots.back() + 1)
+        };
+        promises.emplace_back(action->mapTo(std::monostate{}));
+        actions.emplace_back(std::move(action));
+      }
+      if (recipe.data.second.has_value()) {
+        auto &info(*recipe.data.second);
+        /* store nonConsumable */ {
+          auto action(std::make_shared<Actions::Call>());
+          action->inv = invIn;
+          action->fn = "transferItem";
+          action->args = {
+            static_cast<double>(Actions::down),
+            static_cast<double>(sideNonConsumable),
+            64.0,
+            static_cast<double>(info.craftingGridSlot),
+            static_cast<double>(info.storageSlot)
+          };
+          promises.emplace_back(action->mapTo(std::monostate{}));
+          actions.emplace_back(std::move(action));
+        }
+      }
+      factory.s.enqueueActionGroup(client, std::move(actions));
+      return Promise<std::monostate>::all(promises)->mapTo(std::monostate{});
+    })->finally(factory.alive, [this, slotsToFree(std::move(slotsToFree))]() {
+      factory.busFree(*slotsToFree);
+    }));
+  }
+  if (promises.empty())
+    return scheduleTrivialPromise(factory.s.io);
+  return Promise<std::monostate>::all(promises)->mapTo(std::monostate{});
+}
+
 SharedPromise<std::monostate> ProcessWorkingSet::cycle() {
   if (!outFilter)
     if (factory.getDemand(recipes).empty())

@@ -52,6 +52,19 @@ struct ProcessCraftingRobot : Process {
   SharedPromise<std::monostate> cycle() override;
 };
 
+struct ProcessRFToolsControlWorkbench : Process {
+  using Recipe = ::Recipe<std::pair<int, std::optional<NonConsumableInfo>>, std::vector<size_t>>;
+  std::string name, client, invIn, invOut;
+  int sideBusIn, sideBusOut, sideNonConsumable;
+  std::vector<Recipe> recipes;
+  ProcessRFToolsControlWorkbench(Factory &factory, std::string name, std::string client, std::string invIn,
+  std::string invOut, int sideBusIn, int sideBusOut, int sideNonConsumable, std::vector<Recipe> recipes)
+    :Process(factory), name(std::move(name)), client(std::move(client)), invIn(std::move(invIn)),
+    invOut(std::move(invOut)), sideBusIn(sideBusIn), sideBusOut(sideBusOut),
+    sideNonConsumable(sideNonConsumable), recipes(std::move(recipes)) {}
+  SharedPromise<std::monostate> cycle() override;
+};
+
 struct ProcessWorkingSet : ProcessSingleBlock {
   // Note: single input only.
   using Recipe = ::Recipe<std::pair<std::string, int>>; // name, maxInproc
