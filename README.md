@@ -27,8 +27,8 @@ OCRemote currently supports the following types of auto-crafting processes:
     This process uses a single crafting robot to handle all grid crafting recipes. It also allows non-consumable items in recipes (e.g. Pam's Harvestcraft recipes that require a utensil).
   - **ProcessRFToolsControlWorkbench**\
     Same as ProcessCraftingRobot, but uses RFTools Control's Workbench as the crafter.
-  - **ProcessWorkingSet** and **ProcessHeterogeneousWorkingSet**\
-    These processes are intended for machines that can run multiple recipes at once, or for general buffering/pipelining of recipe inputs. In additional to recipes, they also allow items to be constantly refilled at the target inventory. ProcessHeterogeneousWorkingSet also respects the ratio of the input items, which is useful for machines such as ExCompressum's Auto Compressor.
+  - **ProcessBuffered**\
+    This process is intended for machines that can run multiple recipes at once, or for general buffering/pipelining of recipe inputs. In additional to recipes, it also allow items to be constantly refilled at the target inventory. It allows limiting each individual recipe's maximum number of item being processed. It also respects the ratio of the input items, which is useful for machines such as ExCompressum's Auto Compressor.
   - **ProcessScatteringWorkingSet**\
     This process is intended for machine that can run multiple recipes at once but independently for each slot. This process will try to spread out input items among slots to help with parallelization.
   - **ProcessInputless** and **ProcessHeterogeneousInputless**\

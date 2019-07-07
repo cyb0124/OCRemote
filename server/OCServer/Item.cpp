@@ -80,7 +80,7 @@ InsertResult insertIntoInventory(std::vector<SharedItemStack> &inventory, const 
   InsertResult result;
   size = std::min(size, item->maxSize);
   std::optional<size_t> firstEmptySlot;
-  for (size_t slot{}; slot < inventory.size(); ++slot) {
+  for (size_t slot{}; size && slot < inventory.size(); ++slot) {
     auto &stack(inventory[slot]);
     if (!stack) {
       if (!firstEmptySlot.has_value())

@@ -356,8 +356,8 @@ SharedPromise<std::monostate> ProcessRFToolsControlWorkbench::cycle() {
   return Promise<std::monostate>::all(promises)->mapTo(std::monostate{});
 }
 
-SharedPromise<std::monostate> ProcessWorkingSet::cycle() {
-  if (!outFilter)
+SharedPromise<std::monostate> ProcessBuffered::cycle() {
+  if (!outFilter && stockList.empty())
     if (factory.getDemand(recipes).empty())
       return scheduleTrivialPromise(factory.s.io);
   auto action(std::make_shared<Actions::List>());
@@ -367,59 +367,149 @@ SharedPromise<std::monostate> ProcessWorkingSet::cycle() {
   return action->then(factory.alive, [this](std::vector<SharedItemStack> &&items) {
     std::vector<SharedPromise<std::monostate>> promises;
     std::unordered_map<SharedItem, int, SharedItemHash, SharedItemEqual> inProcMap;
-    auto demands(factory.getDemand(recipes));
-    for (auto &i : demands)
-      inProcMap.try_emplace(i.in.front(), 0);
+    auto quota{recipeMaxInProc};
     for (size_t slot{}; slot < items.size(); ++slot) {
       auto &stack(items[slot]);
       if (!stack)
         continue;
-      auto itr(inProcMap.find(stack->item));
-      if (itr == inProcMap.end()) {
-        if (outFilter) {
-          bool notInput{true};
-          for (auto &recipe : recipes) {
-            if (recipe.in.front().item->filter(*stack->item)) {
-              notInput = false;
-              break;
-            }
-          }
-          if (notInput && outFilter(slot, *stack))
-            promises.emplace_back(processOutput(slot, stack->item->maxSize));
-        }
-      } else {
-        itr->second += stack->size;
+      inProcMap[stack->item] += stack->size;
+      for (size_t i{}; i < stockList.size(); ++i)
+        if (stockList[i].item->filter(*stack->item))
+          goto skipSlot;
+      quota -= stack->size;
+      if (outFilter) {
+        for (auto &recipe : recipes)
+          for (auto &ingredient : recipe.in)
+            if (ingredient.item->filter(*stack->item))
+              goto skipSlot;
+        if (outFilter(slot, *stack))
+          promises.emplace_back(processOutput(slot, stack->item->maxSize));
       }
+      skipSlot: {}
     }
-    for (auto &demand : demands) {
-      auto &recipe(*demand.recipe);
-      demand.in.clear();
-      factory.resolveRecipeInputs(recipe, demand, true);
-      int toProc{std::min({
-        recipe.data.second - inProcMap.at(demand.in.front()),
-        factory.getAvail(demand.in.front(), recipe.in.front().allowBackup),
-        demand.in.front()->maxSize})};
+    for (size_t i{}; i < stockList.size(); ++i) {
+      auto &entry{stockList[i]};
+      auto resolved{factory.getItem(*entry.item)};
+      if (!resolved)
+        continue;
+      auto &inProc{inProcMap[resolved]};
+      int toProc{std::min({entry.toStock - inProc, factory.getAvail(resolved, entry.allowBackup)})};
       if (toProc <= 0)
         continue;
+      auto plan{insertIntoInventory(items, resolved, toProc)};
+      if (plan.totalSize <= 0)
+        continue;
+      inProc += plan.totalSize;
       promises.emplace_back(factory.busAllocate()->then(factory.alive, [
-        this, toProc, reservation(factory.reserve(recipe.data.first, demand.in.front(), toProc))
+        this, reservation(factory.reserve(name, resolved, plan.totalSize)), plan(std::move(plan.actions))
       ](size_t busSlot) {
-        return reservation.extract(busSlot)->then(factory.alive, [this, toProc, busSlot](auto&&) {
-          auto action(std::make_shared<Actions::Call>());
-          action->inv = inv;
-          action->fn = "transferItem";
-          action->args = {
-            static_cast<double>(sideBus),
-            static_cast<double>(sideCrafter),
-            static_cast<double>(toProc),
-            static_cast<double>(busSlot + 1)
-          };
-          factory.s.enqueueAction(client, action);
-          return action->mapTo(std::monostate{});
+        return reservation.extract(busSlot)->then(factory.alive, [this, busSlot, plan(std::move(plan))](auto&&) {
+          std::vector<SharedPromise<std::monostate>> promises;
+          std::vector<SharedAction> actions;
+          for (auto &to : plan) {
+            auto action(std::make_shared<Actions::Call>());
+            action->inv = inv;
+            action->fn = "transferItem";
+            action->args = {
+              static_cast<double>(sideBus),
+              static_cast<double>(sideCrafter),
+              static_cast<double>(to.second),
+              static_cast<double>(busSlot + 1),
+              static_cast<double>(to.first + 1)
+            };
+            promises.emplace_back(action->mapTo(std::monostate{}));
+            actions.emplace_back(std::move(action));
+          }
+          factory.s.enqueueActionGroup(client, std::move(actions));
+          return Promise<std::monostate>::all(promises)->mapTo(std::monostate{});
         })->finally(factory.alive, [this, busSlot]() {
           factory.busFree(busSlot);
         });
       }));
+    }
+    if (quota > 0) {
+      auto demands(factory.getDemand(recipes));
+      for (auto &demand : demands) {
+        auto &recipe(*demand.recipe);
+        demand.in.clear();
+        factory.resolveRecipeInputs(recipe, demand, true);
+        if (demand.inAvail <= 0)
+          continue;
+        int listSum{};
+        for (auto &ingredient : recipe.in)
+          listSum += ingredient.size;
+        int sets{std::min(demand.inAvail, quota / listSum)};
+        if (sets <= 0)
+          continue;
+        std::vector<int*> inProcs;
+        inProcs.reserve(recipe.in.size());
+        int inProcSum{};
+        for (auto &ingredient : demand.in)
+          inProcSum += *inProcs.emplace_back(&inProcMap[ingredient]);
+        sets = std::min(sets, (recipe.data - inProcSum) / listSum);
+        if (sets <= 0)
+          continue;
+        auto backup{cloneInventory(items)};
+        std::vector<InsertResult> plans;
+        plans.reserve(recipe.in.size());
+        retry: for (size_t i{}; i < recipe.in.size(); ++i) {
+          int required{sets * recipe.in[i].size};
+          auto plan{insertIntoInventory(items, demand.in[i], required)};
+          if (plan.totalSize == required) {
+            plans.emplace_back(std::move(plan));
+          } else if (--sets > 0) {
+            plans.clear();
+            items = cloneInventory(backup);
+            goto retry;
+          } else {
+            goto skipRecipe;
+          }
+        }
+        {
+          for (size_t i{}; i < recipe.in.size(); ++i)
+            *inProcs[i] += plans[i].totalSize;
+          quota -= sets * listSum;
+          auto slotsToFree(std::make_shared<std::vector<size_t>>());
+          std::vector<SharedPromise<size_t>> extractions;
+          for (size_t i{}; i < recipe.in.size(); ++i) {
+            extractions.emplace_back(factory.busAllocate()->then(factory.alive, [
+              this, slotsToFree, reservation(factory.reserve(name, demand.in[i], plans[i].totalSize))
+            ](size_t busSlot) {
+              slotsToFree->emplace_back(busSlot);
+              return reservation.extract(busSlot)->mapTo(busSlot);
+            }));
+          }
+          promises.emplace_back(Promise<size_t>::all(extractions)->then(factory.alive, [
+            this, plans(std::move(plans))
+          ](std::vector<size_t> &&busSlots) {
+            std::vector<SharedPromise<std::monostate>> promises;
+            std::vector<SharedAction> actions;
+            for (size_t i{}; i < plans.size(); ++i) {
+              for (auto &to : plans[i].actions) {
+                auto action(std::make_shared<Actions::Call>());
+                action->inv = inv;
+                action->fn = "transferItem";
+                action->args = {
+                  static_cast<double>(sideBus),
+                  static_cast<double>(sideCrafter),
+                  static_cast<double>(to.second),
+                  static_cast<double>(busSlots[i] + 1),
+                  static_cast<double>(to.first + 1)
+                };
+                promises.emplace_back(action->mapTo(std::monostate{}));
+                actions.emplace_back(std::move(action));
+              }
+            }
+            factory.s.enqueueActionGroup(client, std::move(actions));
+            return Promise<std::monostate>::all(promises)->mapTo(std::monostate{});
+          })->finally(factory.alive, [this, slotsToFree(std::move(slotsToFree))]() {
+            factory.busFree(*slotsToFree);
+          }));
+          if (quota <= 0)
+            break;
+        }
+        skipRecipe: {}
+      }
     }
     if (promises.empty())
       return scheduleTrivialPromise(factory.s.io);
@@ -520,128 +610,6 @@ SharedPromise<std::monostate> ProcessScatteringWorkingSet::cycle() {
       }
       if (full)
         break;
-    }
-    if (promises.empty())
-      return scheduleTrivialPromise(factory.s.io);
-    return Promise<std::monostate>::all(promises)->mapTo(std::monostate{});
-  });
-}
-
-namespace {
-  struct StockInfo : StockEntry {
-    std::optional<size_t> slot;
-    SharedItem resolved;
-    StockInfo(const StockEntry &from) :StockEntry(from) {}
-  };
-}
-
-SharedPromise<std::monostate> ProcessHeterogeneousWorkingSet::cycle() {
-  if (!outFilter && stockList.empty())
-    if (factory.getDemand(recipes).empty())
-      return scheduleTrivialPromise(factory.s.io);
-  auto action(std::make_shared<Actions::List>());
-  action->inv = inv;
-  action->side = sideCrafter;
-  factory.s.enqueueAction(client, action);
-  return action->then(factory.alive, [this](std::vector<SharedItemStack> &&items) {
-    std::vector<SharedPromise<std::monostate>> promises;
-    std::vector<StockInfo> stockInfos(stockList.begin(), stockList.end());
-    auto recipeInProc(this->recipeMaxInProc);
-    for (size_t slot{}; slot < items.size(); ++slot) {
-      auto &stack(items[slot]);
-      if (!stack)
-        continue;
-      for (auto &stockInfo : stockInfos) {
-        if (stockInfo.item->filter(*stack->item)) {
-          stockInfo.resolved = stack->item;
-          stockInfo.slot = slot;
-          stockInfo.toStock -= stack->size;
-          goto isStockItem;
-        }
-      }
-      recipeInProc -= stack->size;
-      if (outFilter && outFilter(slot, *stack))
-        promises.emplace_back(processOutput(slot, stack->item->maxSize));
-      isStockItem:;
-    }
-    for (auto &stockInfo : stockInfos) {
-      auto stockItem(stockInfo.resolved ? stockInfo.resolved : factory.getItem(*stockInfo.item));
-      if (!stockItem)
-        continue;
-      int toProc{std::min({stockInfo.toStock, stockItem->maxSize, factory.getAvail(stockItem, stockInfo.allowBackup)})};
-      if (toProc <= 0)
-        continue;
-      promises.emplace_back(factory.busAllocate()->then(factory.alive, [
-        this, toProc, reservation(factory.reserve(name, stockItem, toProc)), toSlot(stockInfo.slot)
-      ](size_t busSlot) {
-        return reservation.extract(busSlot)->then(factory.alive, [this, toProc, busSlot, toSlot](auto&&) {
-          auto action(std::make_shared<Actions::Call>());
-          action->inv = inv;
-          action->fn = "transferItem";
-          action->args = {
-            static_cast<double>(sideBus),
-            static_cast<double>(sideCrafter),
-            static_cast<double>(toProc),
-            static_cast<double>(busSlot + 1)
-          };
-          if (toSlot.has_value())
-            action->args.emplace_back(static_cast<double>(*toSlot + 1));
-          factory.s.enqueueAction(client, action);
-          return action->mapTo(std::monostate{});
-        })->finally(factory.alive, [this, busSlot]() {
-          factory.busFree(busSlot);
-        });
-      }));
-    }
-    if (recipeInProc > 0) {
-      auto demands(factory.getDemand(recipes));
-      for (auto &demand : demands) {
-        auto &recipe(*demand.recipe);
-        demand.in.clear();
-        factory.resolveRecipeInputs(recipe, demand, true);
-        int listSum{};
-        for (auto &ingredient : recipe.in)
-          listSum += ingredient.size;
-        int sets{std::min(demand.inAvail, recipeInProc / listSum)};
-        if (sets <= 0)
-          continue;
-        auto slotsToFree(std::make_shared<std::vector<size_t>>());
-        std::vector<SharedPromise<size_t>> extractions;
-        for (size_t i{}; i < recipe.in.size(); ++i) {
-          extractions.emplace_back(factory.busAllocate()->then(factory.alive, [
-            this, slotsToFree, reservation(factory.reserve(name, demand.in[i], sets * recipe.in[i].size))
-          ](size_t busSlot) {
-            slotsToFree->emplace_back(busSlot);
-            return reservation.extract(busSlot)->mapTo(busSlot);
-          }));
-        }
-        promises.emplace_back(Promise<size_t>::all(extractions)->then(factory.alive, [
-          this, sets, &recipe
-        ](std::vector<size_t> &&busSlots) {
-          std::vector<SharedPromise<std::monostate>> promises;
-          std::vector<SharedAction> actions;
-          for (size_t i{}; i < recipe.in.size(); ++i) {
-            auto action(std::make_shared<Actions::Call>());
-            action->inv = inv;
-            action->fn = "transferItem";
-            action->args = {
-              static_cast<double>(sideBus),
-              static_cast<double>(sideCrafter),
-              static_cast<double>(sets * recipe.in[i].size),
-              static_cast<double>(busSlots[i] + 1)
-            };
-            promises.emplace_back(action->mapTo(std::monostate{}));
-            actions.emplace_back(std::move(action));
-          }
-          factory.s.enqueueActionGroup(client, std::move(actions));
-          return Promise<std::monostate>::all(promises)->mapTo(std::monostate{});
-        })->finally(factory.alive, [this, slotsToFree(std::move(slotsToFree))]() {
-          factory.busFree(*slotsToFree);
-        }));
-        recipeInProc -= sets * listSum;
-        if (recipeInProc <= 0)
-          break;
-      }
     }
     if (promises.empty())
       return scheduleTrivialPromise(factory.s.io);

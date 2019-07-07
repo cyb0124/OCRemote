@@ -54,8 +54,8 @@ public:
 template<typename T = std::monostate>
 struct RecipeIn {
   SharedItemFilter item;
-  int size = 1;
-  bool allowBackup = false;
+  int size{1};
+  bool allowBackup{};
   T data;
 
   RecipeIn(SharedItemFilter item, int size, T data, bool allowBackup = false)
