@@ -75,7 +75,7 @@ void Client::read() {
       log("error reading length: " + ec.message());
       s.removeClient(*this);
     } else {
-      read();
+      auto wk{weak_from_this()};
       #ifndef NDEBUG
         std::cout << logHeader << " >=> ";
         std::cout.write(buffer->data(), nRead);
@@ -86,6 +86,10 @@ void Client::read() {
       } catch (std::exception &e) {
         log(std::string("error decoding packet: ") + e.what());
         s.removeClient(*this);
+      }
+      if (!wk.expired()) {
+        updateTimer();
+        read();
       }
     }
   }));
@@ -174,6 +178,7 @@ void Client::send() {
       }
     })
   );
+  updateTimer();
 }
 
 void Client::enqueueActionGroup(std::vector<SharedAction> actions) {
@@ -184,4 +189,17 @@ void Client::enqueueActionGroup(std::vector<SharedAction> actions) {
 
 size_t Client::countPending() const {
   return sendQueueTotal + responseQueue.size();
+}
+
+void Client::updateTimer() {
+  if (sendQueue.empty() && responseQueue.empty()) {
+    responseTimer.reset();
+  } else {
+    responseTimer = std::make_shared<boost::asio::steady_timer>(s.io.io);
+    responseTimer->expires_after(timeout());
+    responseTimer->async_wait(makeWeakCallback(responseTimer, [this](const boost::system::error_code&) {
+      log("timeout waiting for response");
+      s.removeClient(*this);
+    }));
+  }
 }

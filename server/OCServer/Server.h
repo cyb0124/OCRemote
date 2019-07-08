@@ -19,6 +19,7 @@ struct IOEnv {
 
 struct Client : std::enable_shared_from_this<Client> {
   using Itr = std::list<std::shared_ptr<Client>>::iterator;
+  static constexpr auto timeout() { return std::chrono::seconds{8}; }
 private:
   Server &s;
   Itr itr;
@@ -27,12 +28,14 @@ private:
   std::string logHeader;
   std::list<std::vector<SharedAction>> sendQueue;
   std::list<SharedAction> responseQueue;
+  std::shared_ptr<boost::asio::steady_timer> responseTimer;
   bool isSending = false;
   size_t sendQueueTotal{};
   Deserializer d;
   void onPacket(SValue);
   void read();
   void send();
+  void updateTimer();
 public:
   ~Client();
   Client(Server &s, boost::asio::ip::tcp::socket socket);
