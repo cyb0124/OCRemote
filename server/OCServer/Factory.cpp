@@ -65,6 +65,10 @@ SharedPromise<std::monostate> Factory::updateAndBackupItems() {
   for (auto &i : storages)
     promises.emplace_back(i->update());
   return Promise<std::monostate>::all(promises)->map(alive, [this](auto&&) {
+    int total{};
+    for (auto &i : items)
+      total += i.second.getAvail(true);
+    log("storage: " + std::to_string(total) + " items, " + std::to_string(items.size()) + " types", 0x00ff00);
     for (auto &i : backups) {
       auto item(getItem(*i.first));
       if (!item)

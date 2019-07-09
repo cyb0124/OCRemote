@@ -51,6 +51,7 @@ int main() {
         {{{filterLabel("Enderium Ingot"), 64}}, {{filterLabel("Enderium Essence"), 8, {1, 2, 3, 4, 6, 7, 8, 9}}}, {8, std::nullopt}},
         {{{filterLabel("Signalum Ingot"), 64}}, {{filterLabel("Signalum Essence"), 8, {1, 2, 3, 4, 6, 7, 8, 9}}}, {8, std::nullopt}},
         {{{filterLabel("Lumium Ingot"), 64}}, {{filterLabel("Lumium Essence"), 8, {1, 2, 3, 4, 6, 7, 8, 9}}}, {8, std::nullopt}},
+        {{{filterLabel("Fluix Crystal"), 64}}, {{filterLabel("Fluix Essence"), 8, {1, 2, 3, 4, 6, 7, 8, 9}}}, {8, std::nullopt}},
         {{{filterLabel("Lapis Lazuli"), 64}}, {{filterLabel("Lapis Lazuli Essence"), 8, {1, 2, 3, 4, 6, 7, 8, 9}}}, {5, std::nullopt}},
         {{{filterLabel("Glowstone Dust"), 64}}, {{filterLabel("Glowstone Essence"), 8, {1, 2, 3, 4, 6, 7, 8, 9}}}, {4, std::nullopt}},
         {{{filterLabel("Certus Quartz Crystal"), 64}}, {{filterLabel("Certus Quartz Essence"), 8, {1, 2, 3, 4, 6, 7, 8, 9}}}, {8, std::nullopt}},
@@ -68,8 +69,31 @@ int main() {
         {{{filterLabel("Electrum Gear"), 16}}, {{filterLabel("Electrum Ingot"), 4, {2, 4, 6, 8}}}, {16, std::nullopt}},
         {{{filterLabel("Weighted Pressure Plate (Heavy)"), 16}}, {{filterLabel("Iron Ingot"), 2, {1, 2}}}, {16, std::nullopt}},
         {{{filterLabel("Weighted Pressure Plate (Light)"), 16}}, {{filterLabel("Gold Ingot"), 2, {1, 2}}}, {16, std::nullopt}},
-        {{{filterLabel("Rich Phyto-Gro"), 16}}, {{filterLabel("Pulverized Charcoal"), 1, {1}},
-          {filterLabel("Niter"), 1, {2}}, {filterLabel("Rich Slag"), 1, {3}}}, {4, std::nullopt}},
+        {{{filterLabel("Certus Quartz Seed"), 16}}, {
+          {filterLabel("Sand"), 1, {1}},
+          {filterLabel("Certus Quartz Dust"), 1, {2}}
+        }, {16, std::nullopt}},
+        {{{filterLabel("Nether Quartz Seed"), 16}}, {
+          {filterLabel("Sand"), 1, {1}},
+          {filterLabel("Crushed Quartz"), 1, {2}}
+        }, {16, std::nullopt}},
+        {{{filterLabel("Fluix Seed"), 16}}, {
+          {filterLabel("Sand"), 1, {1}},
+          {filterLabel("Fluix Dust"), 1, {2}}
+        }, {16, std::nullopt}},
+        {{{filterLabel("Quartz Glass"), 16}}, {
+          {filterLabel("Crushed Quartz"), 5, {1, 3, 5, 7, 9}},
+          {filterLabel("Glass"), 4, {2, 4, 6, 8}}
+        }, {12, std::nullopt}},
+        {{{filterLabel("Rich Phyto-Gro"), 16}}, {
+          {filterLabel("Pulverized Charcoal"), 1, {1}},
+          {filterLabel("Niter"), 1, {2}},
+          {filterLabel("Rich Slag"), 1, {3}}
+        }, {4, std::nullopt}},
+        {{{filterLabelName("Clay", "minecraft:clay_ball"), 16}}, {
+          {filterLabel("Water Essence"), 2, {1, 5}},
+          {filterLabel("Dirt Essence"), 2, {2, 4}}
+        }, {4, std::nullopt}},
         {{{filterLabel("Cryotheum Dust"), 16}}, {
           {filterLabel("Blizz Powder"), 2, {1, 2}},
           {filterLabel("Redstone"), 1, {4}},
@@ -171,7 +195,9 @@ int main() {
         {{{filterLabel("Pulverized Obsidian"), 16}}, {{filterLabel("Obsidian"), 1}}, INT_MAX},
         {{{filterLabel("Pulverized Lead"), 16}}, {{filterLabel("Lead Ingot"), 1}}, INT_MAX},
         {{{filterLabel("Graphite Dust"), 16}}, {{filterLabel("Graphite Ingot"), 1}}, INT_MAX},
-        {{{filterLabel("Crushed Quartz"), 16}}, {{filterLabel("Nether Quartz"), 1}}, INT_MAX}
+        {{{filterLabel("Crushed Quartz"), 16}}, {{filterLabel("Nether Quartz"), 1}}, INT_MAX},
+        {{{filterLabel("Certus Quartz Dust"), 16}}, {{filterLabel("Certus Quartz Crystal"), 1}}, INT_MAX},
+        {{{filterLabel("Fluix Dust"), 16}}, {{filterLabel("Fluix Crystal"), 1}}, INT_MAX}
       }));
 
     // sagMill
@@ -187,6 +213,33 @@ int main() {
         {{{filterLabel("Stone"), 64}}, {{filterLabel("Cobblestone"), 1}}, INT_MAX},
         {{{filterLabel("Charcoal"), 64}}, {{filterLabel("Oak Wood"), 1}}, INT_MAX},
         {{{filterLabel("Graphite Ingot"), 64}}, {{filterLabel("Charcoal"), 1}}, INT_MAX}
+      }));
+
+    // aeSharedBuffer
+    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "aeSharedBuffer", "center", "c28", Actions::south, Actions::east,
+      std::vector<StockEntry>{}, INT_MAX, nullptr, std::vector<Recipe<int>>{
+        {{{filterLabel("Pure Certus Quartz Crystal"), 16}}, {{filterLabel("Certus Quartz Seed"), 1}}, 16},
+        {{{filterLabel("Pure Nether Quartz Crystal"), 16}}, {{filterLabel("Nether Quartz Seed"), 1}}, 16},
+        {{{filterLabel("Pure Fluix Crystal"), 16}}, {{filterLabel("Fluix Seed"), 1}}, 16},
+        {{{filterLabel("Printed Calculation Circuit"), 16}}, {{filterLabel("Pure Certus Quartz Crystal"), 1}}, 16},
+        {{{filterLabel("Printed Engineering Circuit"), 16}}, {{filterLabel("Diamond"), 1}}, 16},
+        {{{filterLabel("Printed Logic Circuit"), 16}}, {{filterLabel("Gold Ingot"), 1}}, 16},
+        {{{filterLabel("Printed Silicon"), 16}}, {{filterLabel("Silicon"), 1}}, 16},
+        {{{filterLabel("Calculation Processor"), 16}}, {
+          {filterLabel("Printed Silicon"), 1},
+          {filterLabel("Redstone"), 1},
+          {filterLabel("Printed Calculation Circuit"), 1}
+        }, 48},
+        {{{filterLabel("Engineering Processor"), 16}}, {
+          {filterLabel("Printed Silicon"), 1},
+          {filterLabel("Redstone"), 1},
+          {filterLabel("Printed Engineering Circuit"), 1}
+        }, 48},
+        {{{filterLabel("Logic Processor"), 16}}, {
+          {filterLabel("Printed Silicon"), 1},
+          {filterLabel("Redstone"), 1},
+          {filterLabel("Printed Logic Circuit"), 1}
+        }, 48}
       }));
 
     // pulverizer
@@ -207,6 +260,7 @@ int main() {
         {{{filterLabel("Certus Quartz Essence"), 16}}, {{filterLabel("Certus Quartz Seeds"), 1}}, INT_MAX},
         {{{filterLabel("Lapis Lazuli Essence"), 16}}, {{filterLabel("Lapis Lazuli Seeds"), 1}}, INT_MAX},
         {{{filterLabel("Glowstone Essence"), 16}}, {{filterLabel("Glowstone Seeds"), 1}}, INT_MAX},
+        {{{filterLabel("Yellorium Essence"), 16}}, {{filterLabel("Yellorium Seeds"), 1}}, INT_MAX},
         {{{filterLabel("Redstone Essence"), 16}}, {{filterLabel("Redstone Seeds"), 1}}, INT_MAX},
         {{{filterLabel("Enderium Essence"), 16}}, {{filterLabel("Enderium Seeds"), 1}}, INT_MAX},
         {{{filterLabel("Signalum Essence"), 16}}, {{filterLabel("Signalum Seeds"), 1}}, INT_MAX},
@@ -215,7 +269,10 @@ int main() {
         {{{filterLabel("Lumium Essence"), 16}}, {{filterLabel("Lumium Seeds"), 1}}, INT_MAX},
         {{{filterLabel("Cobalt Essence"), 16}}, {{filterLabel("Cobalt Seeds"), 1}}, INT_MAX},
         {{{filterLabel("Nether Essence"), 16}}, {{filterLabel("Nether Seeds"), 1}}, INT_MAX},
+        {{{filterLabel("Fluix Essence"), 16}}, {{filterLabel("Fluix Seeds"), 1}}, INT_MAX},
+        {{{filterLabel("Water Essence"), 16}}, {{filterLabel("Water Seeds"), 1}}, INT_MAX},
         {{{filterLabel("Wood Essence"), 16}}, {{filterLabel("Wood Seeds"), 1}}, INT_MAX},
+        {{{filterLabel("Dirt Essence"), 16}}, {{filterLabel("Dirt Seeds"), 1}}, INT_MAX},
         {{{filterLabel("Ender Pearl"), 64}}, {{filterLabel("Ender Lilly"), 1}}, INT_MAX},
         {{{filterLabel("Seeds"), 16}}, {{filterLabel("Seeds"), 1}}, INT_MAX}
       }));
