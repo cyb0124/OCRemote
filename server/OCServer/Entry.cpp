@@ -25,14 +25,17 @@ int main() {
     factory.addStorage(std::make_unique<StorageChest>(factory, "center", "a12", Actions::east, Actions::north));
     factory.addStorage(std::make_unique<StorageChest>(factory, "center", "3c3", Actions::south, Actions::west));
     factory.addStorage(std::make_unique<StorageDrawer>(factory, "center", "6ef", Actions::up, Actions::west, std::vector<SharedItemFilter>{
-      filterLabel("Cobblestone"), filterLabel("Sand"), filterLabel("Dust"),
-      filterLabel("Niter"), filterLabel("Blitz Powder"), filterLabel("Basalz Powder"),
-      filterLabel(u8"§eInferium Essence"),
-      filterLabel("Platinum Ore Chunk"),
-      filterLabel("Silver Ore Chunk"),
-      filterLabel("Iron Ore Chunk"),
-      filterLabel("Gold Ore Chunk"),
-      filterLabel("Tin Ore Chunk")
+      filterLabel("Cobblestone"), filterLabel("Sand"), filterLabel("Dust"), filterLabel("Glowstone Dust"),
+      filterLabel("Gravel"), filterLabel("Niter"), filterLabel("Blitz Powder"), filterLabel("Basalz Powder"),
+      filterLabel("Flint"), filterLabel(u8"§eInferium Essence"), filterLabel("Iron Ore Piece"), filterLabel("Cocoa Beans"),
+      filterLabel("Iron Ore Chunk"), filterLabel("Certus Quartz Crystal"), filterLabel("Platinum Ore Chunk"),
+      filterLabel("Platinum Ore Piece"), filterLabel("White Wool"), filterLabel("Blaze Powder"), filterLabel("Bone Meal"),
+      filterLabel("Yellorium Ore Piece"), filterLabel("item.contenttweaker.rak_coin.name"), filterLabel("Zinc Ore Piece"),
+      filterLabel("Lead Ore Piece"), filterLabel("Nickel Ore Piece"), filterLabel("Archaic Brick"), filterLabel("Silver Ore Piece"),
+      filterLabel("Copper Ore Piece"), filterLabel("Tin Ore Piece"), filterLabel("Osmium Ore Piece"), filterLabel("Cake"),
+      filterLabel("Charged Certus Quartz Crystal"), filterLabel("Nether Wart"), filterLabel("Redstone Seeds"), filterLabel("Rich Slag"),
+      filterLabel("Oak Wood Planks"), filterLabel("Grain Bait"), filterLabel("Nether Brick"), filterLabel("Sky Stone Dust"),
+      filterLabel("Nickel Ore Chunk"), filterLabel("Gunpowder")
     }));
 
     // reactor
@@ -44,13 +47,18 @@ int main() {
 
     // workbench
     factory.addProcess(std::make_unique<ProcessRFToolsControlWorkbench>(factory, "workbench", "center", "f80", "a12",
-      Actions::east, Actions::north, -1, std::vector<Recipe<std::pair<int, std::optional<NonConsumableInfo>>, std::vector<size_t>>>{
+      Actions::east, Actions::north, Actions::west, std::vector<Recipe<std::pair<int, std::optional<NonConsumableInfo>>, std::vector<size_t>>>{
+        {{{filterLabel("Sugar Canes"), 16}}, {{filterLabel("Nature Essence"), 6, {2, 4, 5, 6, 7, 9}}}, {4, std::nullopt}},
         {{{filterLabel("Netherrack"), 64}}, {{filterLabel("Nether Essence"), 5, {2, 4, 5, 6, 8}}}, {2, std::nullopt}},
+        {{{filterLabel("Sky Stone"), 64}}, {{filterLabel("Sky Stone Essence"), 8, {1, 2, 3, 4, 6, 7, 8, 9}}}, {2, std::nullopt}},
         {{{filterLabel("Soul Sand"), 64}}, {{filterLabel("Nether Essence"), 8, {1, 2, 3, 4, 6, 7, 8, 9}}}, {3, std::nullopt}},
         {{{filterLabel("Cobalt Ingot"), 64}}, {{filterLabel("Cobalt Essence"), 8, {1, 2, 3, 4, 6, 7, 8, 9}}}, {8, std::nullopt}},
+        {{{filterLabel("Yellorium Ingot"), 64}}, {{filterLabel("Yellorium Essence"), 8, {1, 2, 3, 4, 6, 7, 8, 9}}}, {8, std::nullopt}},
         {{{filterLabel("Enderium Ingot"), 64}}, {{filterLabel("Enderium Essence"), 8, {1, 2, 3, 4, 6, 7, 8, 9}}}, {8, std::nullopt}},
         {{{filterLabel("Signalum Ingot"), 64}}, {{filterLabel("Signalum Essence"), 8, {1, 2, 3, 4, 6, 7, 8, 9}}}, {8, std::nullopt}},
         {{{filterLabel("Lumium Ingot"), 64}}, {{filterLabel("Lumium Essence"), 8, {1, 2, 3, 4, 6, 7, 8, 9}}}, {8, std::nullopt}},
+        {{{filterLabel("Gold Ingot"), 64}}, {{filterLabel("Gold Essence"), 8, {1, 2, 3, 4, 6, 7, 8, 9}}}, {8, std::nullopt}},
+        {{{filterLabel("Dawnstone Ingot"), 64}}, {{filterLabel("Dawnstone Essence"), 8, {1, 2, 3, 4, 6, 7, 8, 9}}}, {8, std::nullopt}},
         {{{filterLabel("Fluix Crystal"), 64}}, {{filterLabel("Fluix Essence"), 8, {1, 2, 3, 4, 6, 7, 8, 9}}}, {8, std::nullopt}},
         {{{filterLabel("Lapis Lazuli"), 64}}, {{filterLabel("Lapis Lazuli Essence"), 8, {1, 2, 3, 4, 6, 7, 8, 9}}}, {5, std::nullopt}},
         {{{filterLabel("Glowstone Dust"), 64}}, {{filterLabel("Glowstone Essence"), 8, {1, 2, 3, 4, 6, 7, 8, 9}}}, {4, std::nullopt}},
@@ -59,28 +67,33 @@ int main() {
         {{{filterLabel("Diamond"), 64}}, {{filterLabel("Diamond Essence"), 9, {1, 2, 3, 4, 5, 6, 7, 8, 9}}}, {4, std::nullopt}},
         {{{filterLabel("Compressed Netherrack"), 16}}, {{filterLabel("Netherrack"), 9, {1, 2, 3, 4, 5, 6, 7, 8, 9}}}, {7, std::nullopt}},
         {{{filterLabel("Emerald"), 16}}, {{filterLabel("Emerald Essence"), 9, {1, 2, 3, 4, 5, 6, 7, 8, 9}}}, {7, std::nullopt}},
+        {{{filterLabel("Coal"), 64}}, {{filterLabel("Coal Essence"), 8, {1, 2, 3, 4, 6, 7, 8, 9}}}, {5, std::nullopt}},
         {{{filterLabel("tile.compressed_dust.name"), 16}}, {{filterLabel("Dust"), 9, {1, 2, 3, 4, 5, 6, 7, 8, 9}}}, {7, std::nullopt}},
         {{{filterLabel("Birch Wood"), 64}}, {{filterLabel("Wood Essence"), 3, {1, 5, 9}}}, {4, std::nullopt}},
         {{{filterLabel("Oak Wood"), 64}}, {{filterLabel("Wood Essence"), 3, {1, 2, 3}}}, {4, std::nullopt}},
         {{{filterLabel("Sandstone"), 16}}, {{filterLabel("Sand"), 4, {1, 2, 4, 5}}}, {16, std::nullopt}},
+        {{{filterLabel("String"), 64}}, {{filterLabel("Cotton"), 3, {1, 2, 4}}}, {20, std::nullopt}},
+        {{{filterLabel("White Wool"), 64}}, {{filterLabel("String"), 4, {1, 2, 4, 5}}}, {16, std::nullopt}},
         {{{filterLabel("Bronze Gear"), 16}}, {{filterLabel("Bronze Ingot"), 4, {2, 4, 6, 8}}}, {16, std::nullopt}},
         {{{filterLabel("Silver Gear"), 16}}, {{filterLabel("Silver Ingot"), 4, {2, 4, 6, 8}}}, {16, std::nullopt}},
         {{{filterLabel("Lumium Gear"), 16}}, {{filterLabel("Lumium Ingot"), 4, {2, 4, 6, 8}}}, {16, std::nullopt}},
         {{{filterLabel("Electrum Gear"), 16}}, {{filterLabel("Electrum Ingot"), 4, {2, 4, 6, 8}}}, {16, std::nullopt}},
         {{{filterLabel("Weighted Pressure Plate (Heavy)"), 16}}, {{filterLabel("Iron Ingot"), 2, {1, 2}}}, {16, std::nullopt}},
         {{{filterLabel("Weighted Pressure Plate (Light)"), 16}}, {{filterLabel("Gold Ingot"), 2, {1, 2}}}, {16, std::nullopt}},
-        {{{filterLabel("Certus Quartz Seed"), 16}}, {
+        {{{filterLabel("Paper"), 64}}, {{filterLabel("Sawdust"), 3, {4, 5, 6}}}, {10, std::nullopt}},
+        {{{filterLabel("Dandelion Yellow"), 16}}, {{filterLabel("Dye Essence"), 3, {1, 3, 5}}}, {10, std::nullopt}},
+        {{{filterLabel("Pure Certus Quartz Crystal"), 64}}, {
           {filterLabel("Sand"), 1, {1}},
           {filterLabel("Certus Quartz Dust"), 1, {2}}
-        }, {16, std::nullopt}},
-        {{{filterLabel("Nether Quartz Seed"), 16}}, {
+        }, {32, std::nullopt}},
+        {{{filterLabel("Pure Nether Quartz Crystal"), 64}}, {
           {filterLabel("Sand"), 1, {1}},
           {filterLabel("Crushed Quartz"), 1, {2}}
-        }, {16, std::nullopt}},
-        {{{filterLabel("Fluix Seed"), 16}}, {
+        }, {32, std::nullopt}},
+        {{{filterLabel("Pure Fluix Crystal"), 64}}, {
           {filterLabel("Sand"), 1, {1}},
           {filterLabel("Fluix Dust"), 1, {2}}
-        }, {16, std::nullopt}},
+        }, {32, std::nullopt}},
         {{{filterLabel("Quartz Glass"), 16}}, {
           {filterLabel("Crushed Quartz"), 5, {1, 3, 5, 7, 9}},
           {filterLabel("Glass"), 4, {2, 4, 6, 8}}
@@ -115,35 +128,35 @@ int main() {
         {{{filterLabel("Redstone Servo"), 16}}, {
           {filterLabel("Redstone"), 2, {2, 8}},
           {filterLabel("Iron Ingot"), 1, {5}}
-        }, {16, std::nullopt}},
+        }, {32, std::nullopt}},
         {{{filterLabel("Augment: Auxiliary Reception Coil"), 4}}, {
           {filterLabel("Redstone Reception Coil"), 1, {5}},
           {filterLabel("Gold Ingot"), 4, {2, 4, 6, 8}}
-        }, {4, std::nullopt}},
+        }, {16, std::nullopt}},
         {{{filterLabel("Augment: Auxiliary Sieve"), 4}}, {
           {filterLabel("Redstone Servo"), 1, {5}},
           {filterLabel("Bronze Ingot"), 4, {2, 4, 6, 8}}
-        }, {4, std::nullopt}},
+        }, {16, std::nullopt}},
         {{{filterLabel("Hardened Upgrade Kit"), 4}}, {
           {filterLabel("Bronze Gear"), 1, {5}},
           {filterLabel("Redstone"), 2, {7, 9}},
           {filterLabel("Invar Ingot"), 4, {2, 4, 6, 8}}
-        }, {4, std::nullopt}},
+        }, {16, std::nullopt}},
         {{{filterLabel("Reinforced Upgrade Kit"), 4}}, {
           {filterLabel("Silver Gear"), 1, {5}},
           {filterLabel("Hardened Glass"), 2, {7, 9}},
           {filterLabel("Electrum Ingot"), 4, {2, 4, 6, 8}}
-        }, {4, std::nullopt}},
+        }, {16, std::nullopt}},
         {{{filterLabel("Signalum Upgrade Kit"), 4}}, {
           {filterLabel("Electrum Gear"), 1, {5}},
           {filterLabel("Cryotheum Dust"), 2, {7, 9}},
           {filterLabel("Signalum Ingot"), 4, {2, 4, 6, 8}}
-        }, {4, std::nullopt}},
+        }, {16, std::nullopt}},
         {{{filterLabel("Resonant Upgrade Kit"), 4}}, {
           {filterLabel("Lumium Gear"), 1, {5}},
           {filterLabel("Pyrotheum Dust"), 2, {7, 9}},
           {filterLabel("Enderium Ingot"), 4, {2, 4, 6, 8}}
-        }, {4, std::nullopt}},
+        }, {16, std::nullopt}},
         {{{filterLabelName("Speed Upgrade", "nuclearcraft:upgrade"), 64}}, {
           {filterLabel("Weighted Pressure Plate (Heavy)"), 1, {5}},
           {filterLabel("Redstone"), 4, {2, 4, 6, 8}},
@@ -154,23 +167,74 @@ int main() {
           {filterLabel("Crushed Quartz"), 4, {2, 4, 6, 8}},
           {filterLabel("Pulverized Obsidian"), 4, {1, 3, 7, 9}}
         }, {16, std::nullopt}},
-        {{}, {{filterLabel("Yellorium Ore Piece"), 4, {1, 2, 4, 5}}}, {16, std::nullopt}},
-        {{}, {{filterLabel("Titanium Ore Piece"), 4, {1, 2, 4, 5}}}, {16, std::nullopt}},
-        {{}, {{filterLabel("Tungsten Ore Piece"), 4, {1, 2, 4, 5}}}, {16, std::nullopt}},
-        {{}, {{filterLabel("Platinum Ore Piece"), 4, {1, 2, 4, 5}}}, {16, std::nullopt}},
-        {{}, {{filterLabel("Iridium Ore Piece"), 4, {1, 2, 4, 5}}}, {16, std::nullopt}},
-        {{}, {{filterLabel("Mithril Ore Piece"), 4, {1, 2, 4, 5}}}, {16, std::nullopt}},
-        {{}, {{filterLabel("Copper Ore Piece"), 4, {1, 2, 4, 5}}}, {16, std::nullopt}},
-        {{}, {{filterLabel("Ardite Ore Piece"), 4, {1, 2, 4, 5}}}, {16, std::nullopt}},
-        {{}, {{filterLabel("Cobalt Ore Piece"), 4, {1, 2, 4, 5}}}, {16, std::nullopt}},
-        {{}, {{filterLabel("Osmium Ore Piece"), 4, {1, 2, 4, 5}}}, {16, std::nullopt}},
-        {{}, {{filterLabel("Silver Ore Piece"), 4, {1, 2, 4, 5}}}, {16, std::nullopt}},
-        {{}, {{filterLabel("Nickel Ore Piece"), 4, {1, 2, 4, 5}}}, {16, std::nullopt}},
-        {{}, {{filterLabel("Lead Ore Piece"), 4, {1, 2, 4, 5}}}, {16, std::nullopt}},
-        {{}, {{filterLabel("Gold Ore Piece"), 4, {1, 2, 4, 5}}}, {16, std::nullopt}},
-        {{}, {{filterLabel("Iron Ore Piece"), 4, {1, 2, 4, 5}}}, {16, std::nullopt}},
-        {{}, {{filterLabel("Zinc Ore Piece"), 4, {1, 2, 4, 5}}}, {16, std::nullopt}},
-        {{}, {{filterLabel("Tin Ore Piece"), 4, {1, 2, 4, 5}}}, {16, std::nullopt}}
+        {{{filterLabel("1k ME Storage Component"), 3}}, {
+          {filterLabel("Logic Processor"), 1, {5}},
+          {filterLabel("Redstone"), 4, {1, 3, 7, 9}},
+          {filterLabel("Pure Certus Quartz Crystal"), 4, {2, 4, 6, 8}}
+        }, {16, std::nullopt}},
+        {{{filterLabel("4k ME Storage Component"), 3}}, {
+          {filterLabel("Calculation Processor"), 1, {2}},
+          {filterLabel("Redstone"), 4, {1, 3, 7, 9}},
+          {filterLabel("Quartz Glass"), 1, {5}},
+          {filterLabel("1k ME Storage Component"), 3, {4, 6, 8}}
+        }, {16, std::nullopt}},
+        {{{filterLabel("16k ME Storage Component"), 3}}, {
+          {filterLabel("Calculation Processor"), 1, {2}},
+          {filterLabel("Glowstone Dust"), 4, {1, 3, 7, 9}},
+          {filterLabel("Quartz Glass"), 1, {5}},
+          {filterLabel("4k ME Storage Component"), 3, {4, 6, 8}}
+        }, {16, std::nullopt}},
+        {{{filterLabel("64k ME Storage Component"), 3}}, {
+          {filterLabel("Calculation Processor"), 1, {2}},
+          {filterLabel("Glowstone Dust"), 4, {1, 3, 7, 9}},
+          {filterLabel("Quartz Glass"), 1, {5}},
+          {filterLabel("16k ME Storage Component"), 3, {4, 6, 8}}
+        }, {16, std::nullopt}},
+        {{{filterLabel("256k ME Storage Component"), 3}}, {
+          {filterLabel("Engineering Processor"), 1, {2}},
+          {filterLabel("Glowstone Dust"), 4, {1, 3, 7, 9}},
+          {filterLabel("Logic Processor"), 1, {5}},
+          {filterLabel("64k ME Storage Component"), 3, {4, 6, 8}}
+        }, {16, std::nullopt}},
+        {{{filterLabel("1024k ME Storage Component"), 3}}, {
+          {filterLabel("Engineering Processor"), 1, {2}},
+          {filterLabel("Glowstone Dust"), 4, {1, 3, 7, 9}},
+          {filterLabel("Logic Processor"), 1, {5}},
+          {filterLabel("256k ME Storage Component"), 3, {4, 6, 8}}
+        }, {16, std::nullopt}},
+        {{{filterLabel("4096k ME Storage Component"), 3}}, {
+          {filterLabel("Engineering Processor"), 1, {2}},
+          {filterLabel("Glowstone Dust"), 4, {1, 3, 7, 9}},
+          {filterLabel("Logic Processor"), 1, {5}},
+          {filterLabel("1024k ME Storage Component"), 3, {4, 6, 8}}
+        }, {16, std::nullopt}},
+        {{{filterLabel("16384k ME Storage Component"), 3}}, {
+          {filterLabel("Engineering Processor"), 1, {2}},
+          {filterLabel("Glowstone Dust"), 4, {1, 3, 7, 9}},
+          {filterLabel("Logic Processor"), 1, {5}},
+          {filterLabel("4096k ME Storage Component"), 3, {4, 6, 8}}
+        }, {16, std::nullopt}},
+        {{{filterLabel("Raw Tofeeg"), 16}}, {
+          {filterLabel("Firm Tofu"), 1, {2}},
+          {filterLabel("Dandelion Yellow"), 1, {4}}
+        }, {32, NonConsumableInfo{27, 1}}},
+        {{{filterLabel("Cake"), 64}}, {
+          {filterLabel("Soy Milk"), 3, {1, 2, 3}},
+          {filterLabel("Sugar"), 2, {4, 6}},
+          {filterLabel("Raw Tofeeg"), 1, {5}},
+          {filterLabel("Wheat"), 3, {7, 8, 9}}
+        }, {21, std::nullopt}},
+        {{{filterLabel("Yellorium Ore Chunk"), 16}}, {{filterLabel("Yellorium Ore Piece"), 4, {1, 2, 4, 5}}}, {16, std::nullopt}},
+        {{{filterLabel("Platinum Ore Chunk"), 16}}, {{filterLabel("Platinum Ore Piece"), 4, {1, 2, 4, 5}}}, {16, std::nullopt}},
+        {{{filterLabel("Copper Ore Chunk"), 16}}, {{filterLabel("Copper Ore Piece"), 4, {1, 2, 4, 5}}}, {16, std::nullopt}},
+        {{{filterLabel("Osmium Ore Chunk"), 16}}, {{filterLabel("Osmium Ore Piece"), 4, {1, 2, 4, 5}}}, {16, std::nullopt}},
+        {{{filterLabel("Silver Ore Chunk"), 16}}, {{filterLabel("Silver Ore Piece"), 4, {1, 2, 4, 5}}}, {16, std::nullopt}},
+        {{{filterLabel("Nickel Ore Chunk"), 16}}, {{filterLabel("Nickel Ore Piece"), 4, {1, 2, 4, 5}}}, {16, std::nullopt}},
+        {{{filterLabel("Lead Ore Chunk"), 16}}, {{filterLabel("Lead Ore Piece"), 4, {1, 2, 4, 5}}}, {16, std::nullopt}},
+        {{{filterLabel("Gold Ore Chunk"), 16}}, {{filterLabel("Gold Ore Piece"), 4, {1, 2, 4, 5}}}, {16, std::nullopt}},
+        {{{filterLabel("Iron Ore Chunk"), 16}}, {{filterLabel("Iron Ore Piece"), 4, {1, 2, 4, 5}}}, {16, std::nullopt}},
+        {{{filterLabel("Zinc Ore Chunk"), 16}}, {{filterLabel("Zinc Ore Piece"), 4, {1, 2, 4, 5}}}, {16, std::nullopt}},
+        {{{filterLabel("Tin Ore Chunk"), 16}}, {{filterLabel("Tin Ore Piece"), 4, {1, 2, 4, 5}}}, {16, std::nullopt}}
       }));
 
     // cobbleGen
@@ -197,7 +261,8 @@ int main() {
         {{{filterLabel("Graphite Dust"), 16}}, {{filterLabel("Graphite Ingot"), 1}}, INT_MAX},
         {{{filterLabel("Crushed Quartz"), 16}}, {{filterLabel("Nether Quartz"), 1}}, INT_MAX},
         {{{filterLabel("Certus Quartz Dust"), 16}}, {{filterLabel("Certus Quartz Crystal"), 1}}, INT_MAX},
-        {{{filterLabel("Fluix Dust"), 16}}, {{filterLabel("Fluix Crystal"), 1}}, INT_MAX}
+        {{{filterLabel("Fluix Dust"), 16}}, {{filterLabel("Fluix Crystal"), 1}}, INT_MAX},
+        {{{filterLabel("Stick"), 64}}, {{filterLabel("Oak Wood Planks"), 1}}, INT_MAX}
       }));
 
     // sagMill
@@ -211,6 +276,7 @@ int main() {
       std::vector<StockEntry>{}, 96, nullptr, std::vector<Recipe<int>>{
         {{{filterLabel("Glass"), 64}}, {{filterLabel("Sand"), 1}}, INT_MAX},
         {{{filterLabel("Stone"), 64}}, {{filterLabel("Cobblestone"), 1}}, INT_MAX},
+        {{{filterLabel("Brick"), 16}}, {{filterLabel("Clay"), 1}}, INT_MAX},
         {{{filterLabel("Charcoal"), 64}}, {{filterLabel("Oak Wood"), 1}}, INT_MAX},
         {{{filterLabel("Graphite Ingot"), 64}}, {{filterLabel("Charcoal"), 1}}, INT_MAX}
       }));
@@ -218,49 +284,61 @@ int main() {
     // aeSharedBuffer
     factory.addProcess(std::make_unique<ProcessBuffered>(factory, "aeSharedBuffer", "center", "c28", Actions::south, Actions::east,
       std::vector<StockEntry>{}, INT_MAX, nullptr, std::vector<Recipe<int>>{
-        {{{filterLabel("Pure Certus Quartz Crystal"), 16}}, {{filterLabel("Certus Quartz Seed"), 1}}, 16},
-        {{{filterLabel("Pure Nether Quartz Crystal"), 16}}, {{filterLabel("Nether Quartz Seed"), 1}}, 16},
-        {{{filterLabel("Pure Fluix Crystal"), 16}}, {{filterLabel("Fluix Seed"), 1}}, 16},
-        {{{filterLabel("Printed Calculation Circuit"), 16}}, {{filterLabel("Pure Certus Quartz Crystal"), 1}}, 16},
-        {{{filterLabel("Printed Engineering Circuit"), 16}}, {{filterLabel("Diamond"), 1}}, 16},
-        {{{filterLabel("Printed Logic Circuit"), 16}}, {{filterLabel("Gold Ingot"), 1}}, 16},
-        {{{filterLabel("Printed Silicon"), 16}}, {{filterLabel("Silicon"), 1}}, 16},
+        {{}, {{filterLabel("Certus Quartz Seed"), 1}}, INT_MAX},
+        {{}, {{filterLabel("Nether Quartz Seed"), 1}}, INT_MAX},
+        {{}, {{filterLabel("Fluix Seed"), 1}}, INT_MAX},
+        {{{filterLabel("Printed Calculation Circuit"), 16}}, {{filterLabel("Pure Certus Quartz Crystal"), 1}}, 64},
+        {{{filterLabel("Printed Engineering Circuit"), 16}}, {{filterLabel("Diamond"), 1}}, 64},
+        {{{filterLabel("Printed Logic Circuit"), 16}}, {{filterLabel("Gold Ingot"), 1}}, 64},
+        {{{filterLabel("Printed Silicon"), 16}}, {{filterLabel("Silicon"), 1}}, 64},
         {{{filterLabel("Calculation Processor"), 16}}, {
           {filterLabel("Printed Silicon"), 1},
           {filterLabel("Redstone"), 1},
           {filterLabel("Printed Calculation Circuit"), 1}
-        }, 48},
+        }, 192},
         {{{filterLabel("Engineering Processor"), 16}}, {
           {filterLabel("Printed Silicon"), 1},
           {filterLabel("Redstone"), 1},
           {filterLabel("Printed Engineering Circuit"), 1}
-        }, 48},
+        }, 192},
         {{{filterLabel("Logic Processor"), 16}}, {
           {filterLabel("Printed Silicon"), 1},
           {filterLabel("Redstone"), 1},
           {filterLabel("Printed Logic Circuit"), 1}
-        }, 48}
+        }, 192},
+        {{{filterLabel("Oak Wood Planks"), 64}}, {{filterLabel("Oak Wood"), 1}}, 64},
+        {{{filterLabel("Sugar"), 16}}, {{filterLabel("Sugar Canes"), 1}}, 64},
+        {{{filterLabel("Silken Tofu"), 16}}, {{filterLabel("Soybean"), 1}}, 64},
+        {{
+          {filterLabel("Soy Milk"), 16},
+          {filterLabel("Firm Tofu"), 16}
+        }, {{filterLabel("Silken Tofu"), 1}}, 64},
+        {{}, {{filterName("lootbags:itemlootbag"), 1}}, INT_MAX}
       }));
 
     // pulverizer
     factory.addProcess(std::make_unique<ProcessBuffered>(factory, "pulverizer", "center", "c28", Actions::west, Actions::east,
       std::vector<StockEntry>{}, 64, nullptr, std::vector<Recipe<int>>{
-        {{{filterLabel("Dust"), 640}}, {{filterLabel("Sand"), 1}}, INT_MAX}
+        {{{filterLabel("Dust"), 640}}, {{filterLabel("Sand"), 1}}, INT_MAX},
+        {{{filterLabel("Gravel"), 640}}, {{filterLabel("Cobblestone"), 1}}, INT_MAX},
+        {{{filterLabel("Sawdust"), 16}}, {{filterLabel("Oak Wood"), 1}}, INT_MAX}
       }));
 
     // phyto
     factory.addProcess(std::make_unique<ProcessBuffered>(factory, "phyto", "center", "a12", Actions::south, Actions::north,
       std::vector<StockEntry>{
-        {filterLabel("Fluxed Phyto-Gro"), 16},
+        {filterLabel("Fluxed Phyto-Gro"), 32},
         {filterLabel("Yellorium Ingot"), 16},
         {filterLabel("Cobblestone"), 16},
         {filterLabel("Cryotheum Dust"), 16}
-      }, 16, nullptr, std::vector<Recipe<int>>{
+      }, 32, nullptr, std::vector<Recipe<int>>{
         {{{filterLabel(u8"§eInferium Essence"), 4096}}, {{filterName("mysticalagriculture:tier5_inferium_seeds"), 1}}, INT_MAX},
         {{{filterLabel("Certus Quartz Essence"), 16}}, {{filterLabel("Certus Quartz Seeds"), 1}}, INT_MAX},
         {{{filterLabel("Lapis Lazuli Essence"), 16}}, {{filterLabel("Lapis Lazuli Seeds"), 1}}, INT_MAX},
+        {{{filterLabel("Sky Stone Essence"), 16}}, {{filterLabel("Sky Stone Seeds"), 1}}, INT_MAX},
         {{{filterLabel("Glowstone Essence"), 16}}, {{filterLabel("Glowstone Seeds"), 1}}, INT_MAX},
         {{{filterLabel("Yellorium Essence"), 16}}, {{filterLabel("Yellorium Seeds"), 1}}, INT_MAX},
+        {{{filterLabel("Dawnstone Essence"), 16}}, {{filterLabel("Dawnstone Seeds"), 1}}, INT_MAX},
         {{{filterLabel("Redstone Essence"), 16}}, {{filterLabel("Redstone Seeds"), 1}}, INT_MAX},
         {{{filterLabel("Enderium Essence"), 16}}, {{filterLabel("Enderium Seeds"), 1}}, INT_MAX},
         {{{filterLabel("Signalum Essence"), 16}}, {{filterLabel("Signalum Seeds"), 1}}, INT_MAX},
@@ -269,12 +347,21 @@ int main() {
         {{{filterLabel("Lumium Essence"), 16}}, {{filterLabel("Lumium Seeds"), 1}}, INT_MAX},
         {{{filterLabel("Cobalt Essence"), 16}}, {{filterLabel("Cobalt Seeds"), 1}}, INT_MAX},
         {{{filterLabel("Nether Essence"), 16}}, {{filterLabel("Nether Seeds"), 1}}, INT_MAX},
+        {{{filterLabel("Nature Essence"), 16}}, {{filterLabel("Nature Seeds"), 1}}, INT_MAX},
         {{{filterLabel("Fluix Essence"), 16}}, {{filterLabel("Fluix Seeds"), 1}}, INT_MAX},
         {{{filterLabel("Water Essence"), 16}}, {{filterLabel("Water Seeds"), 1}}, INT_MAX},
+        {{{filterLabel("Gold Essence"), 16}}, {{filterLabel("Gold Seeds"), 1}}, INT_MAX},
         {{{filterLabel("Wood Essence"), 16}}, {{filterLabel("Wood Seeds"), 1}}, INT_MAX},
         {{{filterLabel("Dirt Essence"), 16}}, {{filterLabel("Dirt Seeds"), 1}}, INT_MAX},
+        {{{filterLabel("Coal Essence"), 16}}, {{filterLabel("Coal Seeds"), 1}}, INT_MAX},
+        {{{filterLabel("Dye Essence"), 16}}, {{filterLabel("Dye Seeds"), 1}}, INT_MAX},
         {{{filterLabel("Ender Pearl"), 64}}, {{filterLabel("Ender Lilly"), 1}}, INT_MAX},
-        {{{filterLabel("Seeds"), 16}}, {{filterLabel("Seeds"), 1}}, INT_MAX}
+        {{{filterLabel("Soybean"), 16}}, {{filterLabel("Soybean Seed"), 1}}, INT_MAX},
+        {{{filterLabel("Cotton"), 16}}, {{filterLabel("Cotton Seeds"), 1}}, INT_MAX},
+        {{
+          {filterLabel("Seeds"), 16},
+          {filterLabel("Wheat"), 16}
+        }, {{filterLabel("Seeds"), 1}}, INT_MAX}
       }));
 
     // sandInduction
@@ -296,21 +383,22 @@ int main() {
 
     // sieve
     factory.addProcess(std::make_unique<ProcessBuffered>(factory, "sieve", "center", "6ef", Actions::east, Actions::west,
-      std::vector<StockEntry>{}, 32, nullptr, std::vector<Recipe<int>>{
+      std::vector<StockEntry>{}, 64, nullptr, std::vector<Recipe<int>>{
         {{
-          {filterLabel("Tin Ore Chunk"), 16},
-          {filterLabel("Iron Ore Chunk"), 16},
-          {filterLabel("Gold Ore Chunk"), 16},
-          {filterLabel("Lead Ore Chunk"), 16},
-          {filterLabel("Zinc Ore Chunk"), 16},
-          {filterLabel("Copper Ore Chunk"), 16},
-          {filterLabel("Osmium Ore Chunk"), 16},
-          {filterLabel("Silver Ore Chunk"), 16},
-          {filterLabel("Nickel Ore Chunk"), 16},
-          {filterLabel("Platinum Ore Chunk"), 16},
-          {filterLabel("Yellorium Ore Chunk"), 16}
+          {filterLabel("Tin Ore Piece"), 16},
+          {filterLabel("Iron Ore Piece"), 16},
+          {filterLabel("Gold Ore Piece"), 16},
+          {filterLabel("Lead Ore Piece"), 16},
+          {filterLabel("Zinc Ore Piece"), 16},
+          {filterLabel("Copper Ore Piece"), 16},
+          {filterLabel("Osmium Ore Piece"), 16},
+          {filterLabel("Silver Ore Piece"), 16},
+          {filterLabel("Nickel Ore Piece"), 16},
+          {filterLabel("Platinum Ore Piece"), 16},
+          {filterLabel("Yellorium Ore Piece"), 16}
         }, {{filterLabel("Sand"), 1}}, INT_MAX},
         {{{filterLabel("Prosperity Shard"), 64}}, {{filterLabel("Crushed Netherrack"), 1}}, INT_MAX},
+        {{{filterLabel("Coal"), 64}}, {{filterLabel("Gravel"), 1}}, INT_MAX},
         {{{filterLabel("Nether Quartz"), 64}}, {{filterLabel("Soul Sand"), 1}}, INT_MAX},
         {{
           {filterLabel("Blaze Powder"), 16},
@@ -321,23 +409,24 @@ int main() {
     // charger
     factory.addProcess(std::make_unique<ProcessSlotted>(factory, "charger", "center", "f80", Actions::up, Actions::east,
       std::vector<size_t>{0}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
-        {{{filterLabel("Fluxed Phyto-Gro"), 64}}, {{filterLabel("Rich Phyto-Gro"), 1, {0}}}, 32}
+        {{{filterLabel("Fluxed Phyto-Gro"), 64}}, {{filterLabel("Rich Phyto-Gro"), 1, {0}}}, 64}
       }));
 
     // alloyFurnace
     factory.addProcess(std::make_unique<ProcessSlotted>(factory, "alloyFurnace", "center", "6ef", Actions::down, Actions::west,
       std::vector<size_t>{0, 1}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
-        {{{filterLabel("Steel Ingot"), 16}}, {{filterLabel("Iron Ingot"), 1, {0}}, {filterLabel("Graphite Ingot"), 1, {1}}}, 16},
-        {{{filterLabel("Bronze Ingot"), 16}}, {{filterLabel("Copper Ingot"), 3, {0}}, {filterLabel("Tin Ingot"), 1, {1}}}, 16},
-        {{{filterLabel("Invar Ingot"), 16}}, {{filterLabel("Iron Ingot"), 2, {0}}, {filterLabel("Nickel Ingot"), 1, {1}}}, 16},
-        {{{filterLabel("Electrum Ingot"), 16}}, {{filterLabel("Gold Ingot"), 1, {0}}, {filterLabel("Silver Ingot"), 1, {1}}}, 16}
+        {{{filterLabel("Steel Ingot"), 64}}, {{filterLabel("Iron Ingot"), 1, {0}}, {filterLabel("Graphite Ingot"), 1, {1}}}, 64},
+        {{{filterLabel("Bronze Ingot"), 64}}, {{filterLabel("Copper Ingot"), 3, {0}}, {filterLabel("Tin Ingot"), 1, {1}}}, 16},
+        {{{filterLabel("Invar Ingot"), 64}}, {{filterLabel("Iron Ingot"), 2, {0}}, {filterLabel("Nickel Ingot"), 1, {1}}}, 32},
+        {{{filterLabel("Electrum Ingot"), 64}}, {{filterLabel("Gold Ingot"), 1, {0}}, {filterLabel("Silver Ingot"), 1, {1}}}, 64},
+        {{{filterLabel("Electrical Steel Ingot"), 64}}, {{filterLabel("Steel Ingot"), 1, {0}}, {filterLabel("Silicon"), 1, {1}}}, 64}
       }));
 
     // inductionSmelter
     factory.addProcess(std::make_unique<ProcessSlotted>(factory, "inductionSmelter", "center", "3c3", Actions::north, Actions::west,
       std::vector<size_t>{0, 1}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{{filterLabel("Hardened Glass"), 16}}, {{filterLabel("Pulverized Lead"), 1, {0}}, {filterLabel("Pulverized Obsidian"), 4, {1}}}, 16},
-        {{{filterLabel("Sulfur"), 16}}, {{filterLabel("Soul Sand"), 1, {0}}, {filterLabel("Netherrack"), 2, {1}}}, 16}
+        {{{filterLabel("Sulfur"), 16}}, {{filterLabel("Soul Sand"), 1, {0}}, {filterLabel("Netherrack"), 2, {1}}}, 32}
       }));
 
     factory.start();
