@@ -9,7 +9,8 @@ OCRemote is a OpenComputers program by cyb0124 for item management and auto-craf
 OCRemote includes a TCP server program written in C++ that needs be run outside the minecraft world. In fact, actual computations all happen in the server. The computers in minecraft world merely execute the commands sent by the server. Multiple clients can connect to the same server, which allows parallelization of inventory manipulation operations.
 
 ## Bus
-OCRemote requires a shared inventory to move items around. This inventory is called as the "bus" in the source code. The bus can be implemented using EnderStorage's ender chests, or using ActuallyAdditions' item lasers.
+OCRemote requires a shared inventory to move items around. This inventory is called as the "bus" in the source code. The bus can be implemented using EnderStorage's ender chests, or using ActuallyAdditions' item lasers.\
+![Viewing inside the bus inventory](busDemo2.gif "Viewing inside the bus inventory")
 
 ## Storage
 OCRemote currently supports 3 different types of storages:
@@ -26,7 +27,8 @@ OCRemote currently supports the following types of auto-crafting processes:
   - **ProcessCraftingRobot**\
     This process uses a single crafting robot to handle all grid crafting recipes. It also allows non-consumable items in recipes (e.g. Pam's Harvestcraft recipes that require a utensil).
   - **ProcessRFToolsControlWorkbench**\
-    Same as ProcessCraftingRobot, but uses RFTools Control's Workbench as the crafter.
+    Same as ProcessCraftingRobot, but uses RFTools Control's Workbench as the crafter.\
+    ![Grid crafting with workbench](workbench.gif "Grid crafting with workbench")
   - **ProcessBuffered**\
     This process is intended for machines that can run multiple recipes at once, or for general buffering/pipelining of recipe inputs. In additional to recipes, it also allow items to be constantly refilled at the target inventory. It allows limiting each individual recipe's maximum number of item being processed. It also respects the ratio of the input items, which is useful for machines such as ExCompressum's Auto Compressor.
   - **ProcessScatteringWorkingSet**\

@@ -226,6 +226,7 @@ int main() {
         }, {21, std::nullopt}},
         {{{filterLabel("Yellorium Ore Chunk"), 16}}, {{filterLabel("Yellorium Ore Piece"), 4, {1, 2, 4, 5}}}, {16, std::nullopt}},
         {{{filterLabel("Platinum Ore Chunk"), 16}}, {{filterLabel("Platinum Ore Piece"), 4, {1, 2, 4, 5}}}, {16, std::nullopt}},
+        {{{filterLabel("Mithril Ore Chunk"), 16}}, {{filterLabel("Mithril Ore Piece"), 4, {1, 2, 4, 5}}}, {16, std::nullopt}},
         {{{filterLabel("Copper Ore Chunk"), 16}}, {{filterLabel("Copper Ore Piece"), 4, {1, 2, 4, 5}}}, {16, std::nullopt}},
         {{{filterLabel("Osmium Ore Chunk"), 16}}, {{filterLabel("Osmium Ore Piece"), 4, {1, 2, 4, 5}}}, {16, std::nullopt}},
         {{{filterLabel("Silver Ore Chunk"), 16}}, {{filterLabel("Silver Ore Piece"), 4, {1, 2, 4, 5}}}, {16, std::nullopt}},
@@ -251,7 +252,7 @@ int main() {
 
     // manufactory
     factory.addProcess(std::make_unique<ProcessBuffered>(factory, "manufactory", "center", "5cb", Actions::west, Actions::south,
-      std::vector<StockEntry>{}, 96, nullptr, std::vector<Recipe<int>>{
+      std::vector<StockEntry>{}, 128, nullptr, std::vector<Recipe<int>>{
         {{{filterLabel("Sand"), 640}}, {{filterLabel("Cobblestone"), 1}}, INT_MAX},
         {{{filterLabel("Niter"), 16}}, {{filterLabel("Sandstone"), 1}}, INT_MAX},
         {{{filterLabel("Silicon"), 16}}, {{filterLabel("Sand"), 1}}, INT_MAX},
@@ -318,7 +319,7 @@ int main() {
 
     // pulverizer
     factory.addProcess(std::make_unique<ProcessBuffered>(factory, "pulverizer", "center", "c28", Actions::west, Actions::east,
-      std::vector<StockEntry>{}, 64, nullptr, std::vector<Recipe<int>>{
+      std::vector<StockEntry>{}, 96, nullptr, std::vector<Recipe<int>>{
         {{{filterLabel("Dust"), 640}}, {{filterLabel("Sand"), 1}}, INT_MAX},
         {{{filterLabel("Gravel"), 640}}, {{filterLabel("Cobblestone"), 1}}, INT_MAX},
         {{{filterLabel("Sawdust"), 16}}, {{filterLabel("Oak Wood"), 1}}, INT_MAX}
@@ -332,7 +333,7 @@ int main() {
         {filterLabel("Cobblestone"), 16},
         {filterLabel("Cryotheum Dust"), 16}
       }, 32, nullptr, std::vector<Recipe<int>>{
-        {{{filterLabel(u8"§eInferium Essence"), 4096}}, {{filterName("mysticalagriculture:tier5_inferium_seeds"), 1}}, INT_MAX},
+        {{{filterLabel(u8"§eInferium Essence"), 40'000}}, {{filterName("mysticalagriculture:tier5_inferium_seeds"), 1}}, INT_MAX},
         {{{filterLabel("Certus Quartz Essence"), 16}}, {{filterLabel("Certus Quartz Seeds"), 1}}, INT_MAX},
         {{{filterLabel("Lapis Lazuli Essence"), 16}}, {{filterLabel("Lapis Lazuli Seeds"), 1}}, INT_MAX},
         {{{filterLabel("Sky Stone Essence"), 16}}, {{filterLabel("Sky Stone Seeds"), 1}}, INT_MAX},
@@ -378,7 +379,8 @@ int main() {
         {{{filterLabel("Silver Ingot"), 64}}, {{filterLabel("Silver Ore Chunk"), 1}}, INT_MAX},
         {{{filterLabel("Nickel Ingot"), 64}}, {{filterLabel("Nickel Ore Chunk"), 1}}, INT_MAX},
         {{{filterLabel("Platinum Ingot"), 64}}, {{filterLabel("Platinum Ore Chunk"), 1}}, INT_MAX},
-        {{{filterLabel("Yellorium Ingot"), 64}}, {{filterLabel("Yellorium Ore Chunk"), 1}}, INT_MAX}
+        {{{filterLabel("Yellorium Ingot"), 64}}, {{filterLabel("Yellorium Ore Chunk"), 1}}, INT_MAX},
+        {{{filterLabel("Mana Infused Ingot"), 64}}, {{filterLabel("Mithril Ore Chunk"), 1}}, INT_MAX}
       }));
 
     // sieve
@@ -397,7 +399,10 @@ int main() {
           {filterLabel("Platinum Ore Piece"), 16},
           {filterLabel("Yellorium Ore Piece"), 16}
         }, {{filterLabel("Sand"), 1}}, INT_MAX},
-        {{{filterLabel("Prosperity Shard"), 64}}, {{filterLabel("Crushed Netherrack"), 1}}, INT_MAX},
+        {{
+          {filterLabel("Prosperity Shard"), 64},
+          {filterLabel("Mithril Ore Piece"), 16}
+        }, {{filterLabel("Crushed Netherrack"), 1}}, INT_MAX},
         {{{filterLabel("Coal"), 64}}, {{filterLabel("Gravel"), 1}}, INT_MAX},
         {{{filterLabel("Nether Quartz"), 64}}, {{filterLabel("Soul Sand"), 1}}, INT_MAX},
         {{
