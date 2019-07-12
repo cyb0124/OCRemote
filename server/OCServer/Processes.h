@@ -143,3 +143,12 @@ struct ProcessReactorProportional : ProcessSingleClient {
     :ProcessSingleClient(factory, std::move(name), std::move(client)), inv(std::move(inv)) {}
   SharedPromise<std::monostate> cycle() override;
 };
+
+struct ProcessPlasticMixer : ProcessSingleClient {
+  static const std::vector<std::string> colorMap;
+  std::string inv;
+  int needed;
+  ProcessPlasticMixer(Factory &factory, std::string name, std::string client, int needed = 32, std::string inv = "plastic_mixer")
+    :ProcessSingleClient(factory, std::move(name), std::move(client)), inv(std::move(inv)), needed(needed) {}
+  SharedPromise<std::monostate> cycle() override;
+};

@@ -735,3 +735,28 @@ SharedPromise<std::monostate> ProcessReactorProportional::cycle() {
     return action->mapTo(std::monostate{});
   });
 }
+
+const std::vector<std::string> ProcessPlasticMixer::colorMap{
+  "Black", "Red", "Green", "Brown", "Blue", "Purple", "Cyan", "Light Gray",
+  "Gray", "Pink", "Lime", "Yellow", "Light Blue", "Magenta", "Orange", "White"
+};
+
+SharedPromise<std::monostate> ProcessPlasticMixer::cycle() {
+  std::vector<int> avails;
+  avails.reserve(colorMap.size());
+  for (auto &i : colorMap)
+    avails.emplace_back(factory.getAvail(factory.getItem(ItemFilters::Label{i + " Plastic"}), true));
+  int which{static_cast<int>(std::min_element(avails.begin(), avails.end()) - avails.begin())};
+  if (avails[which] >= needed) {
+    factory.log(name + ": off", 0xff4fff);
+  } else {
+    factory.log(name + ": making " + colorMap[which] + " Plastic", 0xff4fff);
+    ++which;
+  }
+  auto action(std::make_shared<Actions::Call>());
+  action->inv = inv;
+  action->fn = "selectColor";
+  action->args = {static_cast<double>(which)};
+  factory.s.enqueueAction(client, action);
+  return action->mapTo(std::monostate{});
+}

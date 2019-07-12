@@ -43,6 +43,9 @@ int main() {
     // reactor
     factory.addProcess(std::make_unique<ProcessReactorProportional>(factory, "reactor", "center"));
 
+    // plasticMixer
+    factory.addProcess(std::make_unique<ProcessPlasticMixer>(factory, "plasticMixer", "center"));
+
     // output
     factory.addProcess(std::make_unique<ProcessBuffered>(factory, "output", "center", "5cb", Actions::north, Actions::south,
       std::vector<StockEntry>{}, 0, outAll, std::vector<Recipe<int>>{}));
@@ -93,6 +96,8 @@ int main() {
         {{{filterLabel("Paper"), 64}}, {{filterLabel("Sawdust"), 3, {4, 5, 6}}}, {10, std::nullopt}},
         {{{filterLabel("Iron Bars"), 16}}, {{filterLabel("Iron Ingot"), 6, {1, 2, 3, 4, 5, 6}}}, {4, std::nullopt}},
         {{{filterLabel("Dandelion Yellow"), 16}}, {{filterLabel("Dye Essence"), 3, {1, 3, 5}}}, {10, std::nullopt}},
+        {{{filterLabel("Rose Red"), 16}}, {{filterLabel("Dye Essence"), 3, {4, 5, 6}}}, {10, std::nullopt}},
+        {{{filterLabel("Sulfur"), 16}}, {{filterLabel("Sulfur Essence"), 3, {1, 2, 3}}}, {8, std::nullopt}},
         {{{filterLabel("Blank Skull"), 16}}, {
           {filterLabel("Bone Block"), 1, {5}},
           {filterLabel("Soul Dust"), 4, {2, 4, 6, 8}}
@@ -131,7 +136,7 @@ int main() {
           {filterLabel("Blaze Powder"), 2, {1, 2}},
           {filterLabel("Redstone"), 1, {4}},
           {filterLabel("Sulfur"), 1, {5}}
-        }, {16, std::nullopt}},
+        }, {32, std::nullopt}},
         {{{filterLabel("Clock"), 16}}, {
           {filterLabel("Redstone"), 1, {5}},
           {filterLabel("Gold Ingot"), 4, {2, 4, 6, 8}}
@@ -322,7 +327,11 @@ int main() {
     // pneumaticSharedBuffer
     factory.addProcess(std::make_unique<ProcessBuffered>(factory, "pneumaticSharedBuffer", "center", "bc3", Actions::up, Actions::east,
       std::vector<StockEntry>{
-        {filterLabel("Pyrotheum Dust"), 16}
+        {filterLabel("Pyrotheum Dust"), 16},
+        {filterLabel("Coal"), 16},
+        {filterLabel("Rose Red"), 16},
+        {filterLabel("Cactus Green"), 16},
+        {filterLabel("Lapis Lazuli"), 16}
       }, INT_MAX, nullptr, std::vector<Recipe<int>>{}));
 
     // furnace
@@ -410,6 +419,7 @@ int main() {
         {{{filterLabel("Cobalt Essence"), 16}}, {{filterLabel("Cobalt Seeds"), 1}}, INT_MAX},
         {{{filterLabel("Nether Essence"), 16}}, {{filterLabel("Nether Seeds"), 1}}, INT_MAX},
         {{{filterLabel("Nature Essence"), 16}}, {{filterLabel("Nature Seeds"), 1}}, INT_MAX},
+        {{{filterLabel("Sulfur Essence"), 16}}, {{filterLabel("Sulfur Seeds"), 1}}, INT_MAX},
         {{{filterLabel("Fluix Essence"), 16}}, {{filterLabel("Fluix Seeds"), 1}}, INT_MAX},
         {{{filterLabel("Water Essence"), 16}}, {{filterLabel("Water Seeds"), 1}}, INT_MAX},
         {{{filterLabel("Blizz Essence"), 16}}, {{filterLabel("Blizz Seeds"), 1}}, INT_MAX},
