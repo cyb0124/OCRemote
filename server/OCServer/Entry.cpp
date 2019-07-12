@@ -36,7 +36,8 @@ int main() {
       filterLabel("Nether Wart"), filterLabel("Redstone Seeds"), filterLabel("Rich Slag"), filterLabel("Oak Wood Planks"),
       filterLabel("Grain Bait"), filterLabelName("Nether Brick", "minecraft:nether_brick"), filterLabel("Sky Stone Dust"),
       filterLabel("Nickel Ore Chunk"), filterLabel("Gunpowder"), filterLabel("Certus Quartz Seeds"), filterLabel("Cyanite Ingot"),
-      filterName("mysticalagriculture:tier5_inferium_seeds"), filterLabel("Certus Quartz Dust"), filterName("nuclearcraft:flour")
+      filterName("mysticalagriculture:tier5_inferium_seeds"), filterLabel("Certus Quartz Dust"), filterName("nuclearcraft:flour"),
+      filterLabel("Wheat"), filterLabel("Obsidian")
     }));
     factory.addBackup(filterLabel("Seeds"), 32);
 
@@ -61,6 +62,7 @@ int main() {
         {{{filterLabel("Slimeball"), 64}}, {{filterLabel("Slime Essence"), 5, {2, 4, 5, 6, 8}}}, {8, std::nullopt}},
         {{{filterLabel("Netherrack"), 64}}, {{filterLabel("Nether Essence"), 5, {2, 4, 5, 6, 8}}}, {2, std::nullopt}},
         {{{filterLabel("Blizz Rod"), 64}}, {{filterLabel("Blizz Essence"), 5, {2, 4, 5, 6, 8}}}, {12, std::nullopt}},
+        {{{filterLabel("Blaze Rod"), 64}}, {{filterLabel("Blaze Essence"), 5, {2, 4, 5, 6, 8}}}, {12, std::nullopt}},
         {{{filterLabel("Sky Stone"), 64}}, {{filterLabel("Sky Stone Essence"), 8, {1, 2, 3, 4, 6, 7, 8, 9}}}, {2, std::nullopt}},
         {{{filterLabel("Soul Sand"), 64}}, {{filterLabel("Nether Essence"), 8, {1, 2, 3, 4, 6, 7, 8, 9}}}, {3, std::nullopt}},
         {{{filterLabel("Cobalt Ingot"), 64}}, {{filterLabel("Cobalt Essence"), 8, {1, 2, 3, 4, 6, 7, 8, 9}}}, {8, std::nullopt}},
@@ -82,6 +84,7 @@ int main() {
         {{{filterLabel("Coal"), 64}}, {{filterLabel("Coal Essence"), 8, {1, 2, 3, 4, 6, 7, 8, 9}}}, {5, std::nullopt}},
         {{{filterLabel("tile.compressed_dust.name"), 16}}, {{filterLabel("Dust"), 9, {1, 2, 3, 4, 5, 6, 7, 8, 9}}}, {7, std::nullopt}},
         {{{filterLabel("Bone Block"), 16}}, {{filterLabel("Bone Meal"), 9, {1, 2, 3, 4, 5, 6, 7, 8, 9}}}, {7, std::nullopt}},
+        {{{filterLabel("Block of Compressed Iron"), 16}}, {{filterLabel("Compressed Iron Ingot"), 9, {1, 2, 3, 4, 5, 6, 7, 8, 9}}}, {7, std::nullopt}},
         {{{filterLabel("Birch Wood"), 64}}, {{filterLabel("Wood Essence"), 3, {1, 5, 9}}}, {4, std::nullopt}},
         {{{filterLabel("Oak Wood"), 64}}, {{filterLabel("Wood Essence"), 3, {1, 2, 3}}}, {4, std::nullopt}},
         {{{filterLabel("Sandstone"), 16}}, {{filterLabel("Sand"), 4, {1, 2, 4, 5}}}, {16, std::nullopt}},
@@ -321,18 +324,49 @@ int main() {
         {{{filterLabel("Crushed Netherrack"), 64}}, {{filterLabel("Compressed Netherrack"), 1}}, INT_MAX},
         {{{filterLabel("Bone Meal"), 16}}, {{filterLabel("Bone"), 1}}, INT_MAX},
         {{{filterLabel("Seeds"), 64}}, {{filterLabel("Wheat"), 1}}, INT_MAX},
+        {{{filterLabel("Blaze Powder"), 16}, {filterLabel("Sulfur"), 16}}, {{filterLabel("Blaze Rod"), 1}}, INT_MAX},
         {{}, {{filterLabel("Charged Certus Quartz Crystal"), 1}}, INT_MAX}
       }));
 
     // pneumaticSharedBuffer
     factory.addProcess(std::make_unique<ProcessBuffered>(factory, "pneumaticSharedBuffer", "center", "bc3", Actions::up, Actions::east,
       std::vector<StockEntry>{
-        {filterLabel("Pyrotheum Dust"), 16},
+        {filterLabel("Pyrotheum Dust"), 32},
         {filterLabel("Coal"), 16},
         {filterLabel("Rose Red"), 16},
         {filterLabel("Cactus Green"), 16},
         {filterLabel("Lapis Lazuli"), 16}
       }, INT_MAX, nullptr, std::vector<Recipe<int>>{}));
+
+    // pneumaticAssembly
+    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "pneumaticAssembly", "center", "c95", Actions::south, Actions::west,
+      std::vector<StockEntry>{}, 8, nullptr, std::vector<Recipe<int>>{
+        {{{filterLabel("Unassembled PCB"), 16}}, {{filterName("pneumaticcraft:empty_pcb"), 1}}, INT_MAX},
+        {{{filterLabel("Advanced Pressure Tube"), 16}}, {{filterLabel("Block of Compressed Iron"), 1}}, INT_MAX}
+      }));
+
+    // pressureChamber
+    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "pressureChamber", "center", "bc3", Actions::south, Actions::east,
+      std::vector<StockEntry>{}, 16, nullptr, std::vector<Recipe<int>>{
+        {{{filterName("pneumaticcraft:turbine_blade"), 16}}, {
+          {filterLabel("Redstone"), 2},
+          {filterLabel("Gold Ingot"), 1}
+        }, INT_MAX},
+        {{{filterName("pneumaticcraft:empty_pcb"), 16}}, {
+          {filterLabel("Green Plastic"), 1},
+          {filterLabel("Compressed Iron Ingot"), 1}
+        }, INT_MAX},
+        {{{filterName("pneumaticcraft:capacitor"), 16}}, {
+          {filterLabel("Cyan Plastic"), 1},
+          {filterLabel("Compressed Iron Ingot"), 1},
+          {filterLabel("Redstone"), 1}
+        }, INT_MAX},
+        {{{filterName("pneumaticcraft:transistor"), 16}}, {
+          {filterLabel("Black Plastic"), 1},
+          {filterLabel("Compressed Iron Ingot"), 1},
+          {filterLabel("Redstone"), 1}
+        }, INT_MAX}
+      }));
 
     // furnace
     factory.addProcess(std::make_unique<ProcessBuffered>(factory, "furnace", "center", "a12", Actions::west, Actions::north,
@@ -423,6 +457,7 @@ int main() {
         {{{filterLabel("Fluix Essence"), 16}}, {{filterLabel("Fluix Seeds"), 1}}, INT_MAX},
         {{{filterLabel("Water Essence"), 16}}, {{filterLabel("Water Seeds"), 1}}, INT_MAX},
         {{{filterLabel("Blizz Essence"), 16}}, {{filterLabel("Blizz Seeds"), 1}}, INT_MAX},
+        {{{filterLabel("Blaze Essence"), 16}}, {{filterLabel("Blaze Seeds"), 1}}, INT_MAX},
         {{{filterLabel("Gold Essence"), 16}}, {{filterLabel("Gold Seeds"), 1}}, INT_MAX},
         {{{filterLabel("Wood Essence"), 16}}, {{filterLabel("Wood Seeds"), 1}}, INT_MAX},
         {{{filterLabel("Dirt Essence"), 16}}, {{filterLabel("Dirt Seeds"), 1}}, INT_MAX},
