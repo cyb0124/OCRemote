@@ -749,6 +749,7 @@ SharedPromise<std::monostate> ProcessPlasticMixer::cycle() {
   int which{static_cast<int>(std::min_element(avails.begin(), avails.end()) - avails.begin())};
   if (avails[which] >= needed) {
     factory.log(name + ": off", 0xff4fff);
+    which = 0;
   } else {
     factory.log(name + ": making " + colorMap[which] + " Plastic", 0xff4fff);
     ++which;
