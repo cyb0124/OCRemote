@@ -33,11 +33,11 @@ int main() {
       filterLabel("Yellorium Ore Piece"), filterLabel("item.contenttweaker.rak_coin.name"), filterLabel("Zinc Ore Piece"),
       filterLabel("Lead Ore Piece"), filterLabel("Nickel Ore Piece"), filterLabel("Archaic Brick"), filterLabel("Silver Ore Piece"),
       filterLabel("Copper Ore Piece"), filterLabel("Tin Ore Piece"), filterLabel("Osmium Ore Piece"), filterLabel("Cake"),
-      filterLabel("Nether Wart"), filterLabel("Redstone Seeds"), filterLabel("Rich Slag"), filterLabel("Oak Wood Planks"),
+      filterLabel("Nether Wart"), filterLabel("Redstone Seeds"), filterLabel("Oak Wood Planks"), filterLabel("Titanium Ore Piece"),
       filterLabel("Grain Bait"), filterLabelName("Nether Brick", "minecraft:nether_brick"), filterLabel("Sky Stone Dust"),
       filterLabel("Nickel Ore Chunk"), filterLabel("Gunpowder"), filterLabel("Certus Quartz Seeds"), filterLabel("Cyanite Ingot"),
       filterName("mysticalagriculture:tier5_inferium_seeds"), filterLabel("Certus Quartz Dust"), filterName("nuclearcraft:flour"),
-      filterLabel("Wheat"), filterLabel("Obsidian")
+      filterLabel("Wheat"), filterLabel("Obsidian"), filterLabel("Tungsten Ore Piece"), filterLabel("Rotten Flesh")
     }));
     factory.addBackup(filterLabel("Seeds"), 32);
 
@@ -88,8 +88,11 @@ int main() {
         {{{filterLabel("Birch Wood"), 64}}, {{filterLabel("Wood Essence"), 3, {1, 5, 9}}}, {4, std::nullopt}},
         {{{filterLabel("Oak Wood"), 64}}, {{filterLabel("Wood Essence"), 3, {1, 2, 3}}}, {4, std::nullopt}},
         {{{filterLabel("Sandstone"), 16}}, {{filterLabel("Sand"), 4, {1, 2, 4, 5}}}, {16, std::nullopt}},
+        {{{filterLabel("Glowstone"), 16}}, {{filterLabel("Glowstone Dust"), 4, {1, 2, 4, 5}}}, {16, std::nullopt}},
         {{{filterLabel("String"), 64}}, {{filterLabel("Cotton"), 3, {1, 2, 4}}}, {20, std::nullopt}},
         {{{filterLabel("White Wool"), 64}}, {{filterLabel("String"), 4, {1, 2, 4, 5}}}, {16, std::nullopt}},
+        {{{filterLabel("Tin Gear"), 16}}, {{filterLabel("Tin Ingot"), 4, {2, 4, 6, 8}}}, {16, std::nullopt}},
+        {{{filterLabel("Copper Gear"), 16}}, {{filterLabel("Copper Ingot"), 4, {2, 4, 6, 8}}}, {16, std::nullopt}},
         {{{filterLabel("Bronze Gear"), 16}}, {{filterLabel("Bronze Ingot"), 4, {2, 4, 6, 8}}}, {16, std::nullopt}},
         {{{filterLabel("Silver Gear"), 16}}, {{filterLabel("Silver Ingot"), 4, {2, 4, 6, 8}}}, {16, std::nullopt}},
         {{{filterLabel("Lumium Gear"), 16}}, {{filterLabel("Lumium Ingot"), 4, {2, 4, 6, 8}}}, {16, std::nullopt}},
@@ -101,6 +104,8 @@ int main() {
         {{{filterLabel("Dandelion Yellow"), 16}}, {{filterLabel("Dye Essence"), 3, {1, 3, 5}}}, {10, std::nullopt}},
         {{{filterLabel("Rose Red"), 16}}, {{filterLabel("Dye Essence"), 3, {4, 5, 6}}}, {10, std::nullopt}},
         {{{filterLabel("Sulfur"), 16}}, {{filterLabel("Sulfur Essence"), 3, {1, 2, 3}}}, {8, std::nullopt}},
+        {{{filterLabel("Iron Nugget"), 16}}, {{filterLabel("Iron Ingot"), 1, {5}}}, {7, std::nullopt}},
+        {{{filterLabel("Gold Nugget"), 16}}, {{filterLabel("Gold Ingot"), 1, {5}}}, {7, std::nullopt}},
         {{{filterLabel("Blank Skull"), 16}}, {
           {filterLabel("Bone Block"), 1, {5}},
           {filterLabel("Soul Dust"), 4, {2, 4, 6, 8}}
@@ -266,11 +271,44 @@ int main() {
           {filterLabel("Blank Skull"), 1, {5}},
           {filterLabel("Skeleton Essence"), 8, {1, 2, 3, 4, 6, 7, 8, 9}}
         }, {8, std::nullopt}},
+        {{{filterLabel("Wither Skeleton Skull"), 16}}, {
+          {filterLabel("Blank Skull"), 1, {5}},
+          {filterLabel("Wither Skeleton Essence"), 8, {1, 2, 3, 4, 6, 7, 8, 9}}
+        }, {8, std::nullopt}},
         {{{filterLabel("Conduit Binder Composite"), 16}}, {
           {filterLabel("Gravel"), 5, {1, 3, 5, 7, 9}},
           {filterLabelName("Clay", "minecraft:clay_ball"), 2, {2, 8}},
           {filterLabel("Sand"), 2, {4, 6}}
         }, {8, std::nullopt}},
+        {{{filterName("thermalexpansion:frame"), 16}}, {
+          {filterLabel("Iron Ingot"), 4, {1, 3, 7, 9}},
+          {filterLabel("Glass"), 4, {2, 4, 6, 8}},
+          {filterLabel("Tin Gear"), 1, {5}}
+        }, {16, std::nullopt}},
+        {{{filterLabel("Steel Casing"), 16}}, {
+          {filterLabel("Steel Ingot"), 4, {1, 3, 7, 9}},
+          {filterLabel("Gray Plastic"), 4, {2, 4, 6, 8}},
+          {filterLabel("Osmium Ingot"), 1, {5}}
+        }, {16, std::nullopt}},
+        {{{filterLabel("item.item_capacitor_grainy.name"), 16}}, {
+          {filterLabel("Iron Nugget"), 2, {5, 8}},
+          {filterLabel("Grains of Infinity"), 1, {2}}
+        }, {32, std::nullopt}},
+        {{{filterLabel("Basic Capacitor"), 16}}, {
+          {filterLabel("Gold Nugget"), 4, {2, 4, 6, 8}},
+          {filterLabel("Copper Ingot"), 1, {5}},
+          {filterLabel("item.item_capacitor_grainy.name"), 2, {3, 7}}
+        }, {16, std::nullopt}},
+        {{{filterLabel("Double-Layer Capacitor"), 16}}, {
+          {filterLabel("Energetic Alloy Ingot"), 2, {2, 8}},
+          {filterLabel("Pulverized Coal"), 1, {5}},
+          {filterLabel("Basic Capacitor"), 2, {4, 6}}
+        }, {32, std::nullopt}},
+        {{{filterLabel("Octadic Capacitor"), 16}}, {
+          {filterLabel("Vibrant Alloy Ingot"), 2, {2, 8}},
+          {filterLabel("Glowstone"), 1, {5}},
+          {filterLabel("Double-Layer Capacitor"), 2, {4, 6}}
+        }, {32, std::nullopt}},
         {{{filterLabel("Yellorium Ore Chunk"), 16}}, {{filterLabel("Yellorium Ore Piece"), 4, {1, 2, 4, 5}}}, {16, std::nullopt}},
         {{{filterLabel("Platinum Ore Chunk"), 16}}, {{filterLabel("Platinum Ore Piece"), 4, {1, 2, 4, 5}}}, {16, std::nullopt}},
         {{{filterLabel("Mithril Ore Chunk"), 16}}, {{filterLabel("Mithril Ore Piece"), 4, {1, 2, 4, 5}}}, {16, std::nullopt}},
@@ -324,6 +362,7 @@ int main() {
         {{{filterLabel("Crushed Netherrack"), 64}}, {{filterLabel("Compressed Netherrack"), 1}}, INT_MAX},
         {{{filterLabel("Bone Meal"), 16}}, {{filterLabel("Bone"), 1}}, INT_MAX},
         {{{filterLabel("Seeds"), 64}}, {{filterLabel("Wheat"), 1}}, INT_MAX},
+        {{{filterLabel("Pulverized Coal"), 16}}, {{filterLabel("Coal"), 1}}, INT_MAX},
         {{{filterLabel("Blaze Powder"), 16}, {filterLabel("Sulfur"), 16}}, {{filterLabel("Blaze Rod"), 1}}, INT_MAX},
         {{}, {{filterLabel("Charged Certus Quartz Crystal"), 1}}, INT_MAX}
       }));
@@ -433,11 +472,14 @@ int main() {
         {filterLabel("Cobblestone"), 16},
         {filterLabel("Cryotheum Dust"), 16}
       }, 32, nullptr, std::vector<Recipe<int>>{
-        {{{filterLabel(u8"§eInferium Essence"), 80'000}}, {{filterName("mysticalagriculture:tier5_inferium_seeds"), 1}}, INT_MAX},
+        {{{filterLabel(u8"§eInferium Essence"), 114'000}}, {{filterName("mysticalagriculture:tier5_inferium_seeds"), 1}}, INT_MAX},
         {{{filterLabel("Grains of Infinity Essence"), 16}}, {{filterLabel("Grains of Infinity Seeds"), 1}}, INT_MAX},
+        {{{filterLabel("Wither Skeleton Essence"), 16}}, {{filterLabel("Wither Skeleton Seeds"), 1}}, INT_MAX},
         {{{filterLabel("Compressed Iron Essence"), 16}}, {{filterLabel("Compressed Iron Seeds"), 1}}, INT_MAX},
+        {{{filterLabel("Mystical Flower Essence"), 16}}, {{filterLabel("Mystical Flower Seeds"), 1}}, INT_MAX},
         {{{filterLabel("Certus Quartz Essence"), 16}}, {{filterLabel("Certus Quartz Seeds"), 1}}, INT_MAX},
         {{{filterLabel("Lapis Lazuli Essence"), 16}}, {{filterLabel("Lapis Lazuli Seeds"), 1}}, INT_MAX},
+        {{{filterLabel("Experience Essence"), 16}}, {{filterLabel("Experience Seeds"), 1}}, INT_MAX},
         {{{filterLabel("Sky Stone Essence"), 16}}, {{filterLabel("Sky Stone Seeds"), 1}}, INT_MAX},
         {{{filterLabel("Glowstone Essence"), 16}}, {{filterLabel("Glowstone Seeds"), 1}}, INT_MAX},
         {{{filterLabel("Yellorium Essence"), 16}}, {{filterLabel("Yellorium Seeds"), 1}}, INT_MAX},
@@ -487,7 +529,7 @@ int main() {
         {{{filterLabel("Nickel Ingot"), 64}}, {{filterLabel("Nickel Ore Chunk"), 1}}, INT_MAX},
         {{{filterLabel("Platinum Ingot"), 64}}, {{filterLabel("Platinum Ore Chunk"), 1}}, INT_MAX},
         {{{filterLabel("Yellorium Ingot"), 64}}, {{filterLabel("Yellorium Ore Chunk"), 1}}, INT_MAX},
-        {{{filterLabel("Mana Infused Ingot"), 64}}, {{filterLabel("Mithril Ore Chunk"), 1}}, INT_MAX}
+        {{{filterLabelName("Mana Infused Ingot", "thermalfoundation:material"), 64}}, {{filterLabel("Mithril Ore Chunk"), 1}}, INT_MAX}
       }));
 
     // sieve
