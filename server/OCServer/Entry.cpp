@@ -24,16 +24,17 @@ int main() {
     factory.addStorage(std::make_unique<StorageChest>(factory, "center", "5cb", Actions::east, Actions::south));
     factory.addStorage(std::make_unique<StorageChest>(factory, "center", "a12", Actions::east, Actions::north));
     factory.addStorage(std::make_unique<StorageChest>(factory, "center", "3c3", Actions::south, Actions::west));
+    factory.addStorage(std::make_unique<StorageChest>(factory, "center", "3c3", Actions::up, Actions::west));
     factory.addStorage(std::make_unique<StorageDrawer>(factory, "center", "6ef", Actions::up, Actions::west, std::vector<SharedItemFilter>{
-      filterLabel("Cobblestone"), filterLabel("Sand"), filterLabel("Dust"), filterLabel("Glowstone Dust"),
+      filterLabel("Cobblestone"), filterLabel("Sand"), filterLabel("Blizz Powder"), filterLabel("Glowstone Dust"),
       filterLabel("Gravel"), filterLabel("Niter"), filterLabel("Blitz Powder"), filterLabel("Basalz Powder"),
       filterLabel("Flint"), filterLabel(u8"§eInferium Essence"), filterLabel("Iron Ore Piece"), filterLabel("Cocoa Beans"),
       filterLabel("Iron Ore Chunk"), filterLabel("Certus Quartz Crystal"), filterLabel("Platinum Ore Chunk"),
-      filterLabel("Platinum Ore Piece"), filterLabel("White Wool"), filterLabel("Blaze Powder"), filterLabel("Bone Meal"),
+      filterLabel("Platinum Ore Piece"), filterLabel("White Wool"), filterLabel("Redstone"), filterLabel("Bone Meal"),
       filterLabel("Yellorium Ore Piece"), filterLabel("item.contenttweaker.rak_coin.name"), filterLabel("Zinc Ore Piece"),
       filterLabel("Lead Ore Piece"), filterLabel("Nickel Ore Piece"), filterLabel("Archaic Brick"), filterLabel("Silver Ore Piece"),
       filterLabel("Copper Ore Piece"), filterLabel("Tin Ore Piece"), filterLabel("Osmium Ore Piece"), filterLabel("Cake"),
-      filterLabel("Nether Wart"), filterLabel("Redstone Seeds"), filterLabel("Oak Wood Planks"), filterLabel("Titanium Ore Piece"),
+      filterLabel("Nether Wart"), filterLabel("Redstone Seeds"), filterLabel("Bone"), filterLabel("Titanium Ore Piece"),
       filterLabel("Grain Bait"), filterLabelName("Nether Brick", "minecraft:nether_brick"), filterLabel("Sky Stone Dust"),
       filterLabel("Nickel Ore Chunk"), filterLabel("Gunpowder"), filterLabel("Certus Quartz Seeds"), filterLabel("Cyanite Ingot"),
       filterName("mysticalagriculture:tier5_inferium_seeds"), filterLabel("Certus Quartz Dust"), filterName("nuclearcraft:flour"),
@@ -55,6 +56,7 @@ int main() {
     factory.addProcess(std::make_unique<ProcessRFToolsControlWorkbench>(factory, "workbench", "center", "f80", "a12",
       Actions::east, Actions::north, Actions::west, std::vector<Recipe<std::pair<int, std::optional<NonConsumableInfo>>, std::vector<size_t>>>{
         {{{filterLabel("Sugar Canes"), 16}}, {{filterLabel("Nature Essence"), 6, {2, 4, 5, 6, 7, 9}}}, {4, std::nullopt}},
+        {{{filterLabel("Cocoa Beans"), 16}}, {{filterLabel("Nature Essence"), 3, {4, 5, 6}}}, {8, std::nullopt}},
         {{{filterLabel("Cactus"), 16}}, {{filterLabel("Nature Essence"), 7, {1, 2, 3, 5, 7, 8, 9}}}, {4, std::nullopt}},
         {{{filterLabel("Grains of Infinity"), 64}}, {{filterLabel("Grains of Infinity Essence"), 5, {2, 4, 5, 6, 8}}}, {2, std::nullopt}},
         {{{filterLabel("Vibrant Alloy Grinding Ball"), 16}}, {{filterLabel("Vibrant Alloy Ingot"), 5, {2, 4, 5, 6, 8}}}, {2, std::nullopt}},
@@ -263,6 +265,12 @@ int main() {
           {filterLabel("Organic Green Dye"), 2, {3, 7}},
           {filterLabel("Crushed Quartz"), 4, {2, 4, 6, 8}}
         }, {10, std::nullopt}},
+        {{{filterLabel("Soul Attuned Dye Blend"), 16}}, {
+          {filterLabel("Organic Black Dye"), 1, {5}},
+          {filterLabel("Soul Powder"), 2, {1, 9}},
+          {filterLabel("Organic Brown Dye"), 2, {3, 7}},
+          {filterLabel("Crushed Quartz"), 4, {2, 4, 6, 8}}
+        }, {10, std::nullopt}},
         {{{filterLabel("Soulstone"), 16}}, {
           {filterLabel("Stone"), 5, {1, 3, 5, 7, 9}},
           {filterLabel("Soul Sand"), 4, {2, 4, 6, 8}}
@@ -344,6 +352,7 @@ int main() {
         {{{filterLabel("Pulverized Charcoal"), 16}}, {{filterLabel("Charcoal"), 1}}, INT_MAX},
         {{{filterLabel("Pulverized Obsidian"), 16}}, {{filterLabel("Obsidian"), 1}}, INT_MAX},
         {{{filterLabel("Pulverized Lead"), 16}}, {{filterLabel("Lead Ingot"), 1}}, INT_MAX},
+        {{{filterLabel("Soul Powder"), 16}}, {{filterLabel("Soularium Ingot"), 1}}, INT_MAX},
         {{{filterLabel("Graphite Dust"), 16}}, {{filterLabel("Graphite Ingot"), 1}}, INT_MAX},
         {{{filterLabel("Crushed Quartz"), 16}}, {{filterLabel("Nether Quartz"), 1}}, INT_MAX},
         {{{filterLabel("Crushed Lapis"), 16}}, {{filterLabel("Lapis Lazuli"), 1}}, INT_MAX},
@@ -579,6 +588,7 @@ int main() {
         {{{filterLabel("Bronze Ingot"), 64}}, {{filterLabel("Copper Ingot"), 3, {0}}, {filterLabel("Tin Ingot"), 1, {1}}}, 16},
         {{{filterLabel("Invar Ingot"), 64}}, {{filterLabel("Iron Ingot"), 2, {0}}, {filterLabel("Nickel Ingot"), 1, {1}}}, 32},
         {{{filterLabel("Electrum Ingot"), 64}}, {{filterLabel("Gold Ingot"), 1, {0}}, {filterLabel("Silver Ingot"), 1, {1}}}, 64},
+        {{{filterLabel("Soularium Ingot"), 64}}, {{filterLabel("Gold Ingot"), 1, {0}}, {filterLabel("Soul Sand"), 1, {1}}}, 64},
         {{{filterLabel("Electrical Steel Ingot"), 64}}, {{filterLabel("Steel Ingot"), 1, {0}}, {filterLabel("Silicon"), 1, {1}}}, 64},
         {{{filterLabel("Dark Steel Ingot"), 64}}, {{filterLabel("Steel Ingot"), 1, {0}}, {filterLabel("Obsidian"), 1, {1}}}, 64},
         {{{filterLabel("Vibrant Alloy Ingot"), 64}}, {{filterLabel("Energetic Alloy Ingot"), 1, {0}}, {filterLabel("Ender Pearl"), 1, {1}}}, 64},
@@ -590,6 +600,11 @@ int main() {
       std::vector<size_t>{0, 1, 2}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{{filterLabel("Organic Green Dye"), 16}}, {
           {filterLabel("Cactus Green"), 2, {0}},
+          {filterLabel("Slimeball"), 1, {1}},
+          {filterLabel("Pulverized Charcoal"), 2, {2}}
+        }, 32},
+        {{{filterLabel("Organic Brown Dye"), 16}}, {
+          {filterLabel("Cocoa Beans"), 2, {0}},
           {filterLabel("Slimeball"), 1, {1}},
           {filterLabel("Pulverized Charcoal"), 2, {2}}
         }, 32},
@@ -609,7 +624,8 @@ int main() {
       std::vector<size_t>{0, 1}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{{filterLabel("Hardened Glass"), 16}}, {{filterLabel("Pulverized Lead"), 1, {0}}, {filterLabel("Pulverized Obsidian"), 4, {1}}}, 16},
         {{{filterLabel("Sulfur"), 16}}, {{filterLabel("Soul Sand"), 1, {0}}, {filterLabel("Netherrack"), 2, {1}}}, 32},
-        {{{filterLabel("Industrial Machine Chassis"), 16}}, {{filterLabel("Simple Machine Chassis"), 1, {0}}, {filterLabel("Industrial Dye Blend"), 1, {1}}}, 64}
+        {{{filterLabel("Industrial Machine Chassis"), 16}}, {{filterLabel("Simple Machine Chassis"), 1, {0}}, {filterLabel("Industrial Dye Blend"), 1, {1}}}, 64},
+        {{{filterLabel("Soul Machine Chassis"), 16}}, {{filterLabel("Simple Machine Chassis"), 1, {0}}, {filterLabel("Soul Attuned Dye Blend"), 1, {1}}}, 64}
       }));
 
     factory.start();
