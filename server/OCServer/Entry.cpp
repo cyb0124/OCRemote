@@ -30,7 +30,7 @@ int main() {
       filterLabel("Gravel"), filterLabel("Niter"), filterLabel("Blitz Powder"), filterLabel("Basalz Powder"),
       filterLabel("Flint"), filterLabel(u8"§eInferium Essence"), filterLabel("Iron Ore Piece"), filterLabel("Cocoa Beans"),
       filterLabel("Iron Ore Chunk"), filterLabel("Certus Quartz Crystal"), filterLabel("Platinum Ore Chunk"),
-      filterLabel("Platinum Ore Piece"), filterLabel("White Wool"), filterLabel("Redstone"), filterLabel("Bone Meal"),
+      filterLabel("Platinum Ore Piece"), filterLabel("White Wool"), filterLabel("Blaze Powder"), filterLabel("Bone Meal"),
       filterLabel("Yellorium Ore Piece"), filterLabel("item.contenttweaker.rak_coin.name"), filterLabel("Zinc Ore Piece"),
       filterLabel("Lead Ore Piece"), filterLabel("Nickel Ore Piece"), filterLabel("Archaic Brick"), filterLabel("Silver Ore Piece"),
       filterLabel("Copper Ore Piece"), filterLabel("Tin Ore Piece"), filterLabel("Osmium Ore Piece"), filterLabel("Cake"),
@@ -68,9 +68,15 @@ int main() {
         {{{filterLabel("Sky Stone"), 64}}, {{filterLabel("Sky Stone Essence"), 8, {1, 2, 3, 4, 6, 7, 8, 9}}}, {2, std::nullopt}},
         {{{filterLabel("Soul Sand"), 64}}, {{filterLabel("Nether Essence"), 8, {1, 2, 3, 4, 6, 7, 8, 9}}}, {3, std::nullopt}},
         {{{filterLabel("Cobalt Ingot"), 64}}, {{filterLabel("Cobalt Essence"), 8, {1, 2, 3, 4, 6, 7, 8, 9}}}, {8, std::nullopt}},
+        {{{filterLabel("Ardite Ingot"), 64}}, {{filterLabel("Ardite Essence"), 8, {1, 2, 3, 4, 6, 7, 8, 9}}}, {8, std::nullopt}},
+        {{{filterLabel("Manasteel Ingot"), 64}}, {{filterLabel("Manasteel Essence"), 8, {1, 2, 3, 4, 6, 7, 8, 9}}}, {8, std::nullopt}},
+        {{{filterLabel("Terrasteel Ingot"), 64}}, {{filterLabel("Terrasteel Essence"), 8, {1, 2, 3, 4, 6, 7, 8, 9}}}, {8, std::nullopt}},
+        {{{filterLabel("Elementium Ingot"), 64}}, {{filterLabel("Elementium Essence"), 8, {1, 2, 3, 4, 6, 7, 8, 9}}}, {8, std::nullopt}},
+        {{{filterLabel("Knightslime Ingot"), 64}}, {{filterLabel("Knightslime Essence"), 8, {1, 2, 3, 4, 6, 7, 8, 9}}}, {8, std::nullopt}},
         {{{filterLabel("Yellorium Ingot"), 64}}, {{filterLabel("Yellorium Essence"), 8, {1, 2, 3, 4, 6, 7, 8, 9}}}, {8, std::nullopt}},
         {{{filterLabel("Enderium Ingot"), 64}}, {{filterLabel("Enderium Essence"), 8, {1, 2, 3, 4, 6, 7, 8, 9}}}, {8, std::nullopt}},
         {{{filterLabel("Signalum Ingot"), 64}}, {{filterLabel("Signalum Essence"), 8, {1, 2, 3, 4, 6, 7, 8, 9}}}, {8, std::nullopt}},
+        {{{filterLabel("Experience Droplet"), 64}}, {{filterLabel("Experience Essence"), 8, {1, 2, 3, 4, 6, 7, 8, 9}}}, {8, std::nullopt}},
         {{{filterLabel("Compressed Iron Ingot"), 64}}, {{filterLabel("Compressed Iron Essence"), 8, {1, 2, 3, 4, 6, 7, 8, 9}}}, {8, std::nullopt}},
         {{{filterLabel("Lumium Ingot"), 64}}, {{filterLabel("Lumium Essence"), 8, {1, 2, 3, 4, 6, 7, 8, 9}}}, {8, std::nullopt}},
         {{{filterLabel("Gold Ingot"), 64}}, {{filterLabel("Gold Essence"), 8, {1, 2, 3, 4, 6, 7, 8, 9}}}, {8, std::nullopt}},
@@ -104,6 +110,7 @@ int main() {
         {{{filterLabel("Paper"), 64}}, {{filterLabel("Sawdust"), 3, {4, 5, 6}}}, {10, std::nullopt}},
         {{{filterLabel("Iron Bars"), 16}}, {{filterLabel("Iron Ingot"), 6, {1, 2, 3, 4, 5, 6}}}, {4, std::nullopt}},
         {{{filterLabel("Dandelion Yellow"), 16}}, {{filterLabel("Dye Essence"), 3, {1, 3, 5}}}, {10, std::nullopt}},
+        {{{filterLabel("Glass Bottle"), 16}}, {{filterLabel("Glass"), 3,  {4, 6, 8}}}, {21, std::nullopt}},
         {{{filterLabel("Rose Red"), 16}}, {{filterLabel("Dye Essence"), 3, {4, 5, 6}}}, {10, std::nullopt}},
         {{{filterLabel("Sulfur"), 16}}, {{filterLabel("Sulfur Essence"), 3, {1, 2, 3}}}, {8, std::nullopt}},
         {{{filterLabel("Iron Nugget"), 16}}, {{filterLabel("Iron Ingot"), 1, {5}}}, {7, std::nullopt}},
@@ -112,6 +119,10 @@ int main() {
           {filterLabel("Bone Block"), 1, {5}},
           {filterLabel("Soul Dust"), 4, {2, 4, 6, 8}}
         }, {16, std::nullopt}},
+        {{{filterName("minecraft:experience_bottle"), 16}}, {
+          {filterLabel("Glass Bottle"), 1, {1}},
+          {filterLabel("Experience Droplet"), 1, {2}}
+        }, {64, std::nullopt}},
         {{{filterLabel("Pure Certus Quartz Crystal"), 64}}, {
           {filterLabel("Sand"), 1, {1}},
           {filterLabel("Certus Quartz Dust"), 1, {2}}
@@ -358,7 +369,8 @@ int main() {
         {{{filterLabel("Crushed Lapis"), 16}}, {{filterLabel("Lapis Lazuli"), 1}}, INT_MAX},
         {{{filterLabel("Certus Quartz Dust"), 16}}, {{filterLabel("Certus Quartz Crystal"), 1}}, INT_MAX},
         {{{filterLabel("Fluix Dust"), 16}}, {{filterLabel("Fluix Crystal"), 1}}, INT_MAX},
-        {{{filterLabel("Stick"), 64}}, {{filterLabel("Oak Wood Planks"), 1}}, INT_MAX}
+        {{{filterLabel("Stick"), 64}}, {{filterLabel("Oak Wood Planks"), 1}}, INT_MAX},
+        {{{filterLabel("Solidified Experience"), 4096}}, {{filterName("minecraft:experience_bottle"), 3}}, INT_MAX}
       }));
 
     // sagMill
@@ -383,7 +395,8 @@ int main() {
         {filterLabel("Coal"), 16},
         {filterLabel("Rose Red"), 16},
         {filterLabel("Cactus Green"), 16},
-        {filterLabel("Lapis Lazuli"), 16}
+        {filterLabel("Lapis Lazuli"), 16},
+        {filterLabel("Cake"), 16}
       }, INT_MAX, nullptr, std::vector<Recipe<int>>{}));
 
     // pneumaticAssembly
@@ -488,7 +501,11 @@ int main() {
         {{{filterLabel("Mystical Flower Essence"), 16}}, {{filterLabel("Mystical Flower Seeds"), 1}}, INT_MAX},
         {{{filterLabel("Certus Quartz Essence"), 16}}, {{filterLabel("Certus Quartz Seeds"), 1}}, INT_MAX},
         {{{filterLabel("Lapis Lazuli Essence"), 16}}, {{filterLabel("Lapis Lazuli Seeds"), 1}}, INT_MAX},
+        {{{filterLabel("Knightslime Essence"), 16}}, {{filterLabel("Knightslime Seeds"), 1}}, INT_MAX},
         {{{filterLabel("Experience Essence"), 16}}, {{filterLabel("Experience Seeds"), 1}}, INT_MAX},
+        {{{filterLabel("Elementium Essence"), 16}}, {{filterLabel("Elementium Seeds"), 1}}, INT_MAX},
+        {{{filterLabel("Terrasteel Essence"), 16}}, {{filterLabel("Terrasteel Seeds"), 1}}, INT_MAX},
+        {{{filterLabel("Manasteel Essence"), 16}}, {{filterLabel("Manasteel Seeds"), 1}}, INT_MAX},
         {{{filterLabel("Sky Stone Essence"), 16}}, {{filterLabel("Sky Stone Seeds"), 1}}, INT_MAX},
         {{{filterLabel("Glowstone Essence"), 16}}, {{filterLabel("Glowstone Seeds"), 1}}, INT_MAX},
         {{{filterLabel("Yellorium Essence"), 16}}, {{filterLabel("Yellorium Seeds"), 1}}, INT_MAX},
@@ -500,11 +517,12 @@ int main() {
         {{{filterLabel("Diamond Essence"), 16}}, {{filterLabel("Diamond Seeds"), 1}}, INT_MAX},
         {{{filterLabel("Emerald Essence"), 16}}, {{filterLabel("Emerald Seeds"), 1}}, INT_MAX},
         {{{filterLabel("Lumium Essence"), 16}}, {{filterLabel("Lumium Seeds"), 1}}, INT_MAX},
-        {{{filterLabel("Slime Essence"), 16}}, {{filterLabel("Slime Seeds"), 1}}, INT_MAX},
         {{{filterLabel("Cobalt Essence"), 16}}, {{filterLabel("Cobalt Seeds"), 1}}, INT_MAX},
+        {{{filterLabel("Ardite Essence"), 16}}, {{filterLabel("Ardite Seeds"), 1}}, INT_MAX},
         {{{filterLabel("Nether Essence"), 16}}, {{filterLabel("Nether Seeds"), 1}}, INT_MAX},
         {{{filterLabel("Nature Essence"), 16}}, {{filterLabel("Nature Seeds"), 1}}, INT_MAX},
         {{{filterLabel("Sulfur Essence"), 16}}, {{filterLabel("Sulfur Seeds"), 1}}, INT_MAX},
+        {{{filterLabel("Slime Essence"), 16}}, {{filterLabel("Slime Seeds"), 1}}, INT_MAX},
         {{{filterLabel("Fluix Essence"), 16}}, {{filterLabel("Fluix Seeds"), 1}}, INT_MAX},
         {{{filterLabel("Water Essence"), 16}}, {{filterLabel("Water Seeds"), 1}}, INT_MAX},
         {{{filterLabel("Blizz Essence"), 16}}, {{filterLabel("Blizz Seeds"), 1}}, INT_MAX},
@@ -513,8 +531,8 @@ int main() {
         {{{filterLabel("Wood Essence"), 16}}, {{filterLabel("Wood Seeds"), 1}}, INT_MAX},
         {{{filterLabel("Dirt Essence"), 16}}, {{filterLabel("Dirt Seeds"), 1}}, INT_MAX},
         {{{filterLabel("Coal Essence"), 16}}, {{filterLabel("Coal Seeds"), 1}}, INT_MAX},
-        {{{filterLabel("Dye Essence"), 16}}, {{filterLabel("Dye Seeds"), 1}}, INT_MAX},
         {{{filterLabel("Ender Pearl"), 64}}, {{filterLabel("Ender Lilly"), 1}}, INT_MAX},
+        {{{filterLabel("Dye Essence"), 16}}, {{filterLabel("Dye Seeds"), 1}}, INT_MAX},
         {{{filterLabel("Soybean"), 16}}, {{filterLabel("Soybean Seed"), 1}}, INT_MAX},
         {{{filterLabel("Cotton"), 16}}, {{filterLabel("Cotton Seeds"), 1}}, INT_MAX},
         {{
