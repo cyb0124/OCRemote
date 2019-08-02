@@ -4,4 +4,4 @@ load((function()
     content = content .. chunk
   end
   return content
-end)())("clientName")
+end)())("clientName", 80, 25)

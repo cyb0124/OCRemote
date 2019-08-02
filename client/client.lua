@@ -1,7 +1,7 @@
 local serverAddr = "cyb1.net"
 local serverPort = 1847
 local clientName = ...
-local resX, resY = 80, 25
+local resX, resY = select(2, ...)
 
 local encode
 (function()
