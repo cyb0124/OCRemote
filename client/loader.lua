@@ -4,4 +4,4 @@ load((function()
     content = content .. chunk
   end
   return content
-end)())("clientName", 80, 25)
+end)())("cyb1.net", 1847, "clientName", 80, 25)

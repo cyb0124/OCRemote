@@ -1,7 +1,4 @@
-local serverAddr = "cyb1.net"
-local serverPort = 1847
-local clientName = ...
-local resX, resY = select(2, ...)
+local serverAddr, serverPort, clientName, resX, resY = ...
 
 local encode
 (function()
