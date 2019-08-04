@@ -761,3 +761,26 @@ SharedPromise<std::monostate> ProcessPlasticMixer::cycle() {
   factory.s.enqueueAction(client, action);
   return action->mapTo(std::monostate{});
 }
+
+SharedPromise<std::monostate> ProcessRedstoneConditional::cycle() {
+  auto action(std::make_shared<Actions::Call>());
+  action->inv = inv;
+  action->fn = "getInput";
+  action->args = {static_cast<double>(side)};
+  factory.s.enqueueAction(client, action);
+  return action->then(factory.alive, [this](SValue &&arg) {
+    double level;
+    try {
+      level = std::get<double>(std::get<STable>(arg).at(1.0));
+    } catch (std::exception &e) {
+      return scheduleFailingPromise<std::monostate>(factory.s.io, name + ": " + e.what());
+    }
+    if (predicate(static_cast<int>(level))) {
+      return child->cycle();
+    } else {
+      if (logSkip)
+        factory.log(name + ": skipped", 0xff0000);
+      return scheduleTrivialPromise(factory.s.io);
+    }
+  });
+}

@@ -152,3 +152,16 @@ struct ProcessPlasticMixer : ProcessSingleClient {
     :ProcessSingleClient(factory, std::move(name), std::move(client)), inv(std::move(inv)), needed(needed) {}
   SharedPromise<std::monostate> cycle() override;
 };
+
+struct ProcessRedstoneConditional : ProcessSingleClient {
+  std::string inv;
+  int side;
+  bool logSkip;
+  std::function<bool(int)> predicate;
+  std::unique_ptr<Process> child;
+  ProcessRedstoneConditional(Factory &factory, std::string name, std::string client,
+    std::string inv, int side, bool logSkip, decltype(predicate) predicate, decltype(child) child)
+    :ProcessSingleClient(factory, std::move(name), std::move(client)), inv(std::move(inv)),
+    side(side), logSkip(logSkip), predicate(std::move(predicate)), child(std::move(child)) {}
+  SharedPromise<std::monostate> cycle() override;
+};
