@@ -64,7 +64,9 @@ int main() {
       filterLabel("Gold Cable"), filterLabel("Aluminium Wire"), filterLabel("Basic Coil"), filterLabel("Advanced Coil"),
       filterLabel("Device Frame"), filterLabel("Copper Cable"), filterLabel("Iron Sheetmetal"), filterLabel("Gold Gear"),
       filterLabel("Glass Pane"), filterLabel("Steel Sheetmetal"), filterLabel("Iron Mechanical Component"), filterLabel("Coil"),
-      filterLabel("Sturdy Casing"), filterLabel("Bronze Gear")
+      filterLabel("Sturdy Casing"), filterLabel("Bronze Gear"), filterLabel("Steel Rod"), filterLabel("Compressed Redstone"),
+      filterLabel("Compressed Diamond"), filterLabel("Enriched Alloy"), filterLabel("Basic Control Circuit"),
+      filterLabel("Tin Item Casing")
     }));
     factory.addStorage(std::make_unique<StorageChest>(factory, "north", "334", Actions::up, Actions::east));
     factory.addBackup(filterLabel("Potato"), 32);
@@ -85,7 +87,8 @@ int main() {
         {filterLabel("TNT"), 16},
         {filterLabel("Seeds"), 16},
         {filterLabel("Birch Wood"), 16},
-        {filterLabel("Blaze Powder Block"), 16}
+        {filterLabel("Blaze Powder Block"), 16},
+        {filterLabel("Compressed Redstone"), 16}
       }, INT_MAX, nullptr, std::vector<Recipe<int>>{}));
 
     // trash
@@ -129,6 +132,12 @@ int main() {
         {{{filterLabel("Iron Large Plate"), 4}}, {{filterLabel("Block of Iron"), 1}}, INT_MAX}
       }));
 
+    // rodPress
+    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "rodPress", "center", "12a", Actions::west, Actions::south,
+      std::vector<StockEntry>{}, 16, nullptr, std::vector<Recipe<int>>{
+        {{{filterLabel("Steel Rod"), 4}}, {{filterLabel("Steel Sheetmetal"), 1}}, INT_MAX}
+      }));
+
     // gearPress
     factory.addProcess(std::make_unique<ProcessBuffered>(factory, "gearPress", "north", "1e4", Actions::north, Actions::west,
       std::vector<StockEntry>{}, 16, nullptr, std::vector<Recipe<int>>{
@@ -144,7 +153,7 @@ int main() {
       }));
 
     // pinkSlime
-    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "pinkSlime", "center", "12a", Actions::west, Actions::south,
+    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "pinkSlime", "center", "12a", Actions::up, Actions::south,
       std::vector<StockEntry>{}, 16, nullptr, std::vector<Recipe<int>>{
         {{{filterLabel("Pink Slime"), 64}}, {{filterLabel("Slime Block"), 1}}, INT_MAX}
       }));
@@ -397,6 +406,20 @@ int main() {
         {{{filterLabel("Bio Fuel"), 64}}, {{filterLabel("Potato"), 1, {0}}}, 16}
       }));
 
+    // enrichment
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "enrichment", "center", "12a", Actions::north, Actions::south,
+      std::vector<size_t>{0}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
+        {{{filterLabel("Compressed Redstone"), 16}}, {{filterLabel("Redstone"), 1, {0}}}, 16},
+        {{{filterLabel("Compressed Diamond"), 16}}, {{filterLabel("Diamond"), 1, {0}}}, 16}
+      }));
+
+    // redstoneInfusion
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "redstoneInfusion", "center", "1cb", Actions::down, Actions::north,
+      std::vector<size_t>{0}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
+        {{{filterLabel("Enriched Alloy"), 64}}, {{filterLabel("Iron Ingot"), 1, {0}}}, 16},
+        {{{filterLabel("Basic Control Circuit"), 64}}, {{filterLabel("Osmium Ingot"), 1, {0}}}, 16}
+      }));
+
     // presser
     factory.addProcess(std::make_unique<ProcessSlotted>(factory, "presser", "north", "1e4", Actions::down, Actions::west,
       std::vector<size_t>{0}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
@@ -424,10 +447,16 @@ int main() {
       }));
 
     // cable
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "cable", "center", "12a", Actions::up, Actions::south,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "cable", "center", "12a", Actions::down, Actions::south,
       std::vector<size_t>{6}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{{filterLabel("Gold Cable"), 64}}, {{filterLabel("Gold Ingot"), 1, {6}}}, 16},
         {{{filterLabel("Copper Cable"), 64}}, {{filterLabel("Copper Ingot"), 1, {6}}}, 16}
+      }));
+
+    // itemCasing
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "itemCasing", "center", "5a0", Actions::down, Actions::north,
+      std::vector<size_t>{6}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
+        {{{filterLabel("Tin Item Casing"), 4}}, {{filterLabel("Tin Plate"), 1, {6}}}, 16}
       }));
 
     // rockCrusher
