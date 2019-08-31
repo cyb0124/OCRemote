@@ -47,7 +47,7 @@ struct ProcessCraftingRobot : ProcessSingleClient {
   //   4, 8, 12, 13, 14, 15
   //   with extra inventory: 17, 18, ...
   // (maxSets, nonConsumableInfo), slots
-  using Recipe = ::Recipe<std::pair<int, std::optional<NonConsumableInfo>>, std::vector<size_t>>;
+  using Recipe = ::Recipe<std::pair<int, std::vector<NonConsumableInfo>>, std::vector<size_t>>;
   int sideBus;
   std::vector<Recipe> recipes;
   size_t mapCraftingGridSlot(size_t slot);
@@ -58,7 +58,7 @@ struct ProcessCraftingRobot : ProcessSingleClient {
 };
 
 struct ProcessRFToolsControlWorkbench : ProcessSingleClient {
-  using Recipe = ::Recipe<std::pair<int, std::optional<NonConsumableInfo>>, std::vector<size_t>>;
+  using Recipe = ::Recipe<std::pair<int, std::vector<NonConsumableInfo>>, std::vector<size_t>>;
   std::string invIn, invOut;
   int sideBusIn, sideBusOut, sideNonConsumable;
   std::vector<Recipe> recipes;

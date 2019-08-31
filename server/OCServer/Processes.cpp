@@ -176,8 +176,7 @@ SharedPromise<std::monostate> ProcessCraftingRobot::cycle() {
           }
         }
       }
-      if (recipe.data.second.has_value()) {
-        auto &info(*recipe.data.second);
+      for (auto &info : recipe.data.second) {
         /* select nonConsumable */ {
           auto action(std::make_shared<Actions::Call>());
           action->inv = "robot";
@@ -218,8 +217,7 @@ SharedPromise<std::monostate> ProcessCraftingRobot::cycle() {
         promises.emplace_back(action->mapTo(std::monostate{}));
         actions.emplace_back(std::move(action));
       }
-      if (recipe.data.second.has_value()) {
-        auto &info(*recipe.data.second);
+      for (auto &info : recipe.data.second) {
         /* select nonConsumable */ {
           auto action(std::make_shared<Actions::Call>());
           action->inv = "robot";
@@ -295,8 +293,7 @@ SharedPromise<std::monostate> ProcessRFToolsControlWorkbench::cycle() {
           }
         }
       }
-      if (recipe.data.second.has_value()) {
-        auto &info(*recipe.data.second);
+      for (auto &info : recipe.data.second) {
         /* load nonConsumable */ {
           auto action(std::make_shared<Actions::Call>());
           action->inv = invIn;
@@ -328,8 +325,7 @@ SharedPromise<std::monostate> ProcessRFToolsControlWorkbench::cycle() {
           actions.emplace_back(std::move(action));
         }
       }
-      if (recipe.data.second.has_value()) {
-        auto &info(*recipe.data.second);
+      for (auto &info : recipe.data.second) {
         /* store nonConsumable */ {
           auto action(std::make_shared<Actions::Call>());
           action->inv = invIn;
