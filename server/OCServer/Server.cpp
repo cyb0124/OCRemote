@@ -76,7 +76,7 @@ void Client::read() {
       s.removeClient(*this);
     } else {
       auto wk{weak_from_this()};
-      #ifndef NDEBUG
+      #if DUMP_PACKETS
         std::cout << logHeader << " >=> ";
         std::cout.write(buffer->data(), nRead);
         std::cout << std::endl;
@@ -164,7 +164,7 @@ void Client::send() {
     responseQueue.emplace_back(std::move(action));
   sendQueueTotal -= head.size();
   sendQueue.pop_front();
-  #ifndef NDEBUG
+  #if DUMP_PACKETS
     std::cout << logHeader << " <=< " << *dumped << std::endl;
   #endif
   boost::asio::async_write(socket, boost::asio::buffer(*dumped),
