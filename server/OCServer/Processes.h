@@ -16,6 +16,7 @@ struct ProcessSingleBlock : ProcessSingleClient {
 };
 
 using OutFilter = std::function<bool(size_t slot, const ItemStack&)>;
+using SlotFilter = std::function<bool(size_t slot)>;
 inline bool outAll(size_t slot, const ItemStack&) { return true; }
 
 struct ProcessSlotted : ProcessSingleBlock {
@@ -82,14 +83,15 @@ struct ProcessBuffered : ProcessSingleBlock {
   using Recipe = ::Recipe<int>; // maxInproc
   std::vector<StockEntry> stockList;
   int recipeMaxInProc;
+  SlotFilter slotFilter;
   OutFilter outFilter;
   std::vector<Recipe> recipes;
   ProcessBuffered(Factory &factory, std::string name, std::string client,
     std::string inv, int sideCrafter, int sideBus, decltype(stockList) stockList,
-    int recipeMaxInProc, OutFilter outFilter, decltype(recipes) recipes)
+    int recipeMaxInProc, SlotFilter slotFilter, OutFilter outFilter, decltype(recipes) recipes)
     :ProcessSingleBlock(factory, std::move(name), std::move(client), std::move(inv), sideCrafter, sideBus),
     stockList(std::move(stockList)), recipeMaxInProc(recipeMaxInProc),
-    outFilter(std::move(outFilter)), recipes(std::move(recipes)) {}
+    outFilter(std::move(outFilter)), recipes(std::move(recipes)), slotFilter(std::move(slotFilter)) {}
   SharedPromise<std::monostate> cycle() override;
 };
 

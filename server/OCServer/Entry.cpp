@@ -141,7 +141,7 @@ int main() {
 
     // output
     factory.addProcess(std::make_unique<ProcessBuffered>(factory, "output", "center", "f98", Actions::south, Actions::west,
-      std::vector<StockEntry>{}, INT_MAX, outAll, std::vector<Recipe<int>>{}));
+      std::vector<StockEntry>{}, INT_MAX, nullptr, outAll, std::vector<Recipe<int>>{}));
 
     // stock
     factory.addProcess(std::make_unique<ProcessBuffered>(factory, "stock", "center", "f98", Actions::up, Actions::west,
@@ -161,11 +161,11 @@ int main() {
         {filterLabel("Ender Pearl"), 16},
         {filterLabel("Cryotheum Dust"), 16},
         {filterLabel("Aquamarine"), 16}
-      }, INT_MAX, nullptr, std::vector<Recipe<int>>{}));
+      }, INT_MAX, nullptr, nullptr, std::vector<Recipe<int>>{}));
 
     // trash
     factory.addProcess(std::make_unique<ProcessBuffered>(factory, "trash", "north", "334", Actions::north, Actions::east,
-      std::vector<StockEntry>{}, INT_MAX, nullptr, std::vector<Recipe<int>>{
+      std::vector<StockEntry>{}, INT_MAX, nullptr, nullptr, std::vector<Recipe<int>>{
         {{}, {{filterLabel("Bow"), 1}}, INT_MAX},
         {{}, {{filterLabel("Witch Hat"), 1}}, INT_MAX},
         {{}, {{filterLabel("Iron Shovel"), 1}}, INT_MAX},
@@ -249,7 +249,7 @@ int main() {
 
     // phyto
     factory.addProcess(std::make_unique<ProcessBuffered>(factory, "phyto", "center", "1cb", Actions::south, Actions::north,
-      std::vector<StockEntry>{}, 16, nullptr, std::vector<Recipe<int>>{
+      std::vector<StockEntry>{}, 16, nullptr, nullptr, std::vector<Recipe<int>>{
         {{{filterLabel("Mango"), 64}}, {{filterLabel("Mango Sapling"), 1}}, INT_MAX},
         {{{filterLabel("Dye Essence"), 64}}, {{filterLabel("Dye Seeds"), 1}}, INT_MAX},
         {{{filterLabel("Tin Essence"), 64}}, {{filterLabel("Tin Seeds"), 1}}, INT_MAX},
@@ -277,7 +277,7 @@ int main() {
 
     // platePress
     factory.addProcess(std::make_unique<ProcessBuffered>(factory, "platePress", "north", "0b8", Actions::north, Actions::east,
-      std::vector<StockEntry>{}, 16, nullptr, std::vector<Recipe<int>>{
+      std::vector<StockEntry>{}, 16, nullptr, nullptr, std::vector<Recipe<int>>{
         {{{filterLabel("Lead Plate"), 64}}, {{filterLabel("Lead Ingot"), 1}}, INT_MAX},
         {{{filterLabel("Iron Plate"), 64}}, {{filterLabel("Iron Ingot"), 1}}, INT_MAX},
         {{{filterLabel("Copper Plate"), 64}}, {{filterLabel("Copper Ingot"), 1}}, INT_MAX},
@@ -291,14 +291,14 @@ int main() {
 
     // arPress
     factory.addProcess(std::make_unique<ProcessBuffered>(factory, "arPress", "center", "12a", Actions::west, Actions::south,
-      std::vector<StockEntry>{}, 16, nullptr, std::vector<Recipe<int>>{
+      std::vector<StockEntry>{}, 16, nullptr, nullptr, std::vector<Recipe<int>>{
         {{{filterLabel("Steel Rod"), 4}}, {{filterLabel("Steel Sheetmetal"), 1}}, INT_MAX},
         {{{filterLabel("Aluminium Rod"), 4}}, {{filterLabel("Aluminium Sheetmetal"), 1}}, INT_MAX}
       }));
 
     // gearPress
     factory.addProcess(std::make_unique<ProcessBuffered>(factory, "gearPress", "north", "1e4", Actions::north, Actions::west,
-      std::vector<StockEntry>{}, 16, nullptr, std::vector<Recipe<int>>{
+      std::vector<StockEntry>{}, 16, nullptr, nullptr, std::vector<Recipe<int>>{
         {{{filterLabel("Electrum Gear"), 16}}, {{filterLabel("Electrum Ingot"), 4}}, INT_MAX},
         {{{filterLabel("Lumium Gear"), 16}}, {{filterLabel("Lumium Ingot"), 4}}, INT_MAX},
         {{{filterLabel("Copper Gear"), 16}}, {{filterLabel("Copper Ingot"), 4}}, INT_MAX},
@@ -309,25 +309,25 @@ int main() {
 
     // wirePress
     factory.addProcess(std::make_unique<ProcessBuffered>(factory, "wirePress", "center", "5a0", Actions::up, Actions::north,
-      std::vector<StockEntry>{}, 16, nullptr, std::vector<Recipe<int>>{
+      std::vector<StockEntry>{}, 16, nullptr, nullptr, std::vector<Recipe<int>>{
         {{{filterLabel("Aluminium Wire"), 64}}, {{filterLabel("Aluminum Ingot"), 1}}, INT_MAX}
       }));
 
     // pinkSlime
     factory.addProcess(std::make_unique<ProcessBuffered>(factory, "pinkSlime", "center", "12a", Actions::up, Actions::south,
-      std::vector<StockEntry>{}, 16, nullptr, std::vector<Recipe<int>>{
+      std::vector<StockEntry>{}, 16, nullptr, nullptr, std::vector<Recipe<int>>{
         {{{filterLabel("Pink Slime"), 64}}, {{filterLabel("Green Slime Block"), 1}}, INT_MAX}
       }));
 
     // blueSlime
     factory.addProcess(std::make_unique<ProcessBuffered>(factory, "blueSlime", "north", "c3d", Actions::south, Actions::east,
-      std::vector<StockEntry>{}, 16, nullptr, std::vector<Recipe<int>>{
+      std::vector<StockEntry>{}, 16, nullptr, nullptr, std::vector<Recipe<int>>{
         {{{filterLabelName("Slime Ball", "tconstruct:edible"), 64}}, {{filterLabel("Green Slime Block"), 1}}, INT_MAX}
       }));
 
     // atomic
     factory.addProcess(std::make_unique<ProcessBuffered>(factory, "atomic", "center", "5a0", Actions::south, Actions::north,
-      std::vector<StockEntry>{}, 16, nullptr, std::vector<Recipe<int>>{
+      std::vector<StockEntry>{}, 16, nullptr, nullptr, std::vector<Recipe<int>>{
         {{{filterLabel("Enori Crystal"), 64}}, {{filterLabel("Iron Ingot"), 1}}, INT_MAX},
         {{{filterLabel("Restonia Crystal"), 64}}, {{filterLabel("Redstone"), 1}}, INT_MAX},
         {{{filterLabel("Palis Crystal"), 64}}, {{filterLabel("Lapis Lazuli"), 1}}, INT_MAX},
@@ -441,7 +441,7 @@ int main() {
 
     // sandInduction
     factory.addProcess(std::make_unique<ProcessBuffered>(factory, "sandInduction", "center", "441", Actions::south, Actions::east,
-      std::vector<StockEntry>{}, 16, nullptr, std::vector<Recipe<int>>{
+      std::vector<StockEntry>{}, 16, nullptr, nullptr, std::vector<Recipe<int>>{
         {{{filterLabel("Rich Slag"), 64}}, {{filterLabel("Compass"), 1}}, INT_MAX},
         {{{filterLabel("Boron Ingot"), 64}}, {{filterLabel("Boron Ore"), 1}}, INT_MAX},
         {{{filterLabel("Magnesium Ingot"), 64}}, {{filterLabel("Magnesium Ore"), 1}}, INT_MAX},

@@ -1,6 +1,12 @@
 #include <boost/container_hash/hash.hpp>
 #include "Item.h"
 
+SharedItem placeholderItem(std::make_shared<Item>(Item{
+  "OCRemote.placeholderItem.name",
+  "OCRemote.placeholderItem.label",
+  0, 0, 1, false, {}
+}));
+
 void Item::serialize(SValue &s) const {
   auto &t(std::get<STable>(s = others));
   t["name"] = name;

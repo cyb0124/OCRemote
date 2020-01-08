@@ -365,6 +365,10 @@ SharedPromise<std::monostate> ProcessBuffered::cycle() {
     std::unordered_map<SharedItem, int, SharedItemHash, SharedItemEqual> inProcMap;
     auto quota{recipeMaxInProc};
     for (size_t slot{}; slot < items.size(); ++slot) {
+      if (slotFilter && !slotFilter(slot)) {
+        items[slot] = std::make_shared<ItemStack>(ItemStack{placeholderItem, 1});
+        continue;
+      }
       auto &stack(items[slot]);
       if (!stack)
         continue;

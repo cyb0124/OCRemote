@@ -14,6 +14,7 @@ size_t hash_value(const Item&);
 using SharedItem = std::shared_ptr<Item>;
 struct SharedItemHash { size_t operator()(const SharedItem &x) const { return hash_value(*x); } };
 struct SharedItemEqual { bool operator()(const SharedItem &x, const SharedItem &y) const { return *x == *y; } };
+extern SharedItem placeholderItem;
 
 struct ItemStack {
   SharedItem item;
