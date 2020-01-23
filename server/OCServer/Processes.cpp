@@ -784,3 +784,23 @@ SharedPromise<std::monostate> ProcessRedstoneConditional::cycle() {
     }
   });
 }
+
+SharedPromise<std::monostate> ProcessRedstoneEmitter::cycle() {
+  auto action(std::make_shared<Actions::Call>());
+  action->inv = inv;
+  action->fn = "setOutput";
+  action->args = {static_cast<double>(side), static_cast<double>(valueFn())};
+  factory.s.enqueueAction(client, action);
+  return action->mapTo(std::monostate{});
+}
+
+std::function<int()> ProcessRedstoneEmitter::makeNeeded(Factory &factory, std::string name, SharedItemFilter item, int toStock) {
+  return [&factory, name(std::move(name)), item(std::move(item)), toStock]() {
+    if (factory.getAvail(factory.getItem(*item), true) < toStock) {
+      factory.log(name + ": on", 0xff4fff);
+      return 15;
+    } else {
+      return 0;
+    }
+  };
+}

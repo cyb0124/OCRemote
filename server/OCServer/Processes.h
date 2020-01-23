@@ -167,3 +167,15 @@ struct ProcessRedstoneConditional : ProcessSingleClient {
     side(side), logSkip(logSkip), predicate(std::move(predicate)), child(std::move(child)) {}
   SharedPromise<std::monostate> cycle() override;
 };
+
+struct ProcessRedstoneEmitter : ProcessSingleClient {
+  std::string inv;
+  int side;
+  std::function<int()> valueFn;
+  ProcessRedstoneEmitter(Factory &factory, std::string name, std::string client,
+    std::string inv, int side, decltype(valueFn) valueFn)
+    :ProcessSingleClient(factory, std::move(name), std::move(client)),
+    inv(std::move(inv)), side(side), valueFn(std::move(valueFn)) {}
+  SharedPromise<std::monostate> cycle() override;
+  static std::function<int()> makeNeeded(Factory &factory, std::string name, SharedItemFilter item, int toStock);
+};
