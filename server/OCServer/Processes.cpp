@@ -786,12 +786,18 @@ SharedPromise<std::monostate> ProcessRedstoneConditional::cycle() {
 }
 
 SharedPromise<std::monostate> ProcessRedstoneEmitter::cycle() {
+  int value(valueFn());
+  if (value == prevValue)
+    return scheduleTrivialPromise(factory.s.io);
   auto action(std::make_shared<Actions::Call>());
   action->inv = inv;
   action->fn = "setOutput";
-  action->args = {static_cast<double>(side), static_cast<double>(valueFn())};
+  action->args = {static_cast<double>(side), static_cast<double>(value)};
   factory.s.enqueueAction(client, action);
-  return action->mapTo(std::monostate{});
+  return action->map(factory.alive, [this, value](auto&&) {
+    prevValue = value;
+    return std::monostate{};
+  });
 }
 
 std::function<int()> ProcessRedstoneEmitter::makeNeeded(Factory &factory, std::string name, SharedItemFilter item, int toStock) {
