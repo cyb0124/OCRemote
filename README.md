@@ -10,6 +10,8 @@ OCRemote is designed for survival/expert-mode gameplay in modpacks such as Enigm
 ## Server and clients
 OCRemote includes a TCP server program written in C++ that needs be run outside the minecraft world. All decision-makings happen in the server. The computers in minecraft world merely execute the commands sent by the server. Multiple clients can connect to the same server, which allows parallelization of inventory manipulation operations.
 
+Note: it is safe to terminate the server at any time. However, it is not safe to shutdown the computer in minecraft while the server is running, as it may cause incomplete set of input items to be sent to machines.
+
 ## Bus
 OCRemote requires a shared inventory to move items around. This inventory is called as the "bus" in the source code. The bus can be implemented using EnderStorage's ender chests, or using ActuallyAdditions' item lasers.\
 ![Viewing inside the bus inventory](busDemo2.gif "Viewing inside the bus inventory")
@@ -18,7 +20,8 @@ OCRemote requires a shared inventory to move items around. This inventory is cal
 OCRemote currently supports 3 different types of storages:
   - **Chests**\
     OCRemote will use chests the most efficient way, i.e. coalescing item stacks to avoid wasting slots.
-  - **StorageDrawers** or equivalent.
+  - **StorageDrawers** or equivalent.\
+    Note: drawers should always be locked. You should not change drawer layout (e.g. placing down a new drawer, removing a drawer or inserting a new type of item) when OCRemote is running.
   - **ME system**\
     OpenComputers' access to ME system is slow (throttled), so OCRemote is able to use multiple computers to access the same ME system to parallelize accesses.
 
