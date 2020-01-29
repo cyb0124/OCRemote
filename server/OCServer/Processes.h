@@ -133,25 +133,28 @@ struct ProcessHeterogeneousInputless : ProcessSingleBlock {
 
 struct ProcessReactorHysteresis : ProcessSingleClient {
   std::string inv;
-  int lowerBound, upperBound;
-  ProcessReactorHysteresis(Factory &factory, std::string name, std::string client, std::string inv = "br_reactor", int lowerBound = 3000000, int upperBound = 7000000)
-    :ProcessSingleClient(factory, std::move(name), std::move(client)), inv(std::move(inv)), lowerBound(lowerBound), upperBound(upperBound) {}
+  int lowerBound, upperBound, wasOn;
+  ProcessReactorHysteresis(Factory &factory, std::string name, std::string client,
+    std::string inv = "br_reactor", int lowerBound = 3000000, int upperBound = 7000000)
+    :ProcessSingleClient(factory, std::move(name), std::move(client)), inv(std::move(inv)),
+    lowerBound(lowerBound), upperBound(upperBound), wasOn(-1) {}
   SharedPromise<std::monostate> cycle() override;
 };
 
 struct ProcessReactorProportional : ProcessSingleClient {
   std::string inv;
+  int prev;
   ProcessReactorProportional(Factory &factory, std::string name, std::string client, std::string inv = "br_reactor")
-    :ProcessSingleClient(factory, std::move(name), std::move(client)), inv(std::move(inv)) {}
+    :ProcessSingleClient(factory, std::move(name), std::move(client)), inv(std::move(inv)), prev(-1) {}
   SharedPromise<std::monostate> cycle() override;
 };
 
 struct ProcessPlasticMixer : ProcessSingleClient {
   static const std::vector<std::string> colorMap;
   std::string inv;
-  int needed;
+  int needed, prev;
   ProcessPlasticMixer(Factory &factory, std::string name, std::string client, int needed = 32, std::string inv = "plastic_mixer")
-    :ProcessSingleClient(factory, std::move(name), std::move(client)), inv(std::move(inv)), needed(needed) {}
+    :ProcessSingleClient(factory, std::move(name), std::move(client)), inv(std::move(inv)), needed(needed), prev(-1) {}
   SharedPromise<std::monostate> cycle() override;
 };
 

@@ -667,49 +667,34 @@ SharedPromise<std::monostate> ProcessHeterogeneousInputless::cycle() {
 }
 
 SharedPromise<std::monostate> ProcessReactorHysteresis::cycle() {
-  std::vector<SharedPromise<SValue>> promises;
-  std::vector<SharedAction> actions;
-  {
-    auto action(std::make_shared<Actions::Call>());
-    action->inv = inv;
-    action->fn = "getActive";
-    promises.emplace_back(action);
-    actions.emplace_back(std::move(action));
-  }
-  {
-    auto action(std::make_shared<Actions::Call>());
-    action->inv = inv;
-    action->fn = "getEnergyStored";
-    promises.emplace_back(action);
-    actions.emplace_back(std::move(action));
-  }
-  factory.s.enqueueActionGroup(client, actions);
-  return Promise<SValue>::all(promises)->then(factory.alive, [this](std::vector<SValue> &&args) {
-    bool wasOn;
+  auto action(std::make_shared<Actions::Call>());
+  action->inv = inv;
+  action->fn = "getEnergyStored";
+  factory.s.enqueueAction(client, action);
+  return action->then(factory.alive, [this](SValue &&args) {
     int level;
     try {
-      wasOn = std::get<bool>(std::get<STable>(args.front()).at(1.0));
-      level = static_cast<int>(std::get<double>(std::get<STable>(args.back()).at(1.0)));
+      level = static_cast<int>(std::get<double>(std::get<STable>(args).at(1.0)));
     } catch (std::exception &e) {
       return scheduleFailingPromise<std::monostate>(factory.s.io, name + ": " + e.what());
     }
-    std::optional<bool> on;
-    if (wasOn) {
-      if (level > upperBound)
-        on.emplace(false);
-    } else {
-      if (level < lowerBound)
-        on.emplace(true);
-    }
-    if (!on.has_value())
+    int on(-1);
+    if (level > upperBound && wasOn != 0)
+      on = 0;
+    else if (level < lowerBound && wasOn != 1)
+      on = 1;
+    if (on < 0)
       return scheduleTrivialPromise(factory.s.io);
-    factory.log(name + ": " + (*on ? "on" : "off"), 0xff4fff);
+    factory.log(name + ": " + (on ? "on" : "off"), 0xff4fff);
     auto action(std::make_shared<Actions::Call>());
     action->inv = inv;
     action->fn = "setActive";
-    action->args = { *on };
+    action->args = { static_cast<bool>(on) };
     factory.s.enqueueAction(client, action);
-    return action->mapTo(std::monostate{});
+    return action->map(factory.alive, [this, on](auto&&) {
+      wasOn = on;
+      return std::monostate{};
+    });
   });
 }
 
@@ -726,13 +711,19 @@ SharedPromise<std::monostate> ProcessReactorProportional::cycle() {
       return scheduleFailingPromise<std::monostate>(factory.s.io, name + ": " + e.what());
     }
     double rod{std::round(100 * level / 10000000)};
-    factory.log(name + ": " + std::to_string(static_cast<int>(rod)) + "%", 0xff4fff);
+    int iRod(static_cast<int>(rod));
+    factory.log(name + ": " + std::to_string(iRod) + "%", 0xff4fff);
+    if (iRod == prev)
+      return scheduleTrivialPromise(factory.s.io);
     auto action(std::make_shared<Actions::Call>());
     action->inv = inv;
     action->fn = "setAllControlRodLevels";
     action->args = {rod};
     factory.s.enqueueAction(client, action);
-    return action->mapTo(std::monostate{});
+    return action->map(factory.alive, [this, iRod](auto&&) {
+      prev = iRod;
+      return std::monostate{};
+    });
   });
 }
 
@@ -754,12 +745,17 @@ SharedPromise<std::monostate> ProcessPlasticMixer::cycle() {
     factory.log(name + ": making " + colorMap[which] + " Plastic", 0xff4fff);
     ++which;
   }
+  if (which == prev)
+    return scheduleTrivialPromise(factory.s.io);
   auto action(std::make_shared<Actions::Call>());
   action->inv = inv;
   action->fn = "selectColor";
   action->args = {static_cast<double>(which)};
   factory.s.enqueueAction(client, action);
-  return action->mapTo(std::monostate{});
+  return action->map(factory.alive, [this, which](auto&&) {
+    prev = which;
+    return std::monostate{};
+  });
 }
 
 SharedPromise<std::monostate> ProcessRedstoneConditional::cycle() {
