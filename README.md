@@ -44,6 +44,8 @@ OCRemote doesn't analyze any tree structure for recipe dependencies; instead it 
     This process is a simple hysteresis feedback controller for big/extreme reactors.
   - **ProcessReactorProportional**\
     This process is a simple proportional feedback controller for big/extreme reactors.
+  - **ProcessReactorPID**\
+    This process is a PID controller for big/extreme reactors.
   - **ProcessPlasticMixer**\
     This process automatically sets PneumaticCraft's plastic mixer's color setting to produce the plastic that has the lowest amount stored. 
   - **ProcessRedstoneConditional**\

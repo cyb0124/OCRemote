@@ -149,6 +149,20 @@ struct ProcessReactorProportional : ProcessSingleClient {
   SharedPromise<std::monostate> cycle() override;
 };
 
+struct ProcessReactorPID : ProcessSingleClient {
+  std::string inv;
+  double kP, kI, kD;
+  bool isInit;
+  std::chrono::time_point<std::chrono::steady_clock> prevT;
+  double prevE, accum;
+  int prevOut;
+  ProcessReactorPID(Factory &factory, std::string name, std::string client,
+    std::string inv = "br_reactor", double kP = 1, double kI = 0.05, double kD = 0.01)
+    :ProcessSingleClient(factory, std::move(name), std::move(client)), inv(std::move(inv)),
+    kP(kP), kI(kI), kD(kD), isInit(true) {}
+  SharedPromise<std::monostate> cycle() override;
+};
+
 struct ProcessPlasticMixer : ProcessSingleClient {
   static const std::vector<std::string> colorMap;
   std::string inv;

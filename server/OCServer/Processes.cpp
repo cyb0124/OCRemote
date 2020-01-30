@@ -727,6 +727,59 @@ SharedPromise<std::monostate> ProcessReactorProportional::cycle() {
   });
 }
 
+namespace {
+  std::string toPercent(double x) {
+    return std::to_string(static_cast<int>(std::round(x * 100))) + "%";
+  }
+}
+
+SharedPromise<std::monostate> ProcessReactorPID::cycle() {
+  auto action(std::make_shared<Actions::Call>());
+  action->inv = inv;
+  action->fn = "getEnergyStored";
+  factory.s.enqueueAction(client, action);
+  return action->then(factory.alive, [this](SValue &&arg) {
+    double pv;
+    try {
+      pv = std::get<double>(std::get<STable>(arg).at(1.0)) / 10000000;
+    } catch (std::exception &e) {
+      return scheduleFailingPromise<std::monostate>(factory.s.io, name + ": " + e.what());
+    }
+    double nowE((0.5 - pv) * 2);
+    auto nowT(std::chrono::steady_clock::now());
+    if (isInit) {
+      isInit = false;
+      prevT = nowT;
+      prevE = nowE;
+      accum = 0;
+      prevOut = -1;
+      factory.log(name + ": init, E=" + toPercent(-nowE), 0xff4fff);
+      return scheduleTrivialPromise(factory.s.io);
+    }
+    double scaledI(kP * kI), scaledD(kP * kD), maxAccum(1 / scaledI);
+    double ts(std::chrono::duration<double, std::chrono::seconds::period>(nowT - prevT).count());
+    prevT = nowT;
+    accum = std::clamp(accum + ts * nowE, -maxAccum, maxAccum);
+    double diff((nowE - prevE) / ts);
+    prevE = nowE;
+    double rawOut(nowE * kP + accum * scaledI + diff * scaledD);
+    int out(std::clamp(static_cast<int>(std::round(100 * (0.5 - rawOut))), 0, 100));
+    factory.log(name + ": E=" + toPercent(-nowE) + ", I=" + toPercent(accum * scaledI)
+      + ", O=" + std::to_string(100 - out) + "%", 0xff4fff);
+    if (out == prevOut)
+      return scheduleTrivialPromise(factory.s.io);
+    auto action(std::make_shared<Actions::Call>());
+    action->inv = inv;
+    action->fn = "setAllControlRodLevels";
+    action->args = {static_cast<double>(out)};
+    factory.s.enqueueAction(client, action);
+    return action->map(factory.alive, [this, out](auto&&) {
+      prevOut = out;
+      return std::monostate{};
+    });
+  });
+}
+
 const std::vector<std::string> ProcessPlasticMixer::colorMap{
   "Black", "Red", "Green", "Brown", "Blue", "Purple", "Cyan", "Light Gray",
   "Gray", "Pink", "Lime", "Yellow", "Light Blue", "Magenta", "Orange", "White"
