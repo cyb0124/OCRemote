@@ -131,34 +131,41 @@ struct ProcessHeterogeneousInputless : ProcessSingleBlock {
   SharedPromise<std::monostate> cycle() override;
 };
 
-struct ProcessReactorHysteresis : ProcessSingleClient {
+struct ProcessReactor : ProcessSingleClient {
   std::string inv;
-  int lowerBound, upperBound, wasOn;
+  bool hasTurbine;
+  ProcessReactor(Factory &factory, std::string name, std::string client, std::string inv, bool hasTurbine)
+    :ProcessSingleClient(factory, std::move(name), std::move(client)), inv(std::move(inv)), hasTurbine(hasTurbine) {}
+  SharedPromise<double> getPV();
+};
+
+struct ProcessReactorHysteresis : ProcessReactor {
+  double lowerBound, upperBound;
+  int wasOn;
   ProcessReactorHysteresis(Factory &factory, std::string name, std::string client,
-    std::string inv = "br_reactor", int lowerBound = 3000000, int upperBound = 7000000)
-    :ProcessSingleClient(factory, std::move(name), std::move(client)), inv(std::move(inv)),
+    std::string inv = "br_reactor", bool hasTurbine = false, double lowerBound = 0.3, double upperBound = 0.7)
+    :ProcessReactor(factory, std::move(name), std::move(client), std::move(inv), hasTurbine),
     lowerBound(lowerBound), upperBound(upperBound), wasOn(-1) {}
   SharedPromise<std::monostate> cycle() override;
 };
 
-struct ProcessReactorProportional : ProcessSingleClient {
-  std::string inv;
+struct ProcessReactorProportional : ProcessReactor {
   int prev;
-  ProcessReactorProportional(Factory &factory, std::string name, std::string client, std::string inv = "br_reactor")
-    :ProcessSingleClient(factory, std::move(name), std::move(client)), inv(std::move(inv)), prev(-1) {}
+  ProcessReactorProportional(Factory &factory, std::string name, std::string client,
+    std::string inv = "br_reactor", bool hasTurbine = false)
+    :ProcessReactor(factory, std::move(name), std::move(client), std::move(inv), hasTurbine), prev(-1) {}
   SharedPromise<std::monostate> cycle() override;
 };
 
-struct ProcessReactorPID : ProcessSingleClient {
-  std::string inv;
+struct ProcessReactorPID : ProcessReactor {
   double kP, kI, kD;
   bool isInit;
   std::chrono::time_point<std::chrono::steady_clock> prevT;
   double prevE, accum;
   int prevOut;
   ProcessReactorPID(Factory &factory, std::string name, std::string client,
-    std::string inv = "br_reactor", double kP = 1, double kI = 0.01, double kD = 0, double initAccum = 0)
-    :ProcessSingleClient(factory, std::move(name), std::move(client)), inv(std::move(inv)),
+    std::string inv = "br_reactor", bool hasTurbine = false, double kP = 1, double kI = 0.01, double kD = 0, double initAccum = 0)
+    :ProcessReactor(factory, std::move(name), std::move(client), std::move(inv), hasTurbine),
     kP(kP), kI(kP * kI), kD(kP * kD), isInit(true), accum(initAccum), prevOut(-1) {}
   SharedPromise<std::monostate> cycle() override;
 };

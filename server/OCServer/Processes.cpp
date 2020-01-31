@@ -666,22 +666,61 @@ SharedPromise<std::monostate> ProcessHeterogeneousInputless::cycle() {
   });
 }
 
-SharedPromise<std::monostate> ProcessReactorHysteresis::cycle() {
-  auto action(std::make_shared<Actions::Call>());
-  action->inv = inv;
-  action->fn = "getEnergyStored";
-  factory.s.enqueueAction(client, action);
-  return action->then(factory.alive, [this](SValue &&args) {
-    int level;
-    try {
-      level = static_cast<int>(std::get<double>(std::get<STable>(args).at(1.0)));
-    } catch (std::exception &e) {
-      return scheduleFailingPromise<std::monostate>(factory.s.io, name + ": " + e.what());
+SharedPromise<double> ProcessReactor::getPV() {
+  if (hasTurbine) {
+    std::vector<SharedPromise<SValue>> promises;
+    std::vector<SharedAction> actions;
+    {
+      auto action(std::make_shared<Actions::Call>());
+      action->inv = inv;
+      action->fn = "getHotFluidAmount";
+      promises.emplace_back(action);
+      actions.emplace_back(std::move(action));
     }
+    {
+      auto action(std::make_shared<Actions::Call>());
+      action->inv = inv;
+      action->fn = "getHotFluidAmountMax";
+      promises.emplace_back(action);
+      actions.emplace_back(std::move(action));
+    }
+    factory.s.enqueueActionGroup(client, std::move(actions));
+    return Promise<SValue>::all(promises)->then(factory.alive, [this](std::vector<SValue> &&args) {
+      double pv;
+      try {
+        pv = std::get<double>(std::get<STable>(args[0]).at(1.0)) / std::get<double>(std::get<STable>(args[1]).at(1.0));
+      } catch (std::exception &e) {
+        return scheduleFailingPromise<double>(factory.s.io, name + ": " + e.what());
+      }
+      auto result(std::make_shared<Promise<double>>());
+      factory.s.io([result, pv]() { result->onResult(pv); });
+      return result;
+    });
+  } else {
+    auto action(std::make_shared<Actions::Call>());
+    action->inv = inv;
+    action->fn = "getEnergyStored";
+    factory.s.enqueueAction(client, action);
+    return action->then(factory.alive, [this](SValue &&args) {
+      double pv;
+      try {
+        pv = std::get<double>(std::get<STable>(args).at(1.0)) / 10000000;
+      } catch (std::exception &e) {
+        return scheduleFailingPromise<double>(factory.s.io, name + ": " + e.what());
+      }
+      auto result(std::make_shared<Promise<double>>());
+      factory.s.io([result, pv]() { result->onResult(pv); });
+      return result;
+    });
+  }
+}
+
+SharedPromise<std::monostate> ProcessReactorHysteresis::cycle() {
+  return getPV()->then(factory.alive, [this](double pv) {
     int on(-1);
-    if (level > upperBound && wasOn != 0)
+    if (pv > upperBound && wasOn != 0)
       on = 0;
-    else if (level < lowerBound && wasOn != 1)
+    else if (pv < lowerBound && wasOn != 1)
       on = 1;
     if (on < 0)
       return scheduleTrivialPromise(factory.s.io);
@@ -699,18 +738,8 @@ SharedPromise<std::monostate> ProcessReactorHysteresis::cycle() {
 }
 
 SharedPromise<std::monostate> ProcessReactorProportional::cycle() {
-  auto action(std::make_shared<Actions::Call>());
-  action->inv = inv;
-  action->fn = "getEnergyStored";
-  factory.s.enqueueAction(client, action);
-  return action->then(factory.alive, [this](SValue &&arg) {
-    double level;
-    try {
-      level = std::get<double>(std::get<STable>(arg).at(1.0));
-    } catch (std::exception &e) {
-      return scheduleFailingPromise<std::monostate>(factory.s.io, name + ": " + e.what());
-    }
-    double rod{std::round(100 * level / 10000000)};
+  return getPV()->then(factory.alive, [this](double pv) {
+    double rod{std::round(100 * pv)};
     int iRod(static_cast<int>(rod));
     factory.log(name + ": " + std::to_string(iRod) + "%", 0xff4fff);
     if (iRod == prev)
@@ -734,17 +763,7 @@ namespace {
 }
 
 SharedPromise<std::monostate> ProcessReactorPID::cycle() {
-  auto action(std::make_shared<Actions::Call>());
-  action->inv = inv;
-  action->fn = "getEnergyStored";
-  factory.s.enqueueAction(client, action);
-  return action->then(factory.alive, [this](SValue &&arg) {
-    double pv;
-    try {
-      pv = std::get<double>(std::get<STable>(arg).at(1.0)) / 10000000;
-    } catch (std::exception &e) {
-      return scheduleFailingPromise<std::monostate>(factory.s.io, name + ": " + e.what());
-    }
+  return getPV()->then(factory.alive, [this](double pv) {
     double nowE((0.5 - pv) * 2);
     auto nowT(std::chrono::steady_clock::now());
     double diff(0);
