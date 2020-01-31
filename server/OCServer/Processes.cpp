@@ -747,24 +747,19 @@ SharedPromise<std::monostate> ProcessReactorPID::cycle() {
     }
     double nowE((0.5 - pv) * 2);
     auto nowT(std::chrono::steady_clock::now());
+    double diff(0);
     if (isInit) {
       isInit = false;
-      prevT = nowT;
-      prevE = nowE;
-      accum = 0;
-      prevOut = -1;
-      factory.log(name + ": init, E=" + toPercent(-nowE), 0xff4fff);
-      return scheduleTrivialPromise(factory.s.io);
+    } else {
+      double ts(std::chrono::duration<double, std::chrono::seconds::period>(nowT - prevT).count());
+      accum = std::clamp(accum + ts * nowE * kI, -1.0, 1.0);
+      diff = (nowE - prevE) / ts;
     }
-    double scaledI(kP * kI), scaledD(kP * kD), maxAccum(1 / scaledI);
-    double ts(std::chrono::duration<double, std::chrono::seconds::period>(nowT - prevT).count());
     prevT = nowT;
-    accum = std::clamp(accum + ts * nowE, -maxAccum, maxAccum);
-    double diff((nowE - prevE) / ts);
     prevE = nowE;
-    double rawOut(nowE * kP + accum * scaledI + diff * scaledD);
+    double rawOut(nowE * kP + accum + diff * kD);
     int out(std::clamp(static_cast<int>(std::round(100 * (0.5 - rawOut))), 0, 100));
-    factory.log(name + ": E=" + toPercent(-nowE) + ", I=" + toPercent(accum * scaledI)
+    factory.log(name + ": E=" + toPercent(-nowE) + ", I=" + toPercent(accum)
       + ", O=" + std::to_string(100 - out) + "%", 0xff4fff);
     if (out == prevOut)
       return scheduleTrivialPromise(factory.s.io);

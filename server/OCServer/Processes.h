@@ -157,9 +157,9 @@ struct ProcessReactorPID : ProcessSingleClient {
   double prevE, accum;
   int prevOut;
   ProcessReactorPID(Factory &factory, std::string name, std::string client,
-    std::string inv = "br_reactor", double kP = 1, double kI = 0.01, double kD = 0.01)
+    std::string inv = "br_reactor", double kP = 1, double kI = 0.01, double kD = 0, double initAccum = 0)
     :ProcessSingleClient(factory, std::move(name), std::move(client)), inv(std::move(inv)),
-    kP(kP), kI(kI), kD(kD), isInit(true) {}
+    kP(kP), kI(kP * kI), kD(kP * kD), isInit(true), accum(initAccum), prevOut(-1) {}
   SharedPromise<std::monostate> cycle() override;
 };
 
