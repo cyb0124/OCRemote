@@ -169,99 +169,104 @@ local function getInv(invName)
 end
 
 local inet = component.proxy(resolve("internet"))
-while true do
-  print{text = "Connecting to " .. clientName .. "@" .. serverAddr .. ":" .. serverPort, color = 0xFFFF00}
-  local socket = inet.connect(serverAddr, serverPort)
-  local timeout = computer.uptime() + 3
-  while socket and not socket.finishConnect() do
-    if computer.uptime() > timeout then
-      socket.close()
-      socket = nil
-      break
-    end
-  end
-  if socket then
-    local writeBuffer = encode(clientName)
-    print{text = "Connected", color = 0x00FF00, beep = 440}
-    local onRead = decode(function(p)
-      for _, p in ipairs(p) do
-        local inv, result
-        if p.inv then inv = getInv(p.inv) end
-        if p.op == "print" then
-          print(p)
-        elseif p.op == "list" then
-          local stacks = inv.getAllStacks(p.side)
-          local count = stacks.count()
-          result = {}
-          for slot = 1, count do
-            local item = stacks()
-            if item and item.name and item.size > 0 then
-              result[slot] = item
-            elseif slot == count then
-              result[slot] = ''
-            end
-          end
-        elseif p.op == "listME" then
-          result = {}
-          for _, item in ipairs(inv.getItemsInNetwork()) do
-            if item and item.name and item.size > 0 then
-              table.insert(result, item)
-            end
-          end
-        elseif p.op == "listXN" then
-          local pos, stacks = {x = p.x, y = p.y, z = p.z}
-          if p.side < 0 then
-            stacks = inv.getItems(pos)
-          else
-            stacks = inv.getItems(pos, p.side)
-          end
-          result = {}
-          for slot = 1, stacks.n do
-            local item = stacks[slot]
-            if item and item.name and item.size > 0 then
-              result[slot] = item
-            elseif slot == stacks.n then
-              result[slot] = ''
-            end
-          end
-        elseif p.op == "xferME" then
-          local me = getInv(p.me)
-          db.clear(1)
-          me.store(p.filter, dbAddr, p.entry, 1)
-          me.setInterfaceConfiguration(p.entry, dbAddr, p.entry, p.size)
-          inv.transferItem(table.unpack(p.args))
-          me.setInterfaceConfiguration(1)
-        elseif p.op == "call" then
-          -- transferItem (OC): fromSide, toSide, [size, [fromSlot, [toSlot]]]
-          -- transferItem (XN): fromPos, fromSlot, size, toPos, [fromSide, [toSide]]
-          result = {inv[p.fn](table.unpack(p.args))}
-        else
-          error("invalid op")
-        end
-        writeBuffer = writeBuffer .. encode(result)
-      end
-    end)
-    while true do
-      if #writeBuffer > 0 then
-        local n = socket.write(writeBuffer)
-        if not n then
-          print{text = "Connection closed (write)", color = 0xFF0000, beep = 880}
-          socket.close()
-          break
-        elseif n > 0 then
-          writeBuffer = string.sub(writeBuffer, n + 1)
-        end
-      end
-      local data = socket.read()
-      if data then
-        onRead(data)
-      else
-        print{text = "Connection closed (read)", color = 0xFF0000, beep = 880}
+local _, msg = xpcall(function()
+  while true do
+    print{text = "Connecting to " .. clientName .. "@" .. serverAddr .. ":" .. serverPort, color = 0xFFFF00}
+    local socket = inet.connect(serverAddr, serverPort)
+    local timeout = computer.uptime() + 3
+    while socket and not socket.finishConnect() do
+      if computer.uptime() > timeout then
         socket.close()
+        socket = nil
         break
       end
     end
-  else
-    print{text = "Failed to connect", color = 0xFF0000, beep = 880}
+    if socket then
+      local writeBuffer = encode(clientName)
+      print{text = "Connected", color = 0x00FF00, beep = 440}
+      local onRead = decode(function(p)
+        for _, p in ipairs(p) do
+          local inv, result
+          if p.inv then inv = getInv(p.inv) end
+          if p.op == "print" then
+            print(p)
+          elseif p.op == "list" then
+            local stacks = inv.getAllStacks(p.side)
+            local count = stacks.count()
+            result = {}
+            for slot = 1, count do
+              local item = stacks()
+              if item and item.name and item.size > 0 then
+                result[slot] = item
+              elseif slot == count then
+                result[slot] = ''
+              end
+            end
+          elseif p.op == "listME" then
+            result = {}
+            for _, item in ipairs(inv.getItemsInNetwork()) do
+              if item and item.name and item.size > 0 then
+                table.insert(result, item)
+              end
+            end
+          elseif p.op == "listXN" then
+            local pos, stacks = {x = p.x, y = p.y, z = p.z}
+            if p.side < 0 then
+              stacks = inv.getItems(pos)
+            else
+              stacks = inv.getItems(pos, p.side)
+            end
+            result = {}
+            for slot = 1, stacks.n do
+              local item = stacks[slot]
+              if item and item.name and item.size > 0 then
+                result[slot] = item
+              elseif slot == stacks.n then
+                result[slot] = ''
+              end
+            end
+          elseif p.op == "xferME" then
+            local me = getInv(p.me)
+            db.clear(1)
+            me.store(p.filter, dbAddr, p.entry, 1)
+            me.setInterfaceConfiguration(p.entry, dbAddr, p.entry, p.size)
+            inv.transferItem(table.unpack(p.args))
+            me.setInterfaceConfiguration(1)
+          elseif p.op == "call" then
+            -- transferItem (OC): fromSide, toSide, [size, [fromSlot, [toSlot]]]
+            -- transferItem (XN): fromPos, fromSlot, size, toPos, [fromSide, [toSide]]
+            result = {inv[p.fn](table.unpack(p.args))}
+          else
+            error("invalid op")
+          end
+          writeBuffer = writeBuffer .. encode(result)
+        end
+      end)
+      while true do
+        if #writeBuffer > 0 then
+          local n = socket.write(writeBuffer)
+          if not n then
+            print{text = "Connection closed (write)", color = 0xFF0000, beep = 880}
+            socket.close()
+            break
+          elseif n > 0 then
+            writeBuffer = string.sub(writeBuffer, n + 1)
+          end
+        end
+        local data = socket.read()
+        if data then
+          onRead(data)
+        else
+          print{text = "Connection closed (read)", color = 0xFF0000, beep = 880}
+          socket.close()
+          break
+        end
+      end
+    else
+      print{text = "Failed to connect", color = 0xFF0000, beep = 880}
+    end
   end
-end
+end, function(msg)
+  return msg .. "\n" .. debug.traceback()
+end)
+error(msg)
