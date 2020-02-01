@@ -46,6 +46,7 @@ OCRemote doesn't analyze any tree structure for recipe dependencies; instead it 
     This process is a simple proportional feedback controller for big/extreme reactors.
   - **ProcessReactorPID**\
     This process is a PID controller for big/extreme reactors.
+    All the reactor processes above can force the reactor to max output if cyanite stored is low.
   - **ProcessPlasticMixer**\
     This process automatically sets PneumaticCraft's plastic mixer's color setting to produce the plastic that has the lowest amount stored. 
   - **ProcessRedstoneConditional**\

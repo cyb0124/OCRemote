@@ -667,7 +667,11 @@ SharedPromise<std::monostate> ProcessHeterogeneousInputless::cycle() {
 }
 
 SharedPromise<double> ProcessReactor::getPV() {
-  if (hasTurbine) {
+  if (factory.getAvail(factory.getItem(ItemFilters::Label("Cyanite Ingot")), true) < cyaniteNeeded) {
+    auto result(std::make_shared<Promise<double>>());
+    factory.s.io([result]() { result->onResult(0); });
+    return result;
+  } else if (hasTurbine) {
     std::vector<SharedPromise<SValue>> promises;
     std::vector<SharedAction> actions;
     {

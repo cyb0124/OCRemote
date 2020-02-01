@@ -133,9 +133,11 @@ struct ProcessHeterogeneousInputless : ProcessSingleBlock {
 
 struct ProcessReactor : ProcessSingleClient {
   std::string inv;
+  int cyaniteNeeded;
   bool hasTurbine;
-  ProcessReactor(Factory &factory, std::string name, std::string client, std::string inv, bool hasTurbine)
-    :ProcessSingleClient(factory, std::move(name), std::move(client)), inv(std::move(inv)), hasTurbine(hasTurbine) {}
+  ProcessReactor(Factory &factory, std::string name, std::string client, std::string inv, int cyaniteNeeded, bool hasTurbine)
+    :ProcessSingleClient(factory, std::move(name), std::move(client)), inv(std::move(inv)),
+    cyaniteNeeded(cyaniteNeeded), hasTurbine(hasTurbine) {}
   SharedPromise<double> getPV();
 };
 
@@ -143,8 +145,8 @@ struct ProcessReactorHysteresis : ProcessReactor {
   double lowerBound, upperBound;
   int wasOn;
   ProcessReactorHysteresis(Factory &factory, std::string name, std::string client,
-    std::string inv = "br_reactor", bool hasTurbine = false, double lowerBound = 0.3, double upperBound = 0.7)
-    :ProcessReactor(factory, std::move(name), std::move(client), std::move(inv), hasTurbine),
+    std::string inv = "br_reactor", int cyaniteNeeded = 0, bool hasTurbine = false, double lowerBound = 0.3, double upperBound = 0.7)
+    :ProcessReactor(factory, std::move(name), std::move(client), std::move(inv), cyaniteNeeded, hasTurbine),
     lowerBound(lowerBound), upperBound(upperBound), wasOn(-1) {}
   SharedPromise<std::monostate> cycle() override;
 };
@@ -152,8 +154,8 @@ struct ProcessReactorHysteresis : ProcessReactor {
 struct ProcessReactorProportional : ProcessReactor {
   int prev;
   ProcessReactorProportional(Factory &factory, std::string name, std::string client,
-    std::string inv = "br_reactor", bool hasTurbine = false)
-    :ProcessReactor(factory, std::move(name), std::move(client), std::move(inv), hasTurbine), prev(-1) {}
+    std::string inv = "br_reactor", int cyaniteNeeded = 0, bool hasTurbine = false)
+    :ProcessReactor(factory, std::move(name), std::move(client), std::move(inv), cyaniteNeeded, hasTurbine), prev(-1) {}
   SharedPromise<std::monostate> cycle() override;
 };
 
@@ -164,8 +166,9 @@ struct ProcessReactorPID : ProcessReactor {
   double prevE, accum;
   int prevOut;
   ProcessReactorPID(Factory &factory, std::string name, std::string client,
-    std::string inv = "br_reactor", bool hasTurbine = false, double kP = 1, double kI = 0.01, double kD = 0, double initAccum = 0)
-    :ProcessReactor(factory, std::move(name), std::move(client), std::move(inv), hasTurbine),
+    std::string inv = "br_reactor", int cyaniteNeeded = 0, bool hasTurbine = false,
+    double kP = 1, double kI = 0.01, double kD = 0, double initAccum = 0)
+    :ProcessReactor(factory, std::move(name), std::move(client), std::move(inv), cyaniteNeeded, hasTurbine),
     kP(kP), kI(kP * kI), kD(kP * kD), isInit(true), accum(initAccum), prevOut(-1) {}
   SharedPromise<std::monostate> cycle() override;
 };
