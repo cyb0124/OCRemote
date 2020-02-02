@@ -196,6 +196,7 @@ while true do
           for slot = 1, count do
             local item = stacks()
             if item and item.name and item.size > 0 then
+              item.aspects = nil
               result[slot] = item
             elseif slot == count then
               result[slot] = ''
@@ -205,6 +206,7 @@ while true do
           result = {}
           for _, item in ipairs(inv.getItemsInNetwork()) do
             if item and item.name and item.size > 0 then
+              item.aspects = nil
               table.insert(result, item)
             end
           end
@@ -219,6 +221,7 @@ while true do
           for slot = 1, stacks.n do
             local item = stacks[slot]
             if item and item.name and item.size > 0 then
+              item.aspects = nil
               result[slot] = item
             elseif slot == stacks.n then
               result[slot] = ''
