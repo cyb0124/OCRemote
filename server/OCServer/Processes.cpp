@@ -58,7 +58,7 @@ SharedPromise<std::monostate> ProcessSlotted::cycle() {
           } else {
             usedSlots.emplace(slot);
             int inProc{info ? info->size : 0};
-            sets = std::min(sets, (recipe.data - inProc) / eachSize);
+            sets = std::min(sets, (std::min(recipe.data, demand.in[i]->maxSize) - inProc) / eachSize);
             if (sets <= 0)
               goto skip;
           }
