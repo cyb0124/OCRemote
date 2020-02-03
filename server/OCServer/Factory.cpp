@@ -147,14 +147,15 @@ void Factory::doBusUpdate() {
   action->then(alive, [this](std::vector<SharedItemStack> &&items) {
     std::vector<SharedPromise<std::monostate>> promises;
     std::vector<size_t> freeSlots;
+    bool everInserted(false);
     for (size_t i{}; i < items.size(); ++i) {
       if (busAllocations.find(i) != busAllocations.end())
         continue;
       auto &stack(items[i]);
       if (stack) {
         log(stack->item->label + "*" + std::to_string(stack->size), 0xffa500);
-        busState = BusState::RESTART;
         insertItem(promises, i, *stack);
+        everInserted = true;
       } else {
         freeSlots.emplace_back(i);
       }
@@ -166,6 +167,8 @@ void Factory::doBusUpdate() {
       s.io([cont(std::move(busWaitQueue.front())), slot]() { cont->onResult(slot); });
       busWaitQueue.pop_front();
     }
+    if (everInserted && !busWaitQueue.empty())
+      busState = BusState::RESTART;
     if (promises.empty())
       return scheduleTrivialPromise(s.io);
     return Promise<std::monostate>::all(promises)->mapTo(std::monostate{});
