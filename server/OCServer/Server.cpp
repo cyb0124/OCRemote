@@ -148,6 +148,10 @@ size_t Server::countPending(const std::string &client) const {
   return itr->second->countPending();
 }
 
+bool Server::isConnected(const std::string &client) const {
+  return logins.find(client) != logins.end();
+}
+
 void Client::send() {
   if (isSending || sendQueue.empty())
     return;
