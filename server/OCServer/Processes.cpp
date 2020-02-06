@@ -14,10 +14,7 @@ SharedPromise<std::monostate> ProcessSingleBlock::processOutput(size_t slot, int
   return factory.busAllocate()->then(factory.alive, [this, action(std::move(action))](size_t busSlot) {
     action->args.push_back(static_cast<double>(busSlot + 1));
     factory.s.enqueueAction(client, action);
-    return action->map(factory.alive, [busSlot, this](auto&&) {
-      factory.busFree(busSlot);
-      return std::monostate{};
-    });
+    return action->mapTo(std::monostate{})->finally(factory.alive, [busSlot, this]() { factory.busFree(busSlot);});
   });
 }
 
@@ -104,10 +101,9 @@ SharedPromise<std::monostate> ProcessSlotted::cycle() {
             }
           }
           factory.s.enqueueActionGroup(client, std::move(actions));
-          return Promise<std::monostate>::all(promises);
-        })->map(factory.alive, [this, slotsToFree(std::move(slotsToFree))](auto&&) {
-          factory.busFree(*slotsToFree);
-          return std::monostate{};
+          return Promise<std::monostate>::all(promises)->mapTo(std::monostate{});
+        })->finally(factory.alive, [this, slotsToFree(std::move(slotsToFree))]() {
+            factory.busFree(*slotsToFree);
         }));
         break;
       }
@@ -240,10 +236,9 @@ SharedPromise<std::monostate> ProcessCraftingRobot::cycle() {
         }
       }
       factory.s.enqueueActionGroup(client, std::move(actions));
-      return Promise<std::monostate>::all(promises);
-    })->map(factory.alive, [this, slotsToFree(std::move(slotsToFree))](auto&&) {
+      return Promise<std::monostate>::all(promises)->mapTo(std::monostate{});
+    })->finally(factory.alive, [this, slotsToFree(std::move(slotsToFree))]() {
       factory.busFree(*slotsToFree);
-      return std::monostate{};
     }));
   }
   if (promises.empty())
@@ -347,10 +342,9 @@ SharedPromise<std::monostate> ProcessRFToolsControlWorkbench::cycle() {
         }
       }
       factory.s.enqueueActionGroup(client, std::move(actions));
-      return Promise<std::monostate>::all(promises);
-    })->map(factory.alive, [this, slotsToFree(std::move(slotsToFree))](auto&&) {
+      return Promise<std::monostate>::all(promises)->mapTo(std::monostate{});
+    })->finally(factory.alive, [this, slotsToFree(std::move(slotsToFree))]() {
       factory.busFree(*slotsToFree);
-      return std::monostate{};
     }));
   }
   if (promises.empty())
@@ -427,10 +421,9 @@ SharedPromise<std::monostate> ProcessBuffered::cycle() {
             actions.emplace_back(std::move(action));
           }
           factory.s.enqueueActionGroup(client, std::move(actions));
-          return Promise<std::monostate>::all(promises);
-        })->map(factory.alive, [this, busSlot](auto&&) {
+          return Promise<std::monostate>::all(promises)->mapTo(std::monostate{});
+        })->finally(factory.alive, [this, busSlot]() {
           factory.busFree(busSlot);
-          return std::monostate{};
         });
       }));
     }
@@ -508,10 +501,9 @@ SharedPromise<std::monostate> ProcessBuffered::cycle() {
               }
             }
             factory.s.enqueueActionGroup(client, std::move(actions));
-            return Promise<std::monostate>::all(promises);
-          })->map(factory.alive, [this, slotsToFree(std::move(slotsToFree))](auto&&) {
+            return Promise<std::monostate>::all(promises)->mapTo(std::monostate{});
+          })->finally(factory.alive, [this, slotsToFree(std::move(slotsToFree))]() {
             factory.busFree(*slotsToFree);
-            return std::monostate{};
           }));
           if (quota <= 0)
             break;
@@ -610,10 +602,9 @@ SharedPromise<std::monostate> ProcessScatteringWorkingSet::cycle() {
               actions.emplace_back(std::move(action));
             }
             factory.s.enqueueActionGroup(client, std::move(actions));
-            return Promise<std::monostate>::all(promises);
-          })->map(factory.alive, [this, busSlot](auto&&) {
+            return Promise<std::monostate>::all(promises)->mapTo(std::monostate{});
+          })->finally(factory.alive, [this, busSlot]() {
             factory.busFree(busSlot);
-            return std::monostate{};
           });
         }));
       }

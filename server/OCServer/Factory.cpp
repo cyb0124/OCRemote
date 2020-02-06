@@ -50,10 +50,6 @@ void Factory::endOfCycle() {
   nameMap.clear();
   labelMap.clear();
   busEverUpdated = false;
-  if (!busAllocations.empty()) {
-    log("Removed " + std::to_string(busAllocations.size()) + " busAllocations", 0xff0000u, 880.f);
-    busAllocations.clear();
-  }
   cycleDelayTimer = std::make_shared<boost::asio::steady_timer>(s.io.io);
   cycleDelayTimer->expires_at(cycleStartTime + std::chrono::milliseconds(minCycleTime));
   cycleDelayTimer->async_wait(makeWeakCallback(cycleDelayTimer, [this](const boost::system::error_code &ec) {
@@ -321,13 +317,6 @@ void Factory::start() {
       }
     }
   };
-
-  for (auto &i : busAccesses) {
-    if (!s.isConnected(i.client)) {
-      TailListener(*this).onFail(i.client + " isn't connected");
-      return;
-    }
-  }
 
   updateAndBackupItems()->then(alive, [this](std::monostate) {
     std::vector<SharedPromise<std::monostate>> promises;
