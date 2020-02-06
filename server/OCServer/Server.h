@@ -19,7 +19,7 @@ struct IOEnv {
 
 struct Client : std::enable_shared_from_this<Client> {
   using Itr = std::list<std::shared_ptr<Client>>::iterator;
-  static constexpr auto timeout() { return std::chrono::seconds{8}; }
+  static constexpr auto timeout() { return std::chrono::seconds{120}; }
 private:
   Server &s;
   Itr itr;
