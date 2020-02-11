@@ -335,7 +335,7 @@ int main() {
       }));
 
     // combustion
-    factory.addProcess(std::make_unique<ProcessRedstoneConditional>(factory, "combustion", "center", "ed8", Actions::north, true,
+    factory.addProcess(std::make_unique<ProcessRedstoneConditional>(factory, "combustion", "center", "ed8", Actions::north, true, nullptr,
       [&](int value) { return value > 0; }, std::make_unique<ProcessSlotted>(factory, "combustion", "center", "f98", Actions::east, Actions::west,
       std::vector<size_t>{0, 1, 2, 3}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{{filterLabel("Rock Crystal Ore"), 16}}, {

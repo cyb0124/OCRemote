@@ -830,6 +830,8 @@ SharedPromise<std::monostate> ProcessPlasticMixer::cycle() {
 }
 
 SharedPromise<std::monostate> ProcessRedstoneConditional::cycle() {
+  if (precondition && !precondition())
+    return scheduleTrivialPromise(factory.s.io);
   auto action(std::make_shared<Actions::Call>());
   action->inv = inv;
   action->fn = "getInput";

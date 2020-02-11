@@ -187,11 +187,14 @@ struct ProcessRedstoneConditional : ProcessSingleClient {
   int side;
   bool logSkip;
   std::function<bool(int)> predicate;
+  std::function<bool()> precondition;
   std::unique_ptr<Process> child;
   ProcessRedstoneConditional(Factory &factory, std::string name, std::string client,
-    std::string inv, int side, bool logSkip, decltype(predicate) predicate, decltype(child) child)
+    std::string inv, int side, bool logSkip, decltype(precondition) precondition,
+    decltype(predicate) predicate, decltype(child) child)
     :ProcessSingleClient(factory, std::move(name), std::move(client)), inv(std::move(inv)),
-    side(side), logSkip(logSkip), predicate(std::move(predicate)), child(std::move(child)) {}
+    side(side), logSkip(logSkip), precondition(std::move(precondition)),
+    predicate(std::move(predicate)), child(std::move(child)) {}
   SharedPromise<std::monostate> cycle() override;
 };
 
