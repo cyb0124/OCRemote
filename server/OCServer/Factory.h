@@ -85,6 +85,12 @@ struct Demand {
   Demand(const Recipe<T, U> *recipe) :recipe(recipe) {}
 };
 
+struct InputAvailInfo {
+  int avail, needed;
+  bool allowBackup;
+  InputAvailInfo() :needed() {}
+};
+
 struct BusAccess {
   std::string client;
   std::string inv;
@@ -129,14 +135,26 @@ public:
   template<typename T, typename U>
   void resolveRecipeInputs(const Recipe<T, U> &recipe, Demand<T, U> &demand, bool clipToMaxStackSize) {
     demand.inAvail = std::numeric_limits<int>::max();
+    std::unordered_map<SharedItem, InputAvailInfo, SharedItemHash, SharedItemEqual> avails;
     for (auto &in : recipe.in) {
-      auto &inItem{demand.in.emplace_back(getItem(*in.item))};
-      int itemAvail(getAvail(inItem, in.allowBackup));
-      if (itemAvail > 0 && clipToMaxStackSize)
-        itemAvail = std::min(itemAvail, inItem->maxSize);
-      demand.inAvail = std::min(demand.inAvail, itemAvail / in.size);
-      if (demand.inAvail <= 0)
-        break;
+      auto &inItem(demand.in.emplace_back(getItem(*in.item)));
+      if (!inItem) {
+        demand.inAvail = 0;
+        continue;
+      }
+      auto itr(avails.try_emplace(inItem));
+      auto &info(itr.first->second);
+      if (itr.second || info.allowBackup && !in.allowBackup) {
+        info.avail = getAvail(inItem, in.allowBackup);
+        info.allowBackup = in.allowBackup;
+      }
+      info.needed += in.size;
+      if (clipToMaxStackSize) {
+        demand.inAvail = std::min(demand.inAvail, inItem->maxSize / in.size);
+      }
+    }
+    for (auto &entry : avails) {
+      demand.inAvail = std::min(demand.inAvail, entry.second.avail / entry.second.needed);
     }
   }
   template<typename T, typename U>
