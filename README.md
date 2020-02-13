@@ -33,7 +33,7 @@ OCRemote doesn't analyze any tree structure for recipe dependencies; instead it 
     This process uses a single crafting robot to handle all grid crafting recipes. It also allows non-consumable items in recipes (e.g. Pam's Harvestcraft recipes that require utensils, or master infusion crystal).
   - **ProcessRFToolsControlWorkbench**\
     Same as ProcessCraftingRobot, but uses RFTools Control's Workbench as the crafter. In this case, non-consumable items are stored in a neighboring inventory.\
-    ![Grid crafting with workbench](workbench.gif "Grid crafting with workbench")
+    ![Grid crafting with workbench](workbench2.gif "Grid crafting with workbench")
   - **ProcessBuffered**\
     This process is intended for machines that can run multiple recipes at once, or for general buffering/pipelining of recipe inputs. In additional to recipes, it also allows items to be constantly refilled at the target inventory. Besides being able to regulate the total amount of items in the buffer, it also allows limiting each individual recipe's maximum number of items being processed. This process respects the ratio of the input items and only sends complete sets of inputs, which is useful for machines such as ExCompressum's Auto Compressor, or gear presses.
   - **ProcessScatteringWorkingSet**\
