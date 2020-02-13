@@ -122,6 +122,7 @@ private:
   std::vector<BusAccess> busAccesses;
   std::unordered_set<size_t> busAllocations;
   std::list<SharedPromise<size_t>> busWaitQueue;
+  std::vector<size_t> busFreeQueue;
   bool endOfCycleAfterBusUpdate{}, busEverUpdated{};
   enum class BusState { IDLE, RUNNING, RESTART } busState{BusState::IDLE};
   void doBusUpdate();

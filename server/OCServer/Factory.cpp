@@ -167,8 +167,14 @@ void Factory::doBusUpdate() {
       s.io([cont(std::move(busWaitQueue.front())), slot]() { cont->onResult(slot); });
       busWaitQueue.pop_front();
     }
-    if (everInserted && !busWaitQueue.empty())
+    if (!busFreeQueue.empty()) {
+      for (size_t slot : busFreeQueue)
+        busAllocations.erase(slot);
+      busFreeQueue.clear();
       busState = BusState::RESTART;
+    } else if (everInserted && !busWaitQueue.empty()) {
+      busState = BusState::RESTART;
+    }
     if (promises.empty())
       return scheduleTrivialPromise(s.io);
     return Promise<std::monostate>::all(promises)->mapTo(std::monostate{});
@@ -268,14 +274,22 @@ SharedPromise<size_t> Factory::busAllocate() {
 }
 
 void Factory::busFree(size_t slot) {
-  busAllocations.erase(slot);
-  scheduleBusUpdate();
+  if (busState == BusState::IDLE) {
+    busAllocations.erase(slot);
+    scheduleBusUpdate();
+  } else {
+    busFreeQueue.emplace_back(slot);
+  }
 }
 
 void Factory::busFree(const std::vector<size_t> &slots) {
-  for (size_t slot : slots)
-    busAllocations.erase(slot);
-  scheduleBusUpdate();
+  if (busState == BusState::IDLE) {
+    for (size_t slot : slots)
+      busAllocations.erase(slot);
+    scheduleBusUpdate();
+  } else {
+    busFreeQueue.insert(busFreeQueue.end(), slots.begin(), slots.end());
+  }
 }
 
 void Factory::start() {

@@ -65,8 +65,9 @@ SharedPromise<std::monostate> ProcessSlotted::cycle() {
         }
       }
       for (auto &info : slotInfos) {
-        if (info.second && usedSlots.find(info.first) == usedSlots.end())
+        if (info.second && usedSlots.find(info.first) == usedSlots.end()) {
           goto skip;
+        }
       }
       {
         auto slotsToFree(std::make_shared<std::vector<size_t>>());
@@ -103,7 +104,7 @@ SharedPromise<std::monostate> ProcessSlotted::cycle() {
           factory.s.enqueueActionGroup(client, std::move(actions));
           return Promise<std::monostate>::all(promises)->mapTo(std::monostate{});
         })->finally(factory.alive, [this, slotsToFree(std::move(slotsToFree))]() {
-            factory.busFree(*slotsToFree);
+          factory.busFree(*slotsToFree);
         }));
         break;
       }
