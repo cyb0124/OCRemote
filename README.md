@@ -14,7 +14,7 @@ Note: it is safe to terminate the server at any time. However, it is not safe to
 
 ## Bus
 OCRemote requires a shared inventory to move items around. This inventory is called as the "bus" in the source code. The bus can be implemented using EnderStorage's ender chests, or using ActuallyAdditions' item lasers.\
-![Viewing inside the bus inventory](busDemo2.gif "Viewing inside the bus inventory")
+![Viewing inside the bus inventory](busDemo3.gif "Viewing inside the bus inventory")
 
 ## Storage
 OCRemote currently supports 3 different types of storages:
