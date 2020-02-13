@@ -273,8 +273,15 @@ SharedPromise<size_t> Factory::busAllocate() {
   return promise;
 }
 
-void Factory::busFree(size_t slot) {
-  if (busState == BusState::IDLE) {
+void Factory::busFree(size_t slot, bool hasItem) {
+  if (!hasItem) {
+    if (busWaitQueue.empty()) {
+      busAllocations.erase(slot);
+    } else {
+      s.io([cont(std::move(busWaitQueue.front())), slot]() { cont->onResult(slot); });
+      busWaitQueue.pop_front();
+    }
+  } else if (busState == BusState::IDLE) {
     busAllocations.erase(slot);
     scheduleBusUpdate();
   } else {
@@ -282,8 +289,17 @@ void Factory::busFree(size_t slot) {
   }
 }
 
-void Factory::busFree(const std::vector<size_t> &slots) {
-  if (busState == BusState::IDLE) {
+void Factory::busFree(const std::vector<size_t> &slots, bool hasItem) {
+  if (!hasItem) {
+    for (size_t slot : slots) {
+      if (busWaitQueue.empty()) {
+        busAllocations.erase(slot);
+      } else {
+        s.io([cont(std::move(busWaitQueue.front())), slot]() { cont->onResult(slot); });
+        busWaitQueue.pop_front();
+      }
+    }
+  } else if (busState == BusState::IDLE) {
     for (size_t slot : slots)
       busAllocations.erase(slot);
     scheduleBusUpdate();

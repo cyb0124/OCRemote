@@ -14,7 +14,9 @@ SharedPromise<std::monostate> ProcessSingleBlock::processOutput(size_t slot, int
   return factory.busAllocate()->then(factory.alive, [this, action(std::move(action))](size_t busSlot) {
     action->args.push_back(static_cast<double>(busSlot + 1));
     factory.s.enqueueAction(client, action);
-    return action->mapTo(std::monostate{})->finally(factory.alive, [busSlot, this]() { factory.busFree(busSlot);});
+    return action->mapTo(std::monostate{})->finally(factory.alive, [busSlot, this]() {
+      factory.busFree(busSlot, true);
+    });
   });
 }
 
@@ -102,9 +104,13 @@ SharedPromise<std::monostate> ProcessSlotted::cycle() {
             }
           }
           factory.s.enqueueActionGroup(client, std::move(actions));
-          return Promise<std::monostate>::all(promises)->mapTo(std::monostate{});
-        })->finally(factory.alive, [this, slotsToFree(std::move(slotsToFree))]() {
-          factory.busFree(*slotsToFree);
+          return Promise<std::monostate>::all(promises);
+        })->map(factory.alive, [this, slotsToFree](auto&&) {
+          factory.busFree(*slotsToFree, false);
+          slotsToFree->clear();
+          return std::monostate{};
+        })->finally(factory.alive, [this, slotsToFree]() {
+          factory.busFree(*slotsToFree, true);
         }));
         break;
       }
@@ -134,21 +140,24 @@ SharedPromise<std::monostate> ProcessCraftingRobot::cycle() {
     demand.inAvail = std::min(demand.inAvail, recipe.data.first);
     if (demand.inAvail <= 0)
       continue;
-    auto slotsToFree(std::make_shared<std::vector<size_t>>());
+    auto slotsToFreeIn(std::make_shared<std::vector<size_t>>());
+    auto slotToFreeOut(std::make_shared<size_t>());
     std::vector<SharedPromise<size_t>> allocatedSlots;
     for (size_t i{}; i < recipe.in.size(); ++i) {
       allocatedSlots.emplace_back(factory.busAllocate()->then(factory.alive, [
-        this, slotsToFree, reservation(factory.reserve(name, demand.in[i], demand.inAvail * recipe.in[i].size))
+        this, slotsToFreeIn, reservation(factory.reserve(name, demand.in[i], demand.inAvail * recipe.in[i].size))
       ](size_t busSlot) {
-        slotsToFree->emplace_back(busSlot);
+        slotsToFreeIn->emplace_back(busSlot);
         return reservation.extract(busSlot)->mapTo(busSlot);
       }));
     }
-    allocatedSlots.emplace_back(factory.busAllocate()->map(factory.alive, [this, slotsToFree](size_t busSlot) {
-      slotsToFree->emplace_back(busSlot);
+    allocatedSlots.emplace_back(factory.busAllocate()->map(factory.alive, [this, slotToFreeOut](size_t busSlot) {
+      *slotToFreeOut = busSlot;
       return busSlot;
     }));
-    promises.emplace_back(Promise<size_t>::all(allocatedSlots)->then(factory.alive, [this, sets(demand.inAvail), &recipe](std::vector<size_t> &&busSlots) {
+    promises.emplace_back(Promise<size_t>::all(allocatedSlots)->then(factory.alive, [
+      this, sets(demand.inAvail), &recipe
+    ](std::vector<size_t> &&busSlots) {
       std::vector<SharedPromise<std::monostate>> promises;
       std::vector<SharedAction> actions;
       for (size_t i{}; i < recipe.in.size(); ++i) {
@@ -237,9 +246,14 @@ SharedPromise<std::monostate> ProcessCraftingRobot::cycle() {
         }
       }
       factory.s.enqueueActionGroup(client, std::move(actions));
-      return Promise<std::monostate>::all(promises)->mapTo(std::monostate{});
-    })->finally(factory.alive, [this, slotsToFree(std::move(slotsToFree))]() {
-      factory.busFree(*slotsToFree);
+      return Promise<std::monostate>::all(promises);
+    })->map(factory.alive, [this, slotsToFreeIn](auto&&) {
+      factory.busFree(*slotsToFreeIn, false);
+      slotsToFreeIn->clear();
+      return std::monostate{};
+    })->finally(factory.alive, [this, slotsToFreeIn, slotToFreeOut]() {
+      slotsToFreeIn->emplace_back(*slotToFreeOut);
+      factory.busFree(*slotsToFreeIn, true);
     }));
   }
   if (promises.empty())
@@ -257,21 +271,24 @@ SharedPromise<std::monostate> ProcessRFToolsControlWorkbench::cycle() {
     demand.inAvail = std::min(demand.inAvail, recipe.data.first);
     if (demand.inAvail <= 0)
       continue;
-    auto slotsToFree(std::make_shared<std::vector<size_t>>());
+    auto slotsToFreeIn(std::make_shared<std::vector<size_t>>());
+    auto slotToFreeOut(std::make_shared<size_t>());
     std::vector<SharedPromise<size_t>> allocatedSlots;
     for (size_t i{}; i < recipe.in.size(); ++i) {
       allocatedSlots.emplace_back(factory.busAllocate()->then(factory.alive, [
-        this, slotsToFree, reservation(factory.reserve(name, demand.in[i], demand.inAvail * recipe.in[i].size))
+        this, slotsToFreeIn, reservation(factory.reserve(name, demand.in[i], demand.inAvail * recipe.in[i].size))
       ](size_t busSlot) {
-        slotsToFree->emplace_back(busSlot);
+        slotsToFreeIn->emplace_back(busSlot);
         return reservation.extract(busSlot)->mapTo(busSlot);
       }));
     }
-    allocatedSlots.emplace_back(factory.busAllocate()->map(factory.alive, [this, slotsToFree](size_t busSlot) {
-      slotsToFree->emplace_back(busSlot);
+    allocatedSlots.emplace_back(factory.busAllocate()->map(factory.alive, [this, slotToFreeOut](size_t busSlot) {
+      *slotToFreeOut = busSlot;
       return busSlot;
     }));
-    promises.emplace_back(Promise<size_t>::all(allocatedSlots)->then(factory.alive, [this, sets(demand.inAvail), &recipe](std::vector<size_t> &&busSlots) {
+    promises.emplace_back(Promise<size_t>::all(allocatedSlots)->then(factory.alive, [
+      this, sets(demand.inAvail), &recipe
+    ](std::vector<size_t> &&busSlots) {
       std::vector<SharedPromise<std::monostate>> promises;
       std::vector<SharedAction> actions;
       for (size_t i{}; i < recipe.in.size(); ++i) {
@@ -343,9 +360,14 @@ SharedPromise<std::monostate> ProcessRFToolsControlWorkbench::cycle() {
         }
       }
       factory.s.enqueueActionGroup(client, std::move(actions));
-      return Promise<std::monostate>::all(promises)->mapTo(std::monostate{});
-    })->finally(factory.alive, [this, slotsToFree(std::move(slotsToFree))]() {
-      factory.busFree(*slotsToFree);
+      return Promise<std::monostate>::all(promises);
+    })->map(factory.alive, [this, slotsToFreeIn](auto&&) {
+      factory.busFree(*slotsToFreeIn, false);
+      slotsToFreeIn->clear();
+      return std::monostate{};
+    })->finally(factory.alive, [this, slotToFreeOut, slotsToFreeIn]() {
+      slotsToFreeIn->emplace_back(*slotToFreeOut);
+      factory.busFree(*slotsToFreeIn, true);
     }));
   }
   if (promises.empty())
@@ -404,6 +426,7 @@ SharedPromise<std::monostate> ProcessBuffered::cycle() {
       promises.emplace_back(factory.busAllocate()->then(factory.alive, [
         this, reservation(factory.reserve(name, resolved, plan.totalSize)), plan(std::move(plan.actions))
       ](size_t busSlot) {
+        auto slotToFree(std::make_shared<std::optional<size_t>>(busSlot));
         return reservation.extract(busSlot)->then(factory.alive, [this, busSlot, plan(std::move(plan))](auto&&) {
           std::vector<SharedPromise<std::monostate>> promises;
           std::vector<SharedAction> actions;
@@ -422,9 +445,15 @@ SharedPromise<std::monostate> ProcessBuffered::cycle() {
             actions.emplace_back(std::move(action));
           }
           factory.s.enqueueActionGroup(client, std::move(actions));
-          return Promise<std::monostate>::all(promises)->mapTo(std::monostate{});
-        })->finally(factory.alive, [this, busSlot]() {
-          factory.busFree(busSlot);
+          return Promise<std::monostate>::all(promises);
+        })->map(factory.alive, [this, slotToFree](auto&&) {
+          factory.busFree(**slotToFree, false);
+          slotToFree->reset();
+          return std::monostate{};
+        })->finally(factory.alive, [this, slotToFree]() {
+          if (slotToFree->has_value()) {
+            factory.busFree(**slotToFree, true);
+          }
         });
       }));
     }
@@ -502,9 +531,13 @@ SharedPromise<std::monostate> ProcessBuffered::cycle() {
               }
             }
             factory.s.enqueueActionGroup(client, std::move(actions));
-            return Promise<std::monostate>::all(promises)->mapTo(std::monostate{});
-          })->finally(factory.alive, [this, slotsToFree(std::move(slotsToFree))]() {
-            factory.busFree(*slotsToFree);
+            return Promise<std::monostate>::all(promises);
+          })->map(factory.alive, [this, slotsToFree](auto&&) {
+            factory.busFree(*slotsToFree, false);
+            slotsToFree->clear();
+            return std::monostate{};
+          })->finally(factory.alive, [this, slotsToFree]() {
+            factory.busFree(*slotsToFree, true);
           }));
           if (quota <= 0)
             break;
@@ -585,6 +618,7 @@ SharedPromise<std::monostate> ProcessScatteringWorkingSet::cycle() {
         promises.emplace_back(factory.busAllocate()->then(factory.alive, [
           this, transferMap(std::move(transferMap)), reservation(factory.reserve(name, demand.in.front(), transferTotal))
         ](size_t busSlot) {
+          auto slotToFree(std::make_shared<std::optional<size_t>>(busSlot));
           return reservation.extract(busSlot)->then(factory.alive, [this, transferMap(std::move(transferMap)), busSlot](auto&&) {
             std::vector<SharedPromise<std::monostate>> promises;
             std::vector<SharedAction> actions;
@@ -603,9 +637,15 @@ SharedPromise<std::monostate> ProcessScatteringWorkingSet::cycle() {
               actions.emplace_back(std::move(action));
             }
             factory.s.enqueueActionGroup(client, std::move(actions));
-            return Promise<std::monostate>::all(promises)->mapTo(std::monostate{});
-          })->finally(factory.alive, [this, busSlot]() {
-            factory.busFree(busSlot);
+            return Promise<std::monostate>::all(promises);
+          })->map(factory.alive, [this, slotToFree](auto&&) {
+            factory.busFree(**slotToFree, false);
+            slotToFree->reset();
+            return std::monostate{};
+          })->finally(factory.alive, [this, slotToFree]() {
+            if (slotToFree->has_value()) {
+              factory.busFree(**slotToFree, true);
+            }
           });
         }));
       }

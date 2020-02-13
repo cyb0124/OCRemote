@@ -192,8 +192,8 @@ public:
     return result;
   }
   SharedPromise<size_t> busAllocate();
-  void busFree(size_t slot);
-  void busFree(const std::vector<size_t> &slots);
+  void busFree(size_t slot, bool hasItem);
+  void busFree(const std::vector<size_t> &slots, bool hasItem);
 
   Factory(Server &s, int minCycleTime, std::string logClient, std::vector<BusAccess> busAccesses)
     :s(s), minCycleTime(minCycleTime), logClient(std::move(logClient)), busAccesses(std::move(busAccesses)) {}
