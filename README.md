@@ -36,6 +36,7 @@ OCRemote doesn't analyze any tree structure for recipe dependencies; instead it 
     ![Grid crafting with workbench](workbench2.gif "Grid crafting with workbench")
   - **ProcessBuffered**\
     This process is intended for machines that can run multiple recipes at once, or for general buffering/pipelining of recipe inputs. In additional to recipes, it also allows items to be constantly refilled at the target inventory. Besides being able to regulate the total amount of items in the buffer, it also allows limiting each individual recipe's maximum number of items being processed. This process respects the ratio of the input items and only sends complete sets of inputs, which is useful for machines such as ExCompressum's Auto Compressor, or gear presses.
+    ![ProcessBuffered with Auto Compressor](comp.gif "ProcessBuffered with Auto Compressor")
   - **ProcessScatteringWorkingSet**\
     This process is intended for machine that can run multiple recipes at once but independently for each slot. This process will try to spread out input items among slots to help with parallelization.
   - **ProcessInputless** and **ProcessHeterogeneousInputless**\
