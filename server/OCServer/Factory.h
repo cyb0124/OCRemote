@@ -54,12 +54,12 @@ public:
 template<typename T = std::monostate>
 struct RecipeIn {
   SharedItemFilter item;
-  int size{1};
+  int size{1}, extraBackup{};
   bool allowBackup{};
   T data;
 
-  RecipeIn(SharedItemFilter item, int size, T data, bool allowBackup = false)
-      :item(std::move(item)), size(size), allowBackup(allowBackup), data(std::move(data)) {}
+  RecipeIn(SharedItemFilter item, int size, T data, bool allowBackup = false, int extraBackup = 0)
+      :item(std::move(item)), size(size), extraBackup(extraBackup), allowBackup(allowBackup), data(std::move(data)) {}
   RecipeIn(SharedItemFilter item, int size) :item(std::move(item)), size(size) {}
   RecipeIn(SharedItemFilter item) :item(std::move(item)) {}
 };
@@ -146,7 +146,7 @@ public:
       auto itr(avails.try_emplace(inItem));
       auto &info(itr.first->second);
       if (itr.second || info.allowBackup && !in.allowBackup) {
-        info.avail = getAvail(inItem, in.allowBackup);
+        info.avail = std::max(0, getAvail(inItem, in.allowBackup) - in.extraBackup);
         info.allowBackup = in.allowBackup;
       }
       info.needed += in.size;
