@@ -1,4 +1,5 @@
 #include <set>
+#include <iomanip>
 #include "Processes.h"
 
 SharedPromise<std::monostate> ProcessSingleBlock::processOutput(size_t slot, int size) {
@@ -919,4 +920,27 @@ std::function<int()> ProcessRedstoneEmitter::makeNeeded(Factory &factory, std::s
       return 0;
     }
   };
+}
+
+SharedPromise<std::monostate> ProcessFluxNetwork::cycle() {
+  auto action(std::make_shared<Actions::Call>());
+  action->inv = inv;
+  action->fn = "getEnergyInfo";
+  factory.s.enqueueAction(client, action);
+  return action->then(factory.alive, [this](SValue &&arg) {
+    try {
+      lastEnergy = std::get<double>(std::get<STable>(std::get<STable>(arg).at(1.0)).at("totalEnergy"));
+    } catch (std::exception &e) {
+      return scheduleFailingPromise<std::monostate>(factory.s.io, name + ": " + e.what());
+    }
+    std::ostringstream os;
+    os << name << ": " << std::setprecision(0) << std::fixed << lastEnergy;
+    factory.log(os.str(), 0xff4fff);
+    if (outputs.empty())
+      return scheduleTrivialPromise(factory.s.io);
+    std::vector<SharedPromise<std::monostate>> promises;
+    for (auto &output : outputs)
+      promises.emplace_back(output->cycle());
+    return Promise<std::monostate>::all(promises)->mapTo(std::monostate{});
+  });
 }

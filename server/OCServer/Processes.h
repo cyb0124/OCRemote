@@ -210,3 +210,27 @@ struct ProcessRedstoneEmitter : ProcessSingleClient {
   SharedPromise<std::monostate> cycle() override;
   static std::function<int()> makeNeeded(Factory &factory, std::string name, SharedItemFilter item, int toStock);
 };
+
+struct FluxNetworkOutput {
+  std::string name, client, inv;
+  int side;
+  std::function<int(double)> valueFn;
+};
+
+struct ProcessFluxNetwork : ProcessSingleClient {
+  std::string inv;
+  std::vector<std::unique_ptr<ProcessRedstoneEmitter>> outputs;
+  double lastEnergy;
+  ProcessFluxNetwork(Factory &factory, std::string name, std::string client,
+    std::vector<FluxNetworkOutput> outputs, std::string inv = "flux_controller")
+    :ProcessSingleClient(factory, std::move(name), std::move(client)), inv(std::move(inv)) {
+    for (auto &output : outputs)
+      this->outputs.emplace_back(std::make_unique<ProcessRedstoneEmitter>(factory,
+        std::move(output.name), std::move(output.client), std::move(output.inv),
+        output.side, [this, valueFn(std::move(output.valueFn))]() {
+          return valueFn(lastEnergy);
+        }));
+  }
+
+  SharedPromise<std::monostate> cycle() override;
+};
