@@ -4,6 +4,7 @@ OCRemote is an OpenComputers program by cyb0124 for item management and auto-cra
   - Prioritization of recipes based on the current number of items stored. (e.g. deciding which crop to grow, or deciding which ore to process first.)
   - Robust handling of multiple-input recipes to prevent clogging (e.g. for alloy furnaces).
   - Preventing recipes from using up the last seed/sapling/etc.
+  - Processing excessive items (e.g. saplings from tree farm).
 
 OCRemote is designed for survival/expert-mode gameplay in modpacks such as Enigmatica 2 and Project Ozone 3. When used correctly, it can completely replace ME-system based auto processing both in early game and in late game. It has been tested to function correctly in Sponge-based public servers.
 
