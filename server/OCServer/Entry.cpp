@@ -141,15 +141,15 @@ int main() {
 
     // obsidianGen
     factory.addProcess(std::make_unique<ProcessInputless>(factory, "obsidianGen", "south", "06e", Actions::down, Actions::up,
-      0, ProcessInputless::makeNeeded(factory, filterLabel("Obsidian"), 128)));
+      nullptr, std::vector<InputlessEntry>{{filterLabel("Obsidian"), 128}}));
 
     // snowballGen
     factory.addProcess(std::make_unique<ProcessInputless>(factory, "snowballGen", "south", "cb8", Actions::east, Actions::down,
-      0, ProcessInputless::makeNeeded(factory, filterLabel("Snowball"), 128)));
+      nullptr, std::vector<InputlessEntry>{{filterLabel("Snowball"), 128}}));
 
     // rosinGen
     factory.addProcess(std::make_unique<ProcessInputless>(factory, "rosinGen", "south", "547", Actions::south, Actions::down,
-      1, ProcessInputless::makeNeeded(factory, filterLabel("Rosin"), 128)));
+      nullptr, std::vector<InputlessEntry>{{filterLabel("Rosin"), 128}}));
 
     // autoCompressor
     factory.addProcess(std::make_unique<ProcessBuffered>(factory, "autoCompressor", "center", "7b7", Actions::west, Actions::up,

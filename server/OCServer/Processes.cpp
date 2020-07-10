@@ -659,47 +659,48 @@ SharedPromise<std::monostate> ProcessScatteringWorkingSet::cycle() {
   });
 }
 
-SharedPromise<std::monostate> ProcessInputless::cycle() {
-  auto needed(this->needed());
-  if (needed <= 0)
-    return scheduleTrivialPromise(factory.s.io);
-  auto action(std::make_shared<Actions::List>());
-  action->inv = inv;
-  action->side = sideCrafter;
-  factory.s.enqueueAction(client, action);
-  return action->then(factory.alive, [this, needed](std::vector<SharedItemStack> &&items) {
-    if (sourceSlot >= items.size() || !items[sourceSlot])
-      skip: return scheduleTrivialPromise(factory.s.io);
-    int toProc{std::min(needed, items[sourceSlot]->size)};
-    if (toProc <= 0)
-      goto skip;
-    return processOutput(sourceSlot, toProc);
-  });
-}
-
-std::function<int()> ProcessInputless::makeNeeded(Factory &factory, SharedItemFilter item, int toStock) {
-  return [&factory, item(std::move(item)), toStock]() {
-    return toStock - factory.getAvail(factory.getItem(*item), true);
+namespace {
+  struct InputlessInfo {
+    int avail, needed;
   };
 }
 
-SharedPromise<std::monostate> ProcessHeterogeneousInputless::cycle() {
+SharedPromise<std::monostate> ProcessInputless::cycle() {
+  bool skip(true);
+  for (auto &entry : entries) {
+    if (factory.getAvail(factory.getItem(*entry.item), true) < entry.needed) {
+      skip = false;
+      break;
+    }
+  }
+  if (skip)
+    return scheduleTrivialPromise(factory.s.io);
   auto action(std::make_shared<Actions::List>());
   action->inv = inv;
   action->side = sideCrafter;
   factory.s.enqueueAction(client, action);
   return action->then(factory.alive, [this](std::vector<SharedItemStack> &&items) {
     std::vector<SharedPromise<std::monostate>> promises;
-    std::unordered_map<SharedItem, int, SharedItemHash, SharedItemEqual> availMap;
+    std::unordered_map<SharedItem, InputlessInfo, SharedItemHash, SharedItemEqual> availMap;
     for (size_t slot{}; slot < items.size(); ++slot) {
+      if (slotFilter && !slotFilter(slot))
+        continue;
       auto &stack(items[slot]);
       if (!stack)
         continue;
-      int &avail(availMap.try_emplace(stack->item, factory.getAvail(stack->item, true)).first->second);
-      int toProc{std::min(needed - avail, stack->size)};
+      auto result(availMap.try_emplace(stack->item));
+      auto &info(result.first->second);
+      if (result.second) {
+        info.avail = factory.getAvail(stack->item, true);
+        info.needed = 0;
+        for (auto &entry : entries)
+          if (entry.item->filter(*stack->item))
+            info.needed = std::max(info.needed, entry.needed);
+      }
+      int toProc(std::min(info.needed - info.avail, stack->size));
       if (toProc <= 0)
         continue;
-      avail += toProc;
+      info.avail += toProc;
       promises.emplace_back(processOutput(slot, toProc));
     }
     if (promises.empty())

@@ -113,21 +113,18 @@ struct ProcessScatteringWorkingSet : ProcessSingleBlock {
 
 inline std::vector<size_t> plantSowerInSlots() { return {6, 7, 8, 9, 10, 11, 12, 13, 14}; }
 
-struct ProcessInputless : ProcessSingleBlock {
-  size_t sourceSlot;
-  std::function<int()> needed;
-  ProcessInputless(Factory &factory, std::string name, std::string client, std::string inv,
-    int sideCrafter, int sideBus, size_t sourceSlot, decltype(needed) needed)
-    :ProcessSingleBlock(factory, std::move(name), std::move(client), std::move(inv), sideCrafter, sideBus),
-    sourceSlot(sourceSlot), needed(std::move(needed)) {}
-  SharedPromise<std::monostate> cycle() override;
-  static std::function<int()> makeNeeded(Factory &factory, SharedItemFilter item, int toStock);
+struct InputlessEntry {
+  SharedItemFilter item;
+  int needed;
 };
 
-struct ProcessHeterogeneousInputless : ProcessSingleBlock {
-  int needed;
-  ProcessHeterogeneousInputless(Factory &factory, std::string name, std::string client, std::string inv, int sideCrafter, int sideBus, int needed)
-    :ProcessSingleBlock(factory, std::move(name), std::move(client), std::move(inv), sideCrafter, sideBus), needed(needed) {}
+struct ProcessInputless : ProcessSingleBlock {
+  SlotFilter slotFilter;
+  std::vector<InputlessEntry> entries;
+  ProcessInputless(Factory &factory, std::string name, std::string client, std::string inv,
+    int sideCrafter, int sideBus, SlotFilter slotFilter, decltype(entries) entries)
+    :ProcessSingleBlock(factory, std::move(name), std::move(client), std::move(inv), sideCrafter, sideBus),
+    slotFilter(slotFilter), entries(std::move(entries)) {}
   SharedPromise<std::monostate> cycle() override;
 };
 

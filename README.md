@@ -40,8 +40,8 @@ OCRemote doesn't analyze any tree structure for recipe dependencies; instead it 
     ![ProcessBuffered with Auto Compressor](comp.gif "ProcessBuffered with Auto Compressor")
   - **ProcessScatteringWorkingSet**\
     This process is intended for machine that can run multiple recipes at once but independently for each slot. This process will try to spread out input items among slots to help with parallelization.
-  - **ProcessInputless** and **ProcessHeterogeneousInputless**\
-    These processes are for machines that passively generate outputs (e.g. cobblestone generators).
+  - **ProcessInputless**\
+    This process handles machines that passively generate outputs (e.g. cobblestone generators).
   - **ProcessReactorHysteresis**\
     This process is a simple hysteresis feedback controller for big/extreme reactors.
   - **ProcessReactorProportional**\
