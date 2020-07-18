@@ -71,10 +71,10 @@ public:
 
   template<typename T>
   const T &getBestAccess(const std::vector<T> &accesses) {
-    const T *bestAccess{&accesses.front()};
-    size_t bestCount{std::numeric_limits<size_t>::max()};
+    const T *bestAccess(&accesses.front());
+    size_t bestCount(std::numeric_limits<size_t>::max());
     for (auto &access : accesses) {
-      size_t count{countPending(access.client)};
+      size_t count(countPending(access.client));
       if (count < bestCount) {
         bestCount = count;
         bestAccess = &access;
