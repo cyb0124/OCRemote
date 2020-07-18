@@ -2,13 +2,10 @@
 #include "Factory.h"
 
 struct StorageDrawer : public Storage {
-  std::string client, inv;
-  int sideDrawer, sideBus;
+  std::vector<AccessInv> accesses;
   std::vector<SharedItemFilter> filters;
-  StorageDrawer(Factory &factory, std::string client, std::string inv,
-    int sideDrawer, int sideBus, std::vector<SharedItemFilter> filters)
-    :Storage(factory), client(std::move(client)), inv(std::move(inv)),
-    sideDrawer(sideDrawer), sideBus(sideBus), filters(std::move(filters)) {}
+  StorageDrawer(Factory &factory, decltype(accesses) accesses, decltype(filters) filters)
+    :Storage(factory), accesses(std::move(accesses)), filters(std::move(filters)) {}
   SharedPromise<std::monostate> update() override;
   std::optional<int> sinkPriority(const Item&) override;
   std::pair<int, SharedPromise<std::monostate>> sink(const ItemStack&, size_t slot) override;
@@ -23,12 +20,11 @@ struct ProviderDrawer : Provider {
 };
 
 struct StorageChest : Storage {
-  std::string client, inv;
-  int sideChest, sideBus;
+  std::vector<AccessInv> accesses;
   std::vector<SharedItemStack> content;
   size_t slotToSink;
-  StorageChest(Factory &factory, std::string client, std::string inv, int sideChest, int sideBus)
-    :Storage(factory), client(std::move(client)), inv(std::move(inv)), sideChest(sideChest), sideBus(sideBus) {}
+  StorageChest(Factory &factory, decltype(accesses) accesses)
+    :Storage(factory), accesses(std::move(accesses)) {}
   void endOfCycle() override { content.clear(); }
   SharedPromise<std::monostate> update() override;
   std::optional<int> sinkPriority(const Item&) override;
@@ -43,11 +39,11 @@ struct ProviderChest : Provider {
   SharedPromise<std::monostate> extract(int size, size_t slot) override;
 };
 
-struct AccessME {
-  std::string client, inv, me;
-  int sideME, sideBus, entry;
-  AccessME(std::string client, std::string inv, int sideME, int sideBus, int entry, std::string me = "me_interface")
-    :client(std::move(client)), inv(std::move(inv)), me(std::move(me)), sideME(sideME), sideBus(sideBus), entry(entry) {}
+struct AccessME : AccessInv {
+  std::string me;
+  int entry;
+  AccessME(std::string client, std::string addr, int sideInv, int sideBus, int entry, std::string me = "me_interface")
+    :AccessInv(std::move(client), std::move(addr), sideInv, sideBus), me(std::move(me)), entry(entry) {}
 };
 
 struct StorageME : Storage {

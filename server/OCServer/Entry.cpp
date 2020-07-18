@@ -34,19 +34,19 @@ int main() {
       return item.name == "extendedcrafting:trimmed" && item.damage == 4;
     }));
 
-    Factory factory(server, 1000, "south", {
+    Factory factory(server, 1000, {"south"}, {
       {"center", "127", Actions::up},
       {"south", "fff", Actions::down},
       {"west", "cfa", Actions::west},
       {"east", "1d7", Actions::up}
     });
-    factory.addStorage(std::make_unique<StorageChest>(factory, "center", "7f4", Actions::south, Actions::down));
-    factory.addStorage(std::make_unique<StorageChest>(factory, "south", "fff", Actions::up, Actions::down));
-    factory.addStorage(std::make_unique<StorageChest>(factory, "west", "cfa", Actions::up, Actions::west));
-    factory.addStorage(std::make_unique<StorageChest>(factory, "west", "dfc", Actions::south, Actions::west));
-    factory.addStorage(std::make_unique<StorageChest>(factory, "west", "10b", Actions::north, Actions::south));
-    factory.addStorage(std::make_unique<StorageChest>(factory, "east", "1d7", Actions::south, Actions::up));
-    factory.addStorage(std::make_unique<StorageDrawer>(factory, "center", "127", Actions::down, Actions::up, std::vector<SharedItemFilter>{
+    factory.addStorage(std::make_unique<StorageChest>(factory, std::vector<AccessInv>{{"center", "7f4", Actions::south, Actions::down}}));
+    factory.addStorage(std::make_unique<StorageChest>(factory, std::vector<AccessInv>{{"south", "fff", Actions::up, Actions::down}}));
+    factory.addStorage(std::make_unique<StorageChest>(factory, std::vector<AccessInv>{{"west", "cfa", Actions::up, Actions::west}}));
+    factory.addStorage(std::make_unique<StorageChest>(factory, std::vector<AccessInv>{{"west", "dfc", Actions::south, Actions::west}}));
+    factory.addStorage(std::make_unique<StorageChest>(factory, std::vector<AccessInv>{{"west", "10b", Actions::north, Actions::south}}));
+    factory.addStorage(std::make_unique<StorageChest>(factory, std::vector<AccessInv>{{"east", "1d7", Actions::south, Actions::up}}));
+    factory.addStorage(std::make_unique<StorageDrawer>(factory, std::vector<AccessInv>{{"center", "127", Actions::down, Actions::up}}, std::vector<SharedItemFilter>{
       filterLabel("Birch Sapling"), filterLabel("Experience Seeds"), filterLabel("Seeds"), filterLabel("Wheat"),
       filterName("mysticalagriculture:tier4_inferium_seeds"), filterLabel("Substrate"), filterLabel("Mysterious Comb"), filterLabel("Mana Infused Ore"),
       filterLabel("Litherite Crystal"), filterLabel("Sawdust"), filterLabel("Redstone Seeds"), filterLabel("Iron Ore"),
@@ -87,11 +87,11 @@ int main() {
     factory.addBackup(filterLabel("Flax"), 32);
 
     // output
-    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "output", "west", "9a7", Actions::west, Actions::east,
+    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "output", std::vector<AccessInv>{{"west", "9a7", Actions::west, Actions::east}},
       std::vector<StockEntry>{}, INT_MAX, nullptr, outAll, std::vector<Recipe<int>>{}));
 
     // stock
-    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "stock", "center", "7f4", Actions::west, Actions::down,
+    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "stock", std::vector<AccessInv>{{"center", "7f4", Actions::west, Actions::down}},
       std::vector<StockEntry>{
         {filterLabel("Enriched Uranium Nuclear Fuel"), 64}, // ncFission
         {filterLabel("Titanium Iridium Alloy Ingot"), 64},  // neutronium
@@ -140,19 +140,19 @@ int main() {
       }, INT_MAX, nullptr, nullptr, std::vector<Recipe<int>>{}));
 
     // obsidianGen
-    factory.addProcess(std::make_unique<ProcessInputless>(factory, "obsidianGen", "south", "06e", Actions::down, Actions::up,
+    factory.addProcess(std::make_unique<ProcessInputless>(factory, "obsidianGen", std::vector<AccessInv>{{"south", "06e", Actions::down, Actions::up}},
       nullptr, std::vector<InputlessEntry>{{filterLabel("Obsidian"), 128}}));
 
     // snowballGen
-    factory.addProcess(std::make_unique<ProcessInputless>(factory, "snowballGen", "south", "cb8", Actions::east, Actions::down,
+    factory.addProcess(std::make_unique<ProcessInputless>(factory, "snowballGen", std::vector<AccessInv>{{"south", "cb8", Actions::east, Actions::down}},
       nullptr, std::vector<InputlessEntry>{{filterLabel("Snowball"), 128}}));
 
     // rosinGen
-    factory.addProcess(std::make_unique<ProcessInputless>(factory, "rosinGen", "south", "547", Actions::south, Actions::down,
+    factory.addProcess(std::make_unique<ProcessInputless>(factory, "rosinGen", std::vector<AccessInv>{{"south", "547", Actions::south, Actions::down}},
       nullptr, std::vector<InputlessEntry>{{filterLabel("Rosin"), 128}}));
 
     // autoCompressor
-    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "autoCompressor", "center", "7b7", Actions::west, Actions::up,
+    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "autoCompressor", std::vector<AccessInv>{{"center", "7b7", Actions::west, Actions::up}},
       std::vector<StockEntry>{}, INT_MAX, [](size_t slot) { return slot < 12; }, nullptr, std::vector<Recipe<int>>{
         {{}, {{filterLabel("Tiny Dry Rubber"), 9}}, INT_MAX},
         {{}, {{filterLabel("Uranium Ore Piece"), 4}}, INT_MAX},
@@ -209,14 +209,15 @@ int main() {
       }));
 
     // pureDaisy
-    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "pureDaisy", "center", "7a5", Actions::south, Actions::down,
+    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "pureDaisy", std::vector<AccessInv>{{"center", "7a5", Actions::south, Actions::down}},
       std::vector<StockEntry>{}, 8, nullptr, nullptr, std::vector<Recipe<int>>{
         {{{filterLabel("Livingwood"), 16}}, {{filterLabel("Infused Wood"), 1}}, INT_MAX},
         {{{filterLabel("Livingrock"), 16}}, {{filterLabel("Arcane Stone"), 1}}, INT_MAX}
       }));
 
     // advancedMetallurgicFabricator
-    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "advancedMetallurgicFabricator", "south", "e22", Actions::north, Actions::east,
+    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "advancedMetallurgicFabricator",
+      std::vector<AccessInv>{{"south", "e22", Actions::north, Actions::east}},
       std::vector<StockEntry>{}, INT_MAX, nullptr, nullptr, std::vector<Recipe<int>>{
         {{{filterLabel("Titanium Ingot"), 16}}, {
           {filterLabel("Magnesium Ore"), 2},
@@ -240,7 +241,8 @@ int main() {
       }));
 
     // ironMechanicalComponent
-    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "ironMechanicalComponent", "center", "1dc", Actions::north, Actions::south,
+    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "ironMechanicalComponent",
+      std::vector<AccessInv>{{"center", "1dc", Actions::north, Actions::south}},
       std::vector<StockEntry>{}, INT_MAX, nullptr, nullptr, std::vector<Recipe<int>>{
         {{{filterLabel("Iron Mechanical Component"), 16}}, {
           {filterLabel("Iron Plate"), 2},
@@ -249,7 +251,8 @@ int main() {
       }));
 
     // steelMechanicalComponent
-    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "steelMechanicalComponent", "west", "9a7", Actions::up, Actions::east,
+    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "steelMechanicalComponent",
+      std::vector<AccessInv>{{"west", "9a7", Actions::up, Actions::east}},
       std::vector<StockEntry>{}, INT_MAX, nullptr, nullptr, std::vector<Recipe<int>>{
         {{{filterLabel("Steel Mechanical Component"), 16}}, {
           {filterLabel("Steel Plate"), 2},
@@ -258,7 +261,7 @@ int main() {
       }));
 
     // vacuumTube
-    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "vacuumTube", "west", "cfa", Actions::south, Actions::west,
+    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "vacuumTube", std::vector<AccessInv>{{"west", "cfa", Actions::south, Actions::west}},
       std::vector<StockEntry>{}, INT_MAX, nullptr, nullptr, std::vector<Recipe<int>>{
         {{{filterLabel("Vacuum Tube"), 16}}, {
           {filterLabel("Glass"), 1},
@@ -269,7 +272,7 @@ int main() {
       }));
 
     // circuitBoard
-    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "circuitBoard", "west", "9a7", Actions::south, Actions::east,
+    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "circuitBoard", std::vector<AccessInv>{{"west", "9a7", Actions::south, Actions::east}},
       std::vector<StockEntry>{}, INT_MAX, nullptr, nullptr, std::vector<Recipe<int>>{
         {{{filterLabel("Circuit Board"), 16}}, {
           {filterLabel("Insulating Glass"), 1},
@@ -279,14 +282,14 @@ int main() {
       }));
 
     // waterBarrel
-    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "waterBarrel", "center", "80c", Actions::south, Actions::down,
+    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "waterBarrel", std::vector<AccessInv>{{"center", "80c", Actions::south, Actions::down}},
       std::vector<StockEntry>{}, 16, nullptr, nullptr, std::vector<Recipe<int>>{
         {{{filterName("minecraft:clay"), 16}}, {{filterLabel("Dust"), 1}}, INT_MAX},
         {{{filterLabel("Black Concrete"), 16}}, {{filterLabel("Black Concrete Powder"), 1}}, INT_MAX}
       }));
 
     // lathe
-    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "lathe", "west", "cfa", Actions::north, Actions::west,
+    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "lathe", std::vector<AccessInv>{{"west", "cfa", Actions::north, Actions::west}},
       std::vector<StockEntry>{}, 16, nullptr, nullptr, std::vector<Recipe<int>>{
         {{{filterLabel("Aluminium Rod"), 16}}, {{filterLabel("Aluminum Ingot"), 1}}, INT_MAX},
         {{{filterLabel("Titanium Rod"), 16}}, {{filterLabel("Titanium Ingot"), 1}}, INT_MAX},
@@ -295,20 +298,20 @@ int main() {
       }));
 
     // crystallizer
-    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "crystallizer", "west", "9a7", Actions::north, Actions::east,
+    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "crystallizer", std::vector<AccessInv>{{"west", "9a7", Actions::north, Actions::east}},
       std::vector<StockEntry>{}, 16, nullptr, nullptr, std::vector<Recipe<int>>{
         {{{filterLabel("Silicon Boule"), 16}}, {{filterLabel("Silicon Ingot"), 1}}, INT_MAX}
       }));
 
     // cuttingMachine
-    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "cuttingMachine", "east", "ad9", Actions::north, Actions::down,
+    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "cuttingMachine", std::vector<AccessInv>{{"east", "ad9", Actions::north, Actions::down}},
       std::vector<StockEntry>{}, 16, nullptr, nullptr, std::vector<Recipe<int>>{
         {{{filterLabel("Silicon Wafer"), 16}}, {{filterLabel("Silicon Boule"), 1}}, INT_MAX},
         {{{filterLabel("Advanced Circuit"), 16}}, {{filterLabel("Advanced Circuit Plate"), 1}}, INT_MAX}
       }));
 
     // alloying
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "alloying", "east", "ad9", Actions::south, Actions::down,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "alloying", std::vector<AccessInv>{{"east", "ad9", Actions::south, Actions::down}},
       std::vector<size_t>{0, 1, 2, 3, 4}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{{filterLabel("Alumite Ingot"), 16}}, {
           {filterLabel("Obsidian"), 1, {0}},
@@ -330,7 +333,7 @@ int main() {
       }));
 
     // crystaltineIngot
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "crystaltineIngot", "east", "ad9", Actions::up, Actions::down,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "crystaltineIngot", std::vector<AccessInv>{{"east", "ad9", Actions::up, Actions::down}},
       std::vector<size_t>{0, 1, 2, 3, 4}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{{filterLabel("Crystaltine Ingot"), 16}}, {
           {filterLabel("Diamond"), 8, {0}},
@@ -342,26 +345,26 @@ int main() {
       }));
 
     // enderCrystal
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "enderCrystal", "west", "dfc", Actions::north, Actions::west,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "enderCrystal", std::vector<AccessInv>{{"west", "dfc", Actions::north, Actions::west}},
       std::vector<size_t>{0}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{{filterLabel("Ender Crystal"), 16}}, {{filterLabel("Soul Vial"), 1, {0}}}, 16}
       }));
 
     // enderCrystal
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "manganeseDioxide", "west", "dfc", Actions::up, Actions::west,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "manganeseDioxide", std::vector<AccessInv>{{"west", "dfc", Actions::up, Actions::west}},
       std::vector<size_t>{0}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{{filterLabel("Manganese Dioxide Dust"), 16}}, {{filterLabel("Manganese Oxide Dust"), 1, {0}}}, 16}
       }));
 
     // demonIngot
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "demonIngot", "west", "dfc", Actions::east, Actions::west,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "demonIngot", std::vector<AccessInv>{{"west", "dfc", Actions::east, Actions::west}},
       std::vector<size_t>{0}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{}, {{filterLabel("Stone Sword"), 1, {0}}}, INT_MAX},
         {{{filterLabel("Demon Ingot"), 16}}, {{filterLabel("Gold Ingot"), 1, {0}}}, 16},
       }));
 
     // advancedCraftingTable
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "advancedCraftingTable", "east", "ad9", Actions::east, Actions::down,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "advancedCraftingTable", std::vector<AccessInv>{{"east", "ad9", Actions::east, Actions::down}},
       std::vector<size_t>{0, 1, 2, 3, 4, 5, 6, 7, 8}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{{filterLabel("Advanced Crafting Table"), 4}}, {
           {filterLabel("Basic Component"), 1, {0}},
@@ -377,7 +380,7 @@ int main() {
       }));
 
     // eliteCraftingTable
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "eliteCraftingTable", "east", "caf", Actions::south, Actions::north,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "eliteCraftingTable", std::vector<AccessInv>{{"east", "caf", Actions::south, Actions::north}},
       std::vector<size_t>{0, 1, 2, 3, 4, 5, 6, 7}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{{filterLabel("Elite Crafting Table"), 4}}, {
           {filterLabel("Signalum Cell Frame (Full)"), 2, {0}},
@@ -392,7 +395,7 @@ int main() {
       }));
 
     // ultimateCraftingTable
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "ultimateCraftingTable", "east", "caf", Actions::west, Actions::north,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "ultimateCraftingTable", std::vector<AccessInv>{{"east", "caf", Actions::west, Actions::north}},
       std::vector<size_t>{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{{filterLabel("Ultimate Crafting Table"), 4}}, {
           {filterLabel("Double Compressed Crafting Table"), 8, {0}},
@@ -414,7 +417,7 @@ int main() {
       }));
 
     // ultimateStew
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "ultimateStew", "east", "caf", Actions::down, Actions::north,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "ultimateStew", std::vector<AccessInv>{{"east", "caf", Actions::down, Actions::north}},
       std::vector<size_t>{
         0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26,
         27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50
@@ -475,7 +478,7 @@ int main() {
       }));
 
     // cosmicMeatballs
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "cosmicMeatballs", "west", "10b", Actions::east, Actions::south,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "cosmicMeatballs", std::vector<AccessInv>{{"west", "10b", Actions::east, Actions::south}},
       std::vector<size_t>{
         0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21
       }, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
@@ -506,7 +509,7 @@ int main() {
       }));
 
     // enderStar
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "enderStar", "south", "5a8", Actions::west, Actions::up,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "enderStar", std::vector<AccessInv>{{"south", "5a8", Actions::west, Actions::up}},
       std::vector<size_t>{0, 1}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{{filterLabelName("Ender Star", "extendedcrafting:material"), 16}}, {
           {filterLabel("Nether Star"), 1, {0}},
@@ -515,7 +518,7 @@ int main() {
       }));
 
     // enhancedEnderIngot
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "enhancedEnderIngot", "south", "5a8", Actions::down, Actions::up,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "enhancedEnderIngot", std::vector<AccessInv>{{"south", "5a8", Actions::down, Actions::up}},
       std::vector<size_t>{0, 1}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{{filterLabel("Enhanced Ender Ingot"), 16}}, {
           {filterLabelName("Ender Star", "extendedcrafting:material"), 1, {0}},
@@ -524,7 +527,7 @@ int main() {
       }));
 
     // precisionAssembler
-    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "precisionAssembler", "east", "1d7", Actions::north, Actions::up,
+    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "precisionAssembler", std::vector<AccessInv>{{"east", "1d7", Actions::north, Actions::up}},
       std::vector<StockEntry>{}, 16, nullptr, nullptr, std::vector<Recipe<int>>{
         {{{filterLabel("Advanced Circuit Plate"), 16}}, {
           {filterLabel("Silicon Wafer"), 1},
@@ -534,7 +537,7 @@ int main() {
       }));
 
     // atomicReconstructor
-    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "atomicReconstructor", "center", "80c", Actions::west, Actions::down,
+    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "atomicReconstructor", std::vector<AccessInv>{{"center", "80c", Actions::west, Actions::down}},
       std::vector<StockEntry>{}, 16, nullptr, nullptr, std::vector<Recipe<int>>{
         {{{filterLabel("Ethetic Green Block"), 16}}, {{filterLabel("Chiseled Quartz Block"), 1}}, INT_MAX},
         {{{filterLabel("Diamatine Crystal"), 16}}, {{filterLabel("Diamond"), 1}}, INT_MAX},
@@ -547,7 +550,7 @@ int main() {
       }));
 
     // platePress
-    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "platePress", "center", "312", Actions::south, Actions::up,
+    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "platePress", std::vector<AccessInv>{{"center", "312", Actions::south, Actions::up}},
       std::vector<StockEntry>{}, 16, nullptr, nullptr, std::vector<Recipe<int>>{
         {{{filterLabel("Tin Plate"), 16}}, {{filterLabel("Tin Ingot"), 1}}, INT_MAX},
         {{{filterLabel("Lead Plate"), 16}}, {{filterLabel("Lead Ingot"), 1}}, INT_MAX},
@@ -573,7 +576,7 @@ int main() {
       }));
 
     // gearPress
-    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "gearPress", "center", "ffd", Actions::down, Actions::south,
+    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "gearPress", std::vector<AccessInv>{{"center", "ffd", Actions::down, Actions::south}},
       std::vector<StockEntry>{}, 16, nullptr, nullptr, std::vector<Recipe<int>>{
         {{{filterLabel("Lead Gear"), 8}}, {{filterLabel("Lead Ingot"), 4}}, INT_MAX},
         {{{filterLabel("Iron Gear"), 8}}, {{filterLabel("Iron Ingot"), 4}}, INT_MAX},
@@ -596,21 +599,21 @@ int main() {
       }));
 
     // wirePress
-    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "wirePress", "center", "0ed", Actions::down, Actions::north,
+    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "wirePress", std::vector<AccessInv>{{"center", "0ed", Actions::down, Actions::north}},
       std::vector<StockEntry>{}, 16, nullptr, nullptr, std::vector<Recipe<int>>{
         {{{filterLabel("Aluminium Wire"), 16}}, {{filterLabel("Aluminum Ingot"), 1}}, INT_MAX},
         {{{filterLabel("Copper Wire"), 16}}, {{filterLabel("Copper Ingot"), 1}}, INT_MAX}
       }));
 
     // rodPress
-    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "rodPress", "south", "00a", Actions::west, Actions::up,
+    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "rodPress", std::vector<AccessInv>{{"south", "00a", Actions::west, Actions::up}},
       std::vector<StockEntry>{}, 16, nullptr, nullptr, std::vector<Recipe<int>>{
         {{{filterLabel("Ardite Tool Rod"), 16}}, {{filterLabel("Ardite Ingot"), 1}}, INT_MAX},
         {{{filterLabel("Iridium Rod"), 16}}, {{filterLabel("Iridium Ingot"), 1}}, INT_MAX}
       }));
 
     // crusher
-    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "crusher", "center", "127", Actions::east, Actions::up,
+    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "crusher", std::vector<AccessInv>{{"center", "127", Actions::east, Actions::up}},
       std::vector<StockEntry>{}, INT_MAX, nullptr, nullptr, std::vector<Recipe<int>>{
         {{{filterLabel("Bio Fuel"), 16}}, {{filterLabel("Pumpkin"), 1}}, INT_MAX},
         {{{filterLabel("Coke Dust"), 16}}, {{filterLabel("Coal Coke"), 1}}, INT_MAX},
@@ -618,13 +621,13 @@ int main() {
       }));
 
     // pinkSlime
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "pinkSlime", "center", "a96", Actions::up, Actions::down,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "pinkSlime", std::vector<AccessInv>{{"center", "a96", Actions::up, Actions::down}},
       std::vector<size_t>{0}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{{filterLabel("Pink Slime"), 16}}, {{filterLabel("Green Slime Block"), 1, {0}}}, 16}
       }));
 
     // sawMill
-    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "sawMill", "center", "127", Actions::west, Actions::up,
+    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "sawMill", std::vector<AccessInv>{{"center", "127", Actions::west, Actions::up}},
       std::vector<StockEntry>{}, INT_MAX, nullptr, nullptr, std::vector<Recipe<int>>{
         {{{filterLabel("Birch Wood Planks"), 64}}, {{filterLabel("Birch Wood"), 1}}, INT_MAX},
         {{{filterLabel("Ironwood Planks"), 64}}, {{filterLabel("Ironwood"), 1}}, INT_MAX},
@@ -632,7 +635,7 @@ int main() {
       }));
 
     // manufactory
-    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "manufactory", "center", "7b7", Actions::north, Actions::up,
+    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "manufactory", std::vector<AccessInv>{{"center", "7b7", Actions::north, Actions::up}},
       std::vector<StockEntry>{}, 256, nullptr, nullptr, std::vector<Recipe<int>>{
         {{{filterLabel("Sand"), 16}}, {{filterLabel("Cobblestone"), 1}}, INT_MAX},
         {{{filterLabel("Niter"), 16}}, {{filterLabel("Sandstone"), 1}}, INT_MAX},
@@ -666,7 +669,7 @@ int main() {
       }));
 
     // diamondSieve
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "diamondSieve", "center", "7a5", Actions::west, Actions::down,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "diamondSieve", std::vector<AccessInv>{{"center", "7a5", Actions::west, Actions::down}},
       std::vector<size_t>{0}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{
           {filterLabel("Gold Ore"), 16},
@@ -689,7 +692,7 @@ int main() {
       }));
 
     // ironSieve
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "ironSieve", "south", "737", Actions::east, Actions::up,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "ironSieve", std::vector<AccessInv>{{"south", "737", Actions::east, Actions::up}},
       std::vector<size_t>{0}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{
           {filterLabel("Uranium Ore"), 16}
@@ -697,7 +700,7 @@ int main() {
       }));
 
     // furnace
-    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "furnace", "center", "7a5", Actions::north, Actions::down,
+    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "furnace", std::vector<AccessInv>{{"center", "7a5", Actions::north, Actions::down}},
       std::vector<StockEntry>{}, INT_MAX, nullptr, nullptr, std::vector<Recipe<int>>{
         {{{filterName("minecraft:netherbrick"), 16}}, {{filterLabel("Netherrack"), 1}}, INT_MAX},
         {{{filterLabel("Brick"), 16}}, {{filterName("minecraft:clay_ball"), 1}}, INT_MAX},
@@ -721,9 +724,9 @@ int main() {
       }));
 
     // terrasteel
-    factory.addProcess(std::make_unique<ProcessRedstoneConditional>(factory, "terrasteel", "south", "303", Actions::up, true,
+    factory.addProcess(std::make_unique<ProcessRedstoneConditional>(factory, "terrasteel", std::vector<AccessRedstone>{{"south", "303", Actions::up}}, true,
       [&]() { return factory.getAvail(factory.getItem(ItemFilters::Label("Terrasteel Ingot")), true) < 16; }, [](int x) { return !x; },
-      std::make_unique<ProcessSlotted>(factory, "terrasteel", "south", "fff", Actions::east, Actions::down,
+      std::make_unique<ProcessSlotted>(factory, "terrasteel", std::vector<AccessInv>{{"south", "fff", Actions::east, Actions::down}},
         std::vector<size_t>{0, 1, 2}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
           {{{filterLabel("Terrasteel Ingot"), 16}}, {
             {filterLabel("Manasteel Ingot"), 1, {0}},
@@ -733,7 +736,7 @@ int main() {
         })));
 
     // manaCarpenter
-    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "manaCarpenter", "center", "a96", Actions::west, Actions::down,
+    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "manaCarpenter", std::vector<AccessInv>{{"center", "a96", Actions::west, Actions::down}},
       std::vector<StockEntry>{}, 32, nullptr, nullptr, std::vector<Recipe<int>>{
         {{{filterLabel("Wyvern Core"), 16}}, {
           {filterLabel("Ludicrite Ingot"), 2},
@@ -750,7 +753,7 @@ int main() {
       }));
 
     // seedOilCarpenter
-    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "seedOilCarpenter", "center", "7b7", Actions::down, Actions::up,
+    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "seedOilCarpenter", std::vector<AccessInv>{{"center", "7b7", Actions::down, Actions::up}},
       std::vector<StockEntry>{}, 32, nullptr, nullptr, std::vector<Recipe<int>>{
         {{{filterLabel("Impregnated Stick"), 16}}, {
           {filterLabel("Birch Wood Planks"), 2}
@@ -761,7 +764,7 @@ int main() {
       }));
 
     // waterCarpenter
-    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "waterCarpenter", "center", "a96", Actions::south, Actions::down,
+    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "waterCarpenter", std::vector<AccessInv>{{"center", "a96", Actions::south, Actions::down}},
       std::vector<StockEntry>{}, 32, nullptr, nullptr, std::vector<Recipe<int>>{
         {{{filterLabel("Hardened Casing"), 8}}, {
           {filterLabel("Sturdy Casing"), 1},
@@ -789,7 +792,7 @@ int main() {
       }));
 
     // coolantCarpenter
-    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "coolantCarpenter", "center", "7f4", Actions::up, Actions::down,
+    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "coolantCarpenter", std::vector<AccessInv>{{"center", "7f4", Actions::up, Actions::down}},
       std::vector<StockEntry>{}, 32, nullptr, nullptr, std::vector<Recipe<int>>{
         {{{filterLabel("Overclocker Upgrade"), 8}}, {
           {filterLabel("Basic Control Circuit"), 1},
@@ -799,7 +802,7 @@ int main() {
       }));
 
     // coalCarpenter
-    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "coalCarpenter", "center", "80c", Actions::north, Actions::down,
+    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "coalCarpenter", std::vector<AccessInv>{{"center", "80c", Actions::north, Actions::down}},
       std::vector<StockEntry>{}, 32, nullptr, nullptr, std::vector<Recipe<int>>{
         {{{filterLabel("Pedestal"), 16}}, {
           {filterLabel("Black Iron Slate"), 1},
@@ -814,7 +817,7 @@ int main() {
       }));
 
     // dnaCarpenter
-    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "dnaCarpenter", "center", "7f4", Actions::east, Actions::down,
+    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "dnaCarpenter", std::vector<AccessInv>{{"center", "7f4", Actions::east, Actions::down}},
       std::vector<StockEntry>{}, 32, nullptr, nullptr, std::vector<Recipe<int>>{
         {{{filterLabel("Ludicrite Block"), 16}}, {
           {filterLabel("Ender Amethyst"), 1},
@@ -827,7 +830,7 @@ int main() {
       }));
 
     // sewageCarpenter
-    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "sewageCarpenter", "west", "303", Actions::south, Actions::north,
+    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "sewageCarpenter", std::vector<AccessInv>{{"west", "303", Actions::south, Actions::north}},
       std::vector<StockEntry>{}, 32, nullptr, nullptr, std::vector<Recipe<int>>{
         {{{filterLabel("Tier 6 Crafting Seed"), 16}}, {
           {filterLabel("Tier 5 Crafting Seed"), 1},
@@ -837,7 +840,8 @@ int main() {
       }));
 
     // advancedThermionicFabricator
-    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "advancedThermionicFabricator", "south", "737", Actions::down, Actions::up,
+    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "advancedThermionicFabricator",
+      std::vector<AccessInv>{{"south", "737", Actions::down, Actions::up}},
       std::vector<StockEntry>{}, INT_MAX, nullptr, nullptr, std::vector<Recipe<int>>{
         {{{filterLabelName("Machine Frame", "thermalexpansion:frame"), 1}}, {
           {filterLabel("Enori Crystal"), 4},
@@ -872,7 +876,7 @@ int main() {
       }));
 
     // throwInLiquidStarlight
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "throwInLiquidStarlight", "center", "7b7", Actions::south, Actions::up,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "throwInLiquidStarlight", std::vector<AccessInv>{{"center", "7b7", Actions::south, Actions::up}},
       std::vector<size_t>{0, 1, 2}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{{filterLabel("Infused Wood"), 16}}, {
           {filterLabel("Birch Wood"), 1, {0}}
@@ -885,7 +889,7 @@ int main() {
       }));
 
     // alloyFurnace
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "alloyFurnace", "center", "777", Actions::west, Actions::north,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "alloyFurnace", std::vector<AccessInv>{{"center", "777", Actions::west, Actions::north}},
       std::vector<size_t>{0, 1}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{{filterLabel("Steel Ingot"), 16}}, {
           {filterLabel("Iron Ingot"), 1, {0}},
@@ -990,7 +994,7 @@ int main() {
       }));
 
     // alloySmelter
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "alloySmelter", "south", "a1b", Actions::north, Actions::west,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "alloySmelter", std::vector<AccessInv>{{"south", "a1b", Actions::north, Actions::west}},
       std::vector<size_t>{0, 1, 2}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{{filterLabel("Organic Brown Dye"), 16}}, {
           {filterLabel("Cocoa Beans"), 2, {0}},
@@ -1018,7 +1022,7 @@ int main() {
       }));
 
     // isotopeSeparator
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "isotopeSeparator", "south", "a1b", Actions::down, Actions::west,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "isotopeSeparator", std::vector<AccessInv>{{"south", "a1b", Actions::down, Actions::west}},
       std::vector<size_t>{0}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{
           {filterLabel("Uranium-238"), 16},
@@ -1027,27 +1031,27 @@ int main() {
       }));
 
     // osmiumCompressor
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "osmiumCompressor", "south", "a1b", Actions::up, Actions::west,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "osmiumCompressor", std::vector<AccessInv>{{"south", "a1b", Actions::up, Actions::west}},
       std::vector<size_t>{0}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{{filterLabel("Glowstone Ingot"), 16}}, {{filterLabel("Glowstone Dust"), 1, {0}}}, 16},
         {{{filterLabel("Refined Obsidian Ingot"), 16}}, {{filterLabel("Refined Obsidian Dust"), 1, {0}}}, 16}
       }));
 
     // resonator
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "resonator", "south", "e22", Actions::down, Actions::east,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "resonator", std::vector<AccessInv>{{"south", "e22", Actions::down, Actions::east}},
       std::vector<size_t>{0}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{{filterLabel("Stoneburnt"), 16}}, {{filterLabel("Polished Stone"), 1, {0}}}, INT_MAX},
         {{{filterLabel("Lunar Reactive Dust"), 16}}, {{filterLabel("Lapis Lazuli"), 1, {0}}}, INT_MAX}
       }));
 
     // pinkSlimeIngot
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "pinkSlimeIngot", "west", "303", Actions::down, Actions::north,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "pinkSlimeIngot", std::vector<AccessInv>{{"west", "303", Actions::down, Actions::north}},
       std::vector<size_t>{6}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{{filterLabel("Pink Slime Ingot"), 16}}, {{filterLabel("Iron Ingot"), 1, {6}}}, 16}
       }));
 
     // groundTrap
-    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "groundTrap", "west", "303", Actions::west, Actions::north,
+    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "groundTrap", std::vector<AccessInv>{{"west", "303", Actions::west, Actions::north}},
       std::vector<StockEntry>{}, 16, nullptr, nullptr, std::vector<Recipe<int>>{
         {{{filterLabel("Raw Rabbit"), 16}}, {{filterLabel("Fruit Bait"), 1}}, INT_MAX},
         {{
@@ -1063,25 +1067,25 @@ int main() {
       }));
 
     // calciumSulfate
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "calciumSulfate", "south", "e22", Actions::west, Actions::east,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "calciumSulfate", std::vector<AccessInv>{{"south", "e22", Actions::west, Actions::east}},
       std::vector<size_t>{0}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{{filterLabel("Calcium Sulfate"), 16}}, {{filterLabel("Crushed Fluorite"), 1, {0}}}, 16}
       }));
 
     // boronNitride
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "boronNitride", "east", "1d7", Actions::east, Actions::up,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "boronNitride", std::vector<AccessInv>{{"east", "1d7", Actions::east, Actions::up}},
       std::vector<size_t>{0}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{{filterLabel("Hexagonal Boron Nitride"), 16}}, {{filterLabel("Boron Ingot"), 1, {0}}}, 16}
       }));
 
     // draconiumCrystal
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "draconiumCrystal", "east", "1d7", Actions::down, Actions::up,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "draconiumCrystal", std::vector<AccessInv>{{"east", "1d7", Actions::down, Actions::up}},
       std::vector<size_t>{0}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{{filterLabel("Draconium Crystal"), 16}}, {{filterLabel("Draconium Ore"), 1, {0}}}, 16}
       }));
 
     // compressedHammer
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "compressedHammer", "center", "312", Actions::down, Actions::up,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "compressedHammer", std::vector<AccessInv>{{"center", "312", Actions::down, Actions::up}},
       std::vector<size_t>{0}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{{filterLabel("Crushed Netherrack"), 16}}, {{filterLabel("Compressed Netherrack"), 1, {0}}}, 16},
         {{{filterLabel("Crushed Endstone"), 16}}, {{filterLabel("Compressed End Stone"), 1, {0}}}, 16},
@@ -1090,7 +1094,7 @@ int main() {
       }));
 
     // compressor
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "compressor", "center", "a96", Actions::north, Actions::down,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "compressor", std::vector<AccessInv>{{"center", "a96", Actions::north, Actions::down}},
       std::vector<size_t>{6}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{{filterLabel("Dense Lapis Lazuli Plate"), 8}}, {{filterLabel("Lapis Lazuli Plate"), 9, {6}}}, 18},
         {{{filterLabel("Lapis Lazuli Plate"), 16}}, {{filterLabel("Lapis Lazuli Dust"), 1, {6}}}, 16},
@@ -1101,7 +1105,7 @@ int main() {
       }));
 
     // extruder
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "extruder", "center", "539", Actions::north, Actions::up,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "extruder", std::vector<AccessInv>{{"center", "539", Actions::north, Actions::up}},
       std::vector<size_t>{6}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{{filterLabel("Shaft (Iron)"), 16}}, {{filterLabel("Block of Iron"), 1, {6}}}, 16},
         {{{filterLabel("Copper Cable"), 16}}, {{filterLabel("Copper Ingot"), 1, {6}}}, 16},
@@ -1110,7 +1114,7 @@ int main() {
       }));
 
     // roller
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "roller", "center", "539", Actions::west, Actions::up,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "roller", std::vector<AccessInv>{{"center", "539", Actions::west, Actions::up}},
       std::vector<size_t>{6}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{{filterLabel("Bronze Item Casing"), 16}}, {{filterLabel("Bronze Plate"), 1, {6}}}, 16},
         {{{filterLabel("Copper Item Casing"), 16}}, {{filterLabel("Copper Plate"), 1, {6}}}, 16},
@@ -1120,25 +1124,25 @@ int main() {
       }));
 
     // treatedWood
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "treatedWood", "center", "312", Actions::west, Actions::up,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "treatedWood", std::vector<AccessInv>{{"center", "312", Actions::west, Actions::up}},
       std::vector<size_t>{0}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{{filterLabel("Treated Wood Planks"), 64}}, {{filterLabel("Birch Wood Planks"), 1, {0}}}, 64}
       }));
 
     // terraCrystal
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "terraCrystal", "center", "312", Actions::north, Actions::up,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "terraCrystal", std::vector<AccessInv>{{"center", "312", Actions::north, Actions::up}},
       std::vector<size_t>{0}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{{filterLabel("Terra Vis Crystal"), 16}}, {{filterLabel("Quartz Sliver"), 1, {0}}}, 16}
       }));
 
     // brassIngot
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "brassIngot", "east", "5a8", Actions::east, Actions::south,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "brassIngot", std::vector<AccessInv>{{"east", "5a8", Actions::east, Actions::south}},
       std::vector<size_t>{0}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{{filterLabel("Alchemical Brass Ingot"), 16}}, {{filterLabel("Iron Ingot"), 1, {0}}}, 16}
       }));
 
     // sandInduction
-    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "sandInduction", "south", "a1b", Actions::east, Actions::west,
+    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "sandInduction", std::vector<AccessInv>{{"south", "a1b", Actions::east, Actions::west}},
       std::vector<StockEntry>{}, 64, nullptr, nullptr, std::vector<Recipe<int>>{
         {{{filterLabel("Rich Slag"), 64}}, {{filterLabel("Clock"), 1}}, INT_MAX},
         {{{filterLabel("Tin Ingot"), 64}}, {{filterLabel("Tin Ore"), 1}}, INT_MAX},
@@ -1162,7 +1166,7 @@ int main() {
       }));
 
     // inductionSmelter
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "inductionSmelter", "center", "539", Actions::south, Actions::up,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "inductionSmelter", std::vector<AccessInv>{{"center", "539", Actions::south, Actions::up}},
       std::vector<size_t>{0, 1}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{
           {filterLabel("Nickel Ingot"), 16},
@@ -1209,14 +1213,14 @@ int main() {
       }));
 
     // charger
-    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "charger", "center", "ffd", Actions::north, Actions::south,
+    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "charger", std::vector<AccessInv>{{"center", "ffd", Actions::north, Actions::south}},
       std::vector<StockEntry>{}, 256, nullptr, nullptr, std::vector<Recipe<int>>{
         {{{filterLabel("Fluxed Phyto-Gro"), 64}}, {{filterLabel("Rich Phyto-Gro"), 1}}, INT_MAX},
         {{{filterLabel("Charged Certus Quartz Crystal"), 16}}, {{filterLabel("Certus Quartz Crystal"), 1}}, INT_MAX}
       }));
 
     // ironberries
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "ironberries", "west", "9d8", Actions::west, Actions::east,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "ironberries", std::vector<AccessInv>{{"west", "9d8", Actions::west, Actions::east}},
       std::vector<size_t>{10}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{
           {filterLabel("Ironberries"), 64},
@@ -1225,7 +1229,7 @@ int main() {
       }));
 
     // pulverizer
-    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "pulverizer", "center", "ffd", Actions::west, Actions::south,
+    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "pulverizer", std::vector<AccessInv>{{"center", "ffd", Actions::west, Actions::south}},
       std::vector<StockEntry>{}, 32, nullptr, nullptr, std::vector<Recipe<int>>{
         {{{filterName("harvestcraft:flouritem"), 16}}, {{filterLabel("Wheat"), 1}}, INT_MAX},
         {{{filterLabel("Dandelion Yellow"), 16}}, {{filterLabel("Dandelion"), 1}}, INT_MAX},
@@ -1237,7 +1241,7 @@ int main() {
       }));
 
     // centrifuge
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "centrifuge", "center", "1dc", Actions::west, Actions::south,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "centrifuge", std::vector<AccessInv>{{"center", "1dc", Actions::west, Actions::south}},
       std::vector<size_t>{0}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{{filterLabel("Pulsating Propolis"), 16}}, {{filterLabel("Mysterious Comb"), 1, {0}}}, 64},
         {{{filterLabel("Fruit Bait"), 16}}, {{filterLabel("Strawberry"), 1, {0}}}, 64},
@@ -1257,7 +1261,7 @@ int main() {
       }));
 
     // enchanter
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "enchanter", "center", "7a5", Actions::up, Actions::down,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "enchanter", std::vector<AccessInv>{{"center", "7a5", Actions::up, Actions::down}},
       std::vector<size_t>{0, 1}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{{filterLabel("Evil Infused Iron Ingot"), 16}}, {
           {filterLabel("Iron Ingot"), 8, {0}},
@@ -1274,7 +1278,7 @@ int main() {
       }));
 
     // phyto
-    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "phyto", "center", "539", Actions::down, Actions::up,
+    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "phyto", std::vector<AccessInv>{{"center", "539", Actions::down, Actions::up}},
       std::vector<StockEntry>{}, 64, nullptr, nullptr, std::vector<Recipe<int>>{
         {{{filterLabel(u8"§eInferium Essence"), 256}}, {{filterName("mysticalagriculture:tier4_inferium_seeds"), 1}}, INT_MAX},
         {{{filterName("minecraft:brown_mushroom"), 64}}, {{filterName("minecraft:brown_mushroom"), 1, {}, true}}, INT_MAX},
@@ -1361,19 +1365,19 @@ int main() {
       }));
 
     // cinnamon
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "cinnamon", "center", "80c", Actions::up, Actions::down,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "cinnamon", std::vector<AccessInv>{{"center", "80c", Actions::up, Actions::down}},
       std::vector<size_t>{0}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{{filterLabel("Cinnamon"), 16}}, {{filterLabel("Rich Phyto-Gro"), 1, {0}}}, 16}
       }));
 
     // wildberries
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "wildberries", "west", "9d8", Actions::south, Actions::east,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "wildberries", std::vector<AccessInv>{{"west", "9d8", Actions::south, Actions::east}},
       std::vector<size_t>{0}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{{filterLabel("Wildberries"), 16}}, {{filterLabel("Rich Phyto-Gro"), 1, {0}}}, 16}
       }));
 
     // enrichment
-    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "enrichment", "center", "777", Actions::up, Actions::north,
+    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "enrichment", std::vector<AccessInv>{{"center", "777", Actions::up, Actions::north}},
       std::vector<StockEntry>{}, INT_MAX, nullptr, nullptr, std::vector<Recipe<int>>{
         {{}, {{filterLabel("Diamond Ore"), 1}}, INT_MAX},
         {{}, {{filterLabel("Emerald Ore"), 1}}, INT_MAX},
@@ -1394,7 +1398,7 @@ int main() {
       }));
 
     // redstoneInfuser
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "redstoneInfuser", "center", "0ed", Actions::south, Actions::north,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "redstoneInfuser", std::vector<AccessInv>{{"center", "0ed", Actions::south, Actions::north}},
       std::vector<size_t>{0}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{{filterLabel("Enriched Alloy"), 32}}, {{filterLabel("Iron Ingot"), 1, {0}}}, 16},
         {{{filterLabel("Energy Cell Frame"), 1}}, {{filterLabelName("Machine Frame", "thermalexpansion:frame"), 1, {0}}}, 16},
@@ -1405,32 +1409,32 @@ int main() {
       }));
 
     // diamondInfuser
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "diamondInfuser", "center", "777", Actions::down, Actions::north,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "diamondInfuser", std::vector<AccessInv>{{"center", "777", Actions::down, Actions::north}},
       std::vector<size_t>{0}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{{filterLabel("Reinforced Alloy"), 16}}, {{filterLabel("Enriched Alloy"), 1, {0}}}, 16},
         {{{filterLabel("Refined Obsidian Dust"), 16}}, {{filterLabel("Pulverized Obsidian"), 1, {0}}}, 16}
       }));
 
     // obsidianInfuser
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "obsidianInfuser", "south", "547", Actions::east, Actions::down,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "obsidianInfuser", std::vector<AccessInv>{{"south", "547", Actions::east, Actions::down}},
       std::vector<size_t>{0}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{{filterLabel("Atomic Alloy"), 16}}, {{filterLabel("Reinforced Alloy"), 1, {0}}}, 16}
       }));
 
     // bioInfuser
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "bioInfuser", "east", "5a8", Actions::down, Actions::south,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "bioInfuser", std::vector<AccessInv>{{"east", "5a8", Actions::down, Actions::south}},
       std::vector<size_t>{0}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{{filterLabel("Dirt"), 64}}, {{filterLabel("Sand"), 1, {0}}}, 16}
       }));
 
     // fungiInfuser
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "fungiInfuser", "east", "5a8", Actions::west, Actions::south,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "fungiInfuser", std::vector<AccessInv>{{"east", "5a8", Actions::west, Actions::south}},
       std::vector<size_t>{0}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{{filterLabel("Mycelium"), 64}}, {{filterLabel("Dirt"), 1, {0}}}, INT_MAX}
       }));
 
     // pressurizer
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "pressurizer", "south", "547", Actions::west, Actions::down,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "pressurizer", std::vector<AccessInv>{{"south", "547", Actions::west, Actions::down}},
       std::vector<size_t>{0}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{{filterLabel("Cubic Boron Nitride"), 16}}, {{filterLabel("Hexagonal Boron Nitride"), 1, {0}}}, 16},
         {{{filterLabel("Dense Copper Plate"), 16}}, {{filterLabel("Copper Plate"), 9, {0}}}, 18},
@@ -1445,7 +1449,7 @@ int main() {
       }));
 
     // crafterA
-    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "crafterA", "center", "777", Actions::south, Actions::north,
+    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "crafterA", std::vector<AccessInv>{{"center", "777", Actions::south, Actions::north}},
       std::vector<StockEntry>{}, INT_MAX, [](size_t slot) { return slot < 12; }, nullptr, std::vector<Recipe<int>>{
         {{{filterLabel("Salt"), 256}}, {{filterLabel("Fresh Water"), 1}}, INT_MAX},
         {{{filterLabel("Salt"), 256}}, {{filterLabel("Fresh Water"), 1}}, INT_MAX},
@@ -1481,7 +1485,7 @@ int main() {
       }));
 
     // crafterB
-    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "crafterB", "south", "e22", Actions::up, Actions::east,
+    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "crafterB", std::vector<AccessInv>{{"south", "e22", Actions::up, Actions::east}},
       std::vector<StockEntry>{}, INT_MAX, [](size_t slot) { return slot < 12; }, nullptr, std::vector<Recipe<int>>{
         {{{filterLabel(u8"§aPrudentium Essence"), 40}}, {{filterLabel(u8"§eInferium Essence"), 4}}, INT_MAX},
         {{{filterLabel(u8"§aPrudentium Essence"), 40}}, {{filterLabel(u8"§eInferium Essence"), 4}}, INT_MAX},
@@ -1512,7 +1516,7 @@ int main() {
       }));
 
     // crafterC
-    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "crafterC", "west", "cfa", Actions::east, Actions::west,
+    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "crafterC", std::vector<AccessInv>{{"west", "cfa", Actions::east, Actions::west}},
       std::vector<StockEntry>{}, INT_MAX, [](size_t slot) { return slot < 12; }, nullptr, std::vector<Recipe<int>>{
         {{}, {{filterLabel("Magnesium Ore Piece"), 4}}, INT_MAX},
         {{}, {{filterLabel("Lithium Ore Piece"), 4}}, INT_MAX},
@@ -1538,7 +1542,7 @@ int main() {
       }));
 
     // crafterD
-    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "crafterD", "east", "caf", Actions::east, Actions::north,
+    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "crafterD", std::vector<AccessInv>{{"east", "caf", Actions::east, Actions::north}},
       std::vector<StockEntry>{}, INT_MAX, [](size_t slot) { return slot < 12; }, nullptr, std::vector<Recipe<int>>{
         {{{filterLabel("Compressed Cobblestone"), 64}}, {{filterLabel("Cobblestone"), 9}}, INT_MAX},
         {{{filterLabel("Block of Quartz"), 64}}, {{filterLabel("Nether Quartz"), 4}}, INT_MAX},
@@ -1559,14 +1563,14 @@ int main() {
       }));
 
     // crafterE
-    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "crafterE", "west", "10b", Actions::down, Actions::south,
+    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "crafterE", std::vector<AccessInv>{{"west", "10b", Actions::down, Actions::south}},
       std::vector<StockEntry>{}, INT_MAX, [](size_t slot) { return slot < 12; }, nullptr, std::vector<Recipe<int>>{
         {{{filterLabel("Raw Prime Steak"), 16}}, {{filterLabel("Raw Prime Beef"), 1}}, INT_MAX},
         {{{filterLabel("Raw Prime Bacon"), 16}}, {{filterLabel("Raw Prime Pork"), 1}}, INT_MAX}
       }));
 
     // quantumCompressor
-    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "quantumCompressor", "west", "625", Actions::down, Actions::up,
+    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "quantumCompressor", std::vector<AccessInv>{{"west", "625", Actions::down, Actions::up}},
       std::vector<StockEntry>{}, INT_MAX, nullptr, nullptr, std::vector<Recipe<int>>{
         {{{filterLabel("Matter Condenser"), 1}}, {{filterLabel("Piston"), 1}}, INT_MAX},
         {{{filterLabel("Tin Singularity"), 1}}, {{filterLabel("Tin Ingot"), 1}}, INT_MAX},
@@ -1601,7 +1605,7 @@ int main() {
       }));
 
     // alchemy
-    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "alchemy", "south", "737", Actions::south, Actions::up,
+    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "alchemy", std::vector<AccessInv>{{"south", "737", Actions::south, Actions::up}},
       std::vector<StockEntry>{}, 16, nullptr, nullptr, std::vector<Recipe<int>>{
         {{{filterName("minecraft:slime_ball"), 16}}, {{filterLabel("Cactus"), 1}}, INT_MAX},
         {{{filterLabel("Manasteel Ingot"), 16}}, {{filterLabel("Iron Ingot"), 1}}, INT_MAX},
@@ -1611,7 +1615,7 @@ int main() {
       }));
 
     // conjuration
-    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "conjuration", "south", "fff", Actions::south, Actions::down,
+    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "conjuration", std::vector<AccessInv>{{"south", "fff", Actions::south, Actions::down}},
       std::vector<StockEntry>{}, 64, nullptr, nullptr, std::vector<Recipe<int>>{
         {{{filterLabel("Mana Powder"), 16}}, {{filterLabel("Gunpowder"), 1}}, INT_MAX},
         {{{filterLabel("Psigem"), 64}}, {{filterLabel("Psigem"), 1, {}, true}}, INT_MAX},
@@ -1623,53 +1627,53 @@ int main() {
       }));
 
     // elven
-    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "elven", "south", "737", Actions::west, Actions::up,
+    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "elven", std::vector<AccessInv>{{"south", "737", Actions::west, Actions::up}},
       std::vector<StockEntry>{}, 32, nullptr, nullptr, std::vector<Recipe<int>>{
         {{{filterLabel("Elementium Ingot"), 16}}, {{filterLabel("Manasteel Ingot"), 2}}, INT_MAX},
         {{{filterLabel("Dragonstone"), 16}}, {{filterLabel("Mana Diamond"), 1}}, INT_MAX}
       }));
 
     // starlightTransmutation
-    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "starlightTransmutation", "south", "fff", Actions::west, Actions::down,
+    factory.addProcess(std::make_unique<ProcessBuffered>(factory, "starlightTransmutation", std::vector<AccessInv>{{"south", "fff", Actions::west, Actions::down}},
       std::vector<StockEntry>{}, 16, nullptr, nullptr, std::vector<Recipe<int>>{
         {{{filterLabel("End Stone"), 16}}, {{filterLabel("Sandstone"), 1, {}, true}}, INT_MAX},
         {{{filterLabel("Starmetal Ore"), 16}}, {{filterLabel("Iron Ore"), 1, {}, true}}, INT_MAX}
       }));
 
     // redstoneFluidInfuser
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "redstoneFluidInfuser", "south", "cb8", Actions::west, Actions::down,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "redstoneFluidInfuser", std::vector<AccessInv>{{"south", "cb8", Actions::west, Actions::down}},
       std::vector<size_t>{0}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{{filterLabel("Signalum Ingot"), 16}}, {{filterLabel("Shibuichi Alloy"), 1, {0}}}, INT_MAX},
         {{{filterLabel("Fluxed Electrum Ingot"), 16}}, {{filterLabel("Electrum Ingot"), 1, {0}}}, INT_MAX}
       }));
 
     // redstoneTransposer
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "redstoneFluidTransposer", "south", "00a", Actions::down, Actions::up,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "redstoneFluidTransposer", std::vector<AccessInv>{{"south", "00a", Actions::down, Actions::up}},
       std::vector<size_t>{0}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{{filterLabel("Flux Crystal"), 16}}, {{filterLabel("Diamond"), 1, {0}}}, INT_MAX},
         {{{filterLabel("Wyvern Energy Core"), 16}}, {{filterLabel("Draconic Core"), 1, {0}}}, INT_MAX}
       }));
 
     // cryotheumTransposer
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "cryotheumTransposer", "south", "06e", Actions::east, Actions::up,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "cryotheumTransposer", std::vector<AccessInv>{{"south", "06e", Actions::east, Actions::up}},
       std::vector<size_t>{0}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{}, {{filterLabel("Cinnabar Ore"), 1, {0}}}, 64}
       }));
 
     // enderium
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "enderium", "south", "cb8", Actions::up, Actions::down,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "enderium", std::vector<AccessInv>{{"south", "cb8", Actions::up, Actions::down}},
       std::vector<size_t>{0}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{{filterLabel("Enderium Ingot"), 16}}, {{filterLabel("Lead Platinum Alloy"), 1, {0}}}, 16}
       }));
 
     // lumium
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "lumium", "south", "cb8", Actions::south, Actions::down,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "lumium", std::vector<AccessInv>{{"south", "cb8", Actions::south, Actions::down}},
       std::vector<size_t>{0}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{{filterLabel("Lumium Ingot"), 16}}, {{filterLabel("Tin Silver Alloy"), 1, {0}}}, 64}
       }));
 
     // xpTransposer
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "xpTransposer", "south", "06e", Actions::south, Actions::up,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "xpTransposer", std::vector<AccessInv>{{"south", "06e", Actions::south, Actions::up}},
       std::vector<size_t>{0}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{{filterLabel("Blaze Powder"), 16}}, {{filterLabel("Sulfur"), 2, {0}}}, INT_MAX},
         {{{filterLabel("Blitz Powder"), 16}}, {{filterLabel("Niter"), 2, {0}}}, INT_MAX},
@@ -1678,37 +1682,37 @@ int main() {
       }));
 
     // reinforcedCellFrame
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "reinforcedCellFrame", "south", "00a", Actions::south, Actions::up,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "reinforcedCellFrame", std::vector<AccessInv>{{"south", "00a", Actions::south, Actions::up}},
       std::vector<size_t>{0}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{{filterLabel("Reinforced Cell Frame (Full)"), 1}}, {{filterLabel("Reinforced Cell Frame (Empty)"), 1, {0}}}, 16}
       }));
 
     // siliconInscriber
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "siliconInscriber", "south", "9ac", Actions::west, Actions::down,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "siliconInscriber", std::vector<AccessInv>{{"south", "9ac", Actions::west, Actions::down}},
       std::vector<size_t>{1}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{{filterLabel("Printed Silicon"), 16}}, {{filterLabel("Silicon Ingot"), 1, {1}}}, 16}
       }));
 
     // certusInscriber
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "certusInscriber", "south", "9ac", Actions::east, Actions::down,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "certusInscriber", std::vector<AccessInv>{{"south", "9ac", Actions::east, Actions::down}},
       std::vector<size_t>{1}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{{filterLabel("Printed Calculation Circuit"), 16}}, {{filterLabel("Pure Certus Quartz Crystal"), 1, {1}}}, 16}
       }));
 
     // diamondInscriber
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "diamondInscriber", "south", "5a8", Actions::south, Actions::up,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "diamondInscriber", std::vector<AccessInv>{{"south", "5a8", Actions::south, Actions::up}},
       std::vector<size_t>{1}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{{filterLabel("Printed Engineering Circuit"), 16}}, {{filterLabel("Diamond"), 1, {1}}}, 16}
       }));
 
     // goldInscriber
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "diamondInscriber", "south", "5a8", Actions::east, Actions::up,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "diamondInscriber", std::vector<AccessInv>{{"south", "5a8", Actions::east, Actions::up}},
       std::vector<size_t>{1}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{{filterLabel("Printed Logic Circuit"), 16}}, {{filterLabel("Gold Ingot"), 1, {1}}}, 16}
       }));
 
     // processorInscriber
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "processorInscriber", "south", "9ac", Actions::south, Actions::down,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "processorInscriber", std::vector<AccessInv>{{"south", "9ac", Actions::south, Actions::down}},
       std::vector<size_t>{0, 1, 2}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{{filterLabel("Engineering Processor"), 16}}, {
           {filterLabel("Printed Engineering Circuit"), 1, {0}},
@@ -1728,7 +1732,7 @@ int main() {
       }));
 
     // ultimateIngotA
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "ultimateIngotA", "south", "9ac", Actions::up, Actions::down,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "ultimateIngotA", std::vector<AccessInv>{{"south", "9ac", Actions::up, Actions::down}},
       std::vector<size_t>{
         0, 1, 2, 3, 4, 5, 6, 7, 8
       }, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
@@ -1746,7 +1750,7 @@ int main() {
       }));
 
     // ultimateIngotB
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "ultimateIngotB", "west", "9d8", Actions::up, Actions::east,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "ultimateIngotB", std::vector<AccessInv>{{"west", "9d8", Actions::up, Actions::east}},
       std::vector<size_t>{
         0, 1, 2, 3, 4, 5, 6, 7, 8
       }, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
@@ -1764,7 +1768,7 @@ int main() {
       }));
 
     // ultimateIngotC
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "ultimateIngotC", "east", "5a8", Actions::north, Actions::south,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "ultimateIngotC", std::vector<AccessInv>{{"east", "5a8", Actions::north, Actions::south}},
       std::vector<size_t>{
         0, 1, 2, 3, 4, 5, 6, 7, 8
       }, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
@@ -1782,7 +1786,7 @@ int main() {
       }));
 
     // ultimateIngotD
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "ultimateIngotD", "west", "5b0", Actions::up, Actions::down,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "ultimateIngotD", std::vector<AccessInv>{{"west", "5b0", Actions::up, Actions::down}},
       std::vector<size_t>{
         0, 1, 2, 3, 4, 5, 6, 7, 8
       }, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
@@ -1800,7 +1804,7 @@ int main() {
       }));
 
     // ultimateIngotE
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "ultimateIngotE", "west", "5b0", Actions::east, Actions::down,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "ultimateIngotE", std::vector<AccessInv>{{"west", "5b0", Actions::east, Actions::down}},
       std::vector<size_t>{
         0, 1, 2, 3, 4, 5, 6, 7, 8
       }, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
@@ -1818,7 +1822,7 @@ int main() {
       }));
 
     // ultimateIngotF
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "ultimateIngotE", "west", "5b0", Actions::north, Actions::down,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "ultimateIngotE", std::vector<AccessInv>{{"west", "5b0", Actions::north, Actions::down}},
       std::vector<size_t>{
         0, 1, 2, 3, 4, 5, 6, 7, 8
       }, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
@@ -1836,7 +1840,7 @@ int main() {
       }));
 
     // ultimateIngotG
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "ultimateIngotG", "west", "5b0", Actions::west, Actions::down,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "ultimateIngotG", std::vector<AccessInv>{{"west", "5b0", Actions::west, Actions::down}},
       std::vector<size_t>{
         0, 1, 2, 3, 4, 5, 6, 7, 8
       }, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
@@ -1854,7 +1858,7 @@ int main() {
       }));
 
     // ultimateIngotH
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "ultimateIngotH", "west", "625", Actions::west, Actions::up,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "ultimateIngotH", std::vector<AccessInv>{{"west", "625", Actions::west, Actions::up}},
       std::vector<size_t>{
         0, 1, 2, 3, 4, 5, 6, 7, 8
       }, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
@@ -1872,7 +1876,7 @@ int main() {
       }));
 
     // ultimateIngotI
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "ultimateIngotI", "west", "625", Actions::north, Actions::up,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "ultimateIngotI", std::vector<AccessInv>{{"west", "625", Actions::north, Actions::up}},
       std::vector<size_t>{
         0, 1, 2, 3, 4, 5, 6, 7, 8
       }, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
@@ -1890,7 +1894,7 @@ int main() {
       }));
 
     // ultimateIngot
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "ultimateIngot", "west", "625", Actions::east, Actions::up,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "ultimateIngot", std::vector<AccessInv>{{"west", "625", Actions::east, Actions::up}},
       std::vector<size_t>{
         0, 1, 2, 3, 4, 5, 6, 7, 8
       }, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
@@ -1908,7 +1912,7 @@ int main() {
       }));
 
     // rockCrusher
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "rockCrusher", "south", "547", Actions::up, Actions::down,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "rockCrusher", std::vector<AccessInv>{{"south", "547", Actions::up, Actions::down}},
       std::vector<size_t>{0}, nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{
           {filterLabel("Zirconium Dust"), 16},
@@ -1923,59 +1927,59 @@ int main() {
       }));
 
     // dragonHeart
-    factory.addProcess(std::make_unique<ProcessRedstoneEmitter>(factory, "dragonHeart", "east", "c77", Actions::up,
+    factory.addProcess(std::make_unique<ProcessRedstoneEmitter>(factory, "dragonHeart", std::vector<AccessRedstone>{{"east", "c77", Actions::up}},
       ProcessRedstoneEmitter::makeNeeded(factory, "dragonHeart", filterLabel("Dragon Heart"), 16)));
 
     // porkChop
-    factory.addProcess(std::make_unique<ProcessRedstoneEmitter>(factory, "porkChop", "east", "c77", Actions::west,
+    factory.addProcess(std::make_unique<ProcessRedstoneEmitter>(factory, "porkChop", std::vector<AccessRedstone>{{"east", "c77", Actions::west}},
       ProcessRedstoneEmitter::makeNeeded(factory, "porkChop", filterLabel("Raw Porkchop"), 16)));
 
     // cokeOven
-    factory.addProcess(std::make_unique<ProcessRedstoneEmitter>(factory, "cokeOven", "center", "f96", Actions::north,
+    factory.addProcess(std::make_unique<ProcessRedstoneEmitter>(factory, "cokeOven", std::vector<AccessRedstone>{{"center", "f96", Actions::north}},
       ProcessRedstoneEmitter::makeNeeded(factory, "cokeOven", filterLabel("Coal Coke"), 16)));
 
     // blueSlime
-    factory.addProcess(std::make_unique<ProcessRedstoneEmitter>(factory, "blueSlime", "east", "570", Actions::south,
+    factory.addProcess(std::make_unique<ProcessRedstoneEmitter>(factory, "blueSlime", std::vector<AccessRedstone>{{"east", "570", Actions::south}},
       ProcessRedstoneEmitter::makeNeeded(factory, "blueSlime", blueSlime, 16)));
 
     // primePeacock
-    factory.addProcess(std::make_unique<ProcessRedstoneEmitter>(factory, "primePeacock", "east", "570", Actions::east,
+    factory.addProcess(std::make_unique<ProcessRedstoneEmitter>(factory, "primePeacock", std::vector<AccessRedstone>{{"east", "570", Actions::east}},
       ProcessRedstoneEmitter::makeNeeded(factory, "primePeacock", filterLabel("Raw Prime Peacock"), 16)));
 
     // peacock
-    factory.addProcess(std::make_unique<ProcessRedstoneEmitter>(factory, "peacock", "east", "f98", Actions::up,
+    factory.addProcess(std::make_unique<ProcessRedstoneEmitter>(factory, "peacock", std::vector<AccessRedstone>{{"east", "f98", Actions::up}},
       ProcessRedstoneEmitter::makeNeeded(factory, "peacock", filterLabel("Raw Peacock"), 16)));
 
     // primePork
-    factory.addProcess(std::make_unique<ProcessRedstoneEmitter>(factory, "primePork", "east", "f98", Actions::west,
+    factory.addProcess(std::make_unique<ProcessRedstoneEmitter>(factory, "primePork", std::vector<AccessRedstone>{{"east", "f98", Actions::west}},
       ProcessRedstoneEmitter::makeNeeded(factory, "primePork", filterLabel("Raw Prime Pork"), 16)));
 
     // frogLegs
-    factory.addProcess(std::make_unique<ProcessRedstoneEmitter>(factory, "frogLegs", "east", "2fe", Actions::up,
+    factory.addProcess(std::make_unique<ProcessRedstoneEmitter>(factory, "frogLegs", std::vector<AccessRedstone>{{"east", "2fe", Actions::up}},
       ProcessRedstoneEmitter::makeNeeded(factory, "frogLegs", filterLabel("Raw Frog Legs"), 16)));
 
     // chevon
-    factory.addProcess(std::make_unique<ProcessRedstoneEmitter>(factory, "chevon", "east", "f98", Actions::south,
+    factory.addProcess(std::make_unique<ProcessRedstoneEmitter>(factory, "chevon", std::vector<AccessRedstone>{{"east", "f98", Actions::south}},
       ProcessRedstoneEmitter::makeNeeded(factory, "chevon", filterLabel("Raw Chevon"), 16)));
 
     // primeChevon
-    factory.addProcess(std::make_unique<ProcessRedstoneEmitter>(factory, "primeChevon", "east", "570", Actions::up,
+    factory.addProcess(std::make_unique<ProcessRedstoneEmitter>(factory, "primeChevon", std::vector<AccessRedstone>{{"east", "570", Actions::up}},
       ProcessRedstoneEmitter::makeNeeded(factory, "chevon", filterLabel("Raw Prime Chevon"), 16)));
 
     // primeMutton
-    factory.addProcess(std::make_unique<ProcessRedstoneEmitter>(factory, "primeMutton", "east", "78c", Actions::south,
+    factory.addProcess(std::make_unique<ProcessRedstoneEmitter>(factory, "primeMutton", std::vector<AccessRedstone>{{"east", "78c", Actions::south}},
       ProcessRedstoneEmitter::makeNeeded(factory, "primeMutton", filterLabel("Raw Prime Mutton"), 16)));
 
     // primeRabbit
-    factory.addProcess(std::make_unique<ProcessRedstoneEmitter>(factory, "primeRabbit", "east", "78c", Actions::west,
+    factory.addProcess(std::make_unique<ProcessRedstoneEmitter>(factory, "primeRabbit", std::vector<AccessRedstone>{{"east", "78c", Actions::west}},
       ProcessRedstoneEmitter::makeNeeded(factory, "primeRabbit", filterLabel("Raw Prime Rabbit"), 16)));
 
     // horse
-    factory.addProcess(std::make_unique<ProcessRedstoneEmitter>(factory, "horse", "east", "78c", Actions::up,
+    factory.addProcess(std::make_unique<ProcessRedstoneEmitter>(factory, "horse", std::vector<AccessRedstone>{{"east", "78c", Actions::up}},
       ProcessRedstoneEmitter::makeNeeded(factory, "horse", filterLabel("Raw Horse"), 16)));
 
     // witherSkeleton
-    factory.addProcess(std::make_unique<ProcessRedstoneEmitter>(factory, "witherSkeleton", "east", "570", Actions::north,
+    factory.addProcess(std::make_unique<ProcessRedstoneEmitter>(factory, "witherSkeleton", std::vector<AccessRedstone>{{"east", "570", Actions::north}},
       [&]() {
         if (factory.getAvail(factory.getItem(ItemFilters::Label("Bone")), true) < 16
             || factory.getAvail(factory.getItem(ItemFilters::Label("Wither Ash")), true) < 16
@@ -1988,7 +1992,7 @@ int main() {
       }));
 
     // primeBeef
-    factory.addProcess(std::make_unique<ProcessRedstoneEmitter>(factory, "primeBeef", "east", "2fe", Actions::east,
+    factory.addProcess(std::make_unique<ProcessRedstoneEmitter>(factory, "primeBeef", std::vector<AccessRedstone>{{"east", "2fe", Actions::east}},
       [&]() {
         if (factory.getAvail(factory.getItem(ItemFilters::Label("Raw Prime Beef")), true) < 16
             || factory.getAvail(factory.getItem(ItemFilters::Label("Leather")), true) < 16) {
@@ -2000,7 +2004,7 @@ int main() {
       }));
 
     // primeChicken
-    factory.addProcess(std::make_unique<ProcessRedstoneEmitter>(factory, "primeChicken", "east", "f98", Actions::north,
+    factory.addProcess(std::make_unique<ProcessRedstoneEmitter>(factory, "primeChicken", std::vector<AccessRedstone>{{"east", "f98", Actions::north}},
       [&]() {
         if (factory.getAvail(factory.getItem(ItemFilters::Label("Raw Prime Chicken")), true) < 16
             || factory.getAvail(factory.getItem(ItemFilters::Label("Feather")), true) < 16) {
@@ -2012,11 +2016,11 @@ int main() {
       }));
 
     // shulker
-    factory.addProcess(std::make_unique<ProcessRedstoneEmitter>(factory, "shulker", "east", "2fe", Actions::south,
+    factory.addProcess(std::make_unique<ProcessRedstoneEmitter>(factory, "shulker", std::vector<AccessRedstone>{{"east", "2fe", Actions::south}},
       ProcessRedstoneEmitter::makeNeeded(factory, "shulker", filterLabel("Shulker Shell"), 16)));
 
     // fusion
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "fusion", "south", "00a", Actions::east, Actions::up,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "fusion", std::vector<AccessInv>{{"south", "00a", Actions::east, Actions::up}},
       std::vector<size_t>{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21},
       nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{{filterLabel("Ultimate Control Circuit"), 16}}, {
@@ -2100,7 +2104,7 @@ int main() {
       }));
 
     // draconicFusion
-    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "draconicFusion", "west", "9d8", Actions::north, Actions::east,
+    factory.addProcess(std::make_unique<ProcessSlotted>(factory, "draconicFusion", std::vector<AccessInv>{{"west", "9d8", Actions::north, Actions::east}},
       std::vector<size_t>{0, 1, 2, 3, 4, 5},
       nullptr, std::vector<Recipe<int, std::vector<size_t>>>{
         {{{filterLabel("Awakened Draconium Block"), 16}}, {
@@ -2119,8 +2123,8 @@ int main() {
       }));
 
     // workbench
-    factory.addProcess(std::make_unique<ProcessRFToolsControlWorkbench>(factory, "workbench", "center", "1dc", "ffd",
-      Actions::south, Actions::south, Actions::up,
+    factory.addProcess(std::make_unique<ProcessRFToolsControlWorkbench>(factory, "workbench",
+      std::vector<AccessRFToolsControlWorkbench>{{"center", "1dc", "ffd", Actions::south, Actions::south, Actions::up}},
       std::vector<Recipe<std::pair<int, std::vector<NonConsumableInfo>>, std::vector<size_t>>>{
         {{}, {{filterLabel("Dragon Egg Chunk"), 3, {1, 2, 4}}}, {21, {}}},
         {{{filterLabel("Button"), 16}}, {

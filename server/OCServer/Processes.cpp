@@ -2,19 +2,20 @@
 #include <iomanip>
 #include "Processes.h"
 
-SharedPromise<std::monostate> ProcessSingleBlock::processOutput(size_t slot, int size) {
-  auto action(std::make_shared<Actions::Call>());
-  action->inv = inv;
-  action->fn = "transferItem";
-  action->args = {
-    static_cast<double>(sideCrafter),
-    static_cast<double>(sideBus),
-    static_cast<double>(size),
-    static_cast<double>(slot + 1)
-  };
-  return factory.busAllocate()->then(factory.alive, [this, action(std::move(action))](size_t busSlot) {
-    action->args.push_back(static_cast<double>(busSlot + 1));
-    factory.s.enqueueAction(client, action);
+SharedPromise<std::monostate> ProcessAccessInv::processOutput(size_t slot, int size) {
+  return factory.busAllocate()->then(factory.alive, [this, slot, size](size_t busSlot) {
+    auto &access(factory.s.getBestAccess(accesses));
+    auto action(std::make_shared<Actions::Call>());
+    action->inv = access.addr;
+    action->fn = "transferItem";
+    action->args = {
+      static_cast<double>(access.sideInv),
+      static_cast<double>(access.sideBus),
+      static_cast<double>(size),
+      static_cast<double>(slot + 1),
+      static_cast<double>(busSlot + 1)
+    };
+    factory.s.enqueueAction(access.client, action);
     return action->mapTo(std::monostate{})->finally(factory.alive, [busSlot, this]() {
       factory.busFree(busSlot, true);
     });
@@ -25,10 +26,11 @@ SharedPromise<std::monostate> ProcessSlotted::cycle() {
   if (!outFilter)
     if (factory.getDemand(recipes).empty())
       return scheduleTrivialPromise(factory.s.io);
+  auto &access(factory.s.getBestAccess(accesses));
   auto action(std::make_shared<Actions::List>());
-  action->inv = inv;
-  action->side = sideCrafter;
-  factory.s.enqueueAction(client, action);
+  action->inv = access.addr;
+  action->side = access.sideInv;
+  factory.s.enqueueAction(access.client, action);
   return action->then(factory.alive, [this](std::vector<SharedItemStack> &&items) {
     std::vector<SharedPromise<std::monostate>> promises;
     std::unordered_map<size_t, SharedItemStack> slotInfos;
@@ -84,6 +86,7 @@ SharedPromise<std::monostate> ProcessSlotted::cycle() {
           }));
         }
         promises.emplace_back(Promise<size_t>::all(extractions)->then(factory.alive, [this, sets, &recipe](std::vector<size_t> &&busSlots) {
+          auto &access(factory.s.getBestAccess(accesses));
           std::vector<SharedPromise<std::monostate>> promises;
           std::vector<SharedAction> actions;
           for (size_t i{}; i < recipe.in.size(); ++i) {
@@ -91,11 +94,11 @@ SharedPromise<std::monostate> ProcessSlotted::cycle() {
             auto eachSize(in.size / static_cast<int>(in.data.size()));
             for (size_t toSlot : in.data) {
               auto action(std::make_shared<Actions::Call>());
-              action->inv = inv;
+              action->inv = access.addr;
               action->fn = "transferItem";
               action->args = {
-                static_cast<double>(sideBus),
-                static_cast<double>(sideCrafter),
+                static_cast<double>(access.sideBus),
+                static_cast<double>(access.sideInv),
                 static_cast<double>(sets * eachSize),
                 static_cast<double>(busSlots[i] + 1),
                 static_cast<double>(toSlot + 1)
@@ -104,7 +107,7 @@ SharedPromise<std::monostate> ProcessSlotted::cycle() {
               actions.emplace_back(std::move(action));
             }
           }
-          factory.s.enqueueActionGroup(client, std::move(actions));
+          factory.s.enqueueActionGroup(access.client, std::move(actions));
           return Promise<std::monostate>::all(promises);
         })->map(factory.alive, [this, slotsToFree](auto&&) {
           factory.busFree(*slotsToFree, false);
@@ -159,6 +162,7 @@ SharedPromise<std::monostate> ProcessCraftingRobot::cycle() {
     promises.emplace_back(Promise<size_t>::all(allocatedSlots)->then(factory.alive, [
       this, sets(demand.inAvail), &recipe
     ](std::vector<size_t> &&busSlots) {
+      auto &access(factory.s.getBestAccess(accesses));
       std::vector<SharedPromise<std::monostate>> promises;
       std::vector<SharedAction> actions;
       for (size_t i{}; i < recipe.in.size(); ++i) {
@@ -178,7 +182,7 @@ SharedPromise<std::monostate> ProcessCraftingRobot::cycle() {
             action->inv = "inventory_controller";
             action->fn = "suckFromSlot";
             action->args = {
-              static_cast<double>(sideBus),
+              static_cast<double>(access.sideBus),
               static_cast<double>(busSlots[i] + 1),
               static_cast<double>(eachSize * sets)
             };
@@ -224,7 +228,7 @@ SharedPromise<std::monostate> ProcessCraftingRobot::cycle() {
         auto action(std::make_shared<Actions::Call>());
         action->inv = "inventory_controller";
         action->fn = "dropIntoSlot";
-        action->args = { static_cast<double>(sideBus), static_cast<double>(busSlots.back() + 1) };
+        action->args = { static_cast<double>(access.sideBus), static_cast<double>(busSlots.back() + 1) };
         promises.emplace_back(action->mapTo(std::monostate{}));
         actions.emplace_back(std::move(action));
       }
@@ -246,7 +250,7 @@ SharedPromise<std::monostate> ProcessCraftingRobot::cycle() {
           actions.emplace_back(std::move(action));
         }
       }
-      factory.s.enqueueActionGroup(client, std::move(actions));
+      factory.s.enqueueActionGroup(access.client, std::move(actions));
       return Promise<std::monostate>::all(promises);
     })->map(factory.alive, [this, slotsToFreeIn](auto&&) {
       factory.busFree(*slotsToFreeIn, false);
@@ -290,6 +294,7 @@ SharedPromise<std::monostate> ProcessRFToolsControlWorkbench::cycle() {
     promises.emplace_back(Promise<size_t>::all(allocatedSlots)->then(factory.alive, [
       this, sets(demand.inAvail), &recipe
     ](std::vector<size_t> &&busSlots) {
+      auto &access(factory.s.getBestAccess(accesses));
       std::vector<SharedPromise<std::monostate>> promises;
       std::vector<SharedAction> actions;
       for (size_t i{}; i < recipe.in.size(); ++i) {
@@ -298,10 +303,10 @@ SharedPromise<std::monostate> ProcessRFToolsControlWorkbench::cycle() {
         for (size_t toSlot : in.data) {
           /* transfer in */ {
             auto action(std::make_shared<Actions::Call>());
-            action->inv = invIn;
+            action->inv = access.addrIn;
             action->fn = "transferItem";
             action->args = {
-              static_cast<double>(sideBusIn),
+              static_cast<double>(access.sideBusIn),
               static_cast<double>(Actions::down),
               static_cast<double>(eachSize * sets),
               static_cast<double>(busSlots[i] + 1),
@@ -315,10 +320,10 @@ SharedPromise<std::monostate> ProcessRFToolsControlWorkbench::cycle() {
       for (auto &info : recipe.data.second) {
         /* load nonConsumable */ {
           auto action(std::make_shared<Actions::Call>());
-          action->inv = invIn;
+          action->inv = access.addrIn;
           action->fn = "transferItem";
           action->args = {
-            static_cast<double>(sideNonConsumable),
+            static_cast<double>(access.sideNonConsumable),
             static_cast<double>(Actions::down),
             64.0,
             static_cast<double>(info.storageSlot),
@@ -331,11 +336,11 @@ SharedPromise<std::monostate> ProcessRFToolsControlWorkbench::cycle() {
       for (int i{}; i < sets; ++i) {
         /* transfer out */ {
           auto action(std::make_shared<Actions::Call>());
-          action->inv = invOut;
+          action->inv = access.addrOut;
           action->fn = "transferItem";
           action->args = {
             static_cast<double>(Actions::up),
-            static_cast<double>(sideBusOut),
+            static_cast<double>(access.sideBusOut),
             64.0,
             1.0,
             static_cast<double>(busSlots.back() + 1)
@@ -347,11 +352,11 @@ SharedPromise<std::monostate> ProcessRFToolsControlWorkbench::cycle() {
       for (auto &info : recipe.data.second) {
         /* store nonConsumable */ {
           auto action(std::make_shared<Actions::Call>());
-          action->inv = invIn;
+          action->inv = access.addrIn;
           action->fn = "transferItem";
           action->args = {
             static_cast<double>(Actions::down),
-            static_cast<double>(sideNonConsumable),
+            static_cast<double>(access.sideNonConsumable),
             64.0,
             static_cast<double>(info.craftingGridSlot),
             static_cast<double>(info.storageSlot)
@@ -360,7 +365,7 @@ SharedPromise<std::monostate> ProcessRFToolsControlWorkbench::cycle() {
           actions.emplace_back(std::move(action));
         }
       }
-      factory.s.enqueueActionGroup(client, std::move(actions));
+      factory.s.enqueueActionGroup(access.client, std::move(actions));
       return Promise<std::monostate>::all(promises);
     })->map(factory.alive, [this, slotsToFreeIn](auto&&) {
       factory.busFree(*slotsToFreeIn, false);
@@ -380,14 +385,15 @@ SharedPromise<std::monostate> ProcessBuffered::cycle() {
   if (!outFilter && stockList.empty())
     if (factory.getDemand(recipes).empty())
       return scheduleTrivialPromise(factory.s.io);
+  auto &access(factory.s.getBestAccess(accesses));
   auto action(std::make_shared<Actions::List>());
-  action->inv = inv;
-  action->side = sideCrafter;
-  factory.s.enqueueAction(client, action);
+  action->inv = access.addr;
+  action->side = access.sideInv;
+  factory.s.enqueueAction(access.client, action);
   return action->then(factory.alive, [this](std::vector<SharedItemStack> &&items) {
     std::vector<SharedPromise<std::monostate>> promises;
     std::unordered_map<SharedItem, int, SharedItemHash, SharedItemEqual> inProcMap;
-    auto quota{recipeMaxInProc};
+    auto quota(recipeMaxInProc);
     for (size_t slot{}; slot < items.size(); ++slot) {
       if (slotFilter && !slotFilter(slot)) {
         items[slot] = std::make_shared<ItemStack>(ItemStack{placeholderItem, 1});
@@ -429,15 +435,16 @@ SharedPromise<std::monostate> ProcessBuffered::cycle() {
       ](size_t busSlot) {
         auto slotToFree(std::make_shared<std::optional<size_t>>(busSlot));
         return reservation.extract(busSlot)->then(factory.alive, [this, busSlot, plan(std::move(plan))](auto&&) {
+          auto &access(factory.s.getBestAccess(accesses));
           std::vector<SharedPromise<std::monostate>> promises;
           std::vector<SharedAction> actions;
           for (auto &to : plan) {
             auto action(std::make_shared<Actions::Call>());
-            action->inv = inv;
+            action->inv = access.addr;
             action->fn = "transferItem";
             action->args = {
-              static_cast<double>(sideBus),
-              static_cast<double>(sideCrafter),
+              static_cast<double>(access.sideBus),
+              static_cast<double>(access.sideInv),
               static_cast<double>(to.second),
               static_cast<double>(busSlot + 1),
               static_cast<double>(to.first + 1)
@@ -445,7 +452,7 @@ SharedPromise<std::monostate> ProcessBuffered::cycle() {
             promises.emplace_back(action->mapTo(std::monostate{}));
             actions.emplace_back(std::move(action));
           }
-          factory.s.enqueueActionGroup(client, std::move(actions));
+          factory.s.enqueueActionGroup(access.client, std::move(actions));
           return Promise<std::monostate>::all(promises);
         })->map(factory.alive, [this, slotToFree](auto&&) {
           factory.busFree(**slotToFree, false);
@@ -513,16 +520,17 @@ SharedPromise<std::monostate> ProcessBuffered::cycle() {
           promises.emplace_back(Promise<size_t>::all(extractions)->then(factory.alive, [
             this, plans(std::move(plans))
           ](std::vector<size_t> &&busSlots) {
+            auto &access(factory.s.getBestAccess(accesses));
             std::vector<SharedPromise<std::monostate>> promises;
             std::vector<SharedAction> actions;
             for (size_t i{}; i < plans.size(); ++i) {
               for (auto &to : plans[i].actions) {
                 auto action(std::make_shared<Actions::Call>());
-                action->inv = inv;
+                action->inv = access.addr;
                 action->fn = "transferItem";
                 action->args = {
-                  static_cast<double>(sideBus),
-                  static_cast<double>(sideCrafter),
+                  static_cast<double>(access.sideBus),
+                  static_cast<double>(access.sideInv),
                   static_cast<double>(to.second),
                   static_cast<double>(busSlots[i] + 1),
                   static_cast<double>(to.first + 1)
@@ -531,7 +539,7 @@ SharedPromise<std::monostate> ProcessBuffered::cycle() {
                 actions.emplace_back(std::move(action));
               }
             }
-            factory.s.enqueueActionGroup(client, std::move(actions));
+            factory.s.enqueueActionGroup(access.client, std::move(actions));
             return Promise<std::monostate>::all(promises);
           })->map(factory.alive, [this, slotsToFree](auto&&) {
             factory.busFree(*slotsToFree, false);
@@ -556,10 +564,11 @@ SharedPromise<std::monostate> ProcessScatteringWorkingSet::cycle() {
   if (!outFilter)
     if (factory.getDemand(recipes).empty())
       return scheduleTrivialPromise(factory.s.io);
+  auto &access(factory.s.getBestAccess(accesses));
   auto action(std::make_shared<Actions::List>());
-  action->inv = inv;
-  action->side = sideCrafter;
-  factory.s.enqueueAction(client, action);
+  action->inv = access.addr;
+  action->side = access.sideInv;
+  factory.s.enqueueAction(access.client, action);
   return action->then(factory.alive, [this](std::vector<SharedItemStack> &&items) {
     std::vector<SharedPromise<std::monostate>> promises;
     std::vector<bool> isInSlot(items.size());
@@ -622,22 +631,21 @@ SharedPromise<std::monostate> ProcessScatteringWorkingSet::cycle() {
           auto slotToFree(std::make_shared<std::optional<size_t>>(busSlot));
           return reservation.extract(busSlot)->then(factory.alive, [this, transferMap(std::move(transferMap)), busSlot](auto&&) {
             std::vector<SharedPromise<std::monostate>> promises;
-            std::vector<SharedAction> actions;
             for (auto &transfer : transferMap) {
+              auto &access(factory.s.getBestAccess(accesses));
               auto action(std::make_shared<Actions::Call>());
-              action->inv = inv;
+              action->inv = access.addr;
               action->fn = "transferItem";
               action->args = {
-                static_cast<double>(sideBus),
-                static_cast<double>(sideCrafter),
+                static_cast<double>(access.sideBus),
+                static_cast<double>(access.sideInv),
                 static_cast<double>(transfer.second),
                 static_cast<double>(busSlot + 1),
                 static_cast<double>(transfer.first + 1)
               };
               promises.emplace_back(action->mapTo(std::monostate{}));
-              actions.emplace_back(std::move(action));
+              factory.s.enqueueAction(access.client, std::move(action));
             }
-            factory.s.enqueueActionGroup(client, std::move(actions));
             return Promise<std::monostate>::all(promises);
           })->map(factory.alive, [this, slotToFree](auto&&) {
             factory.busFree(**slotToFree, false);
@@ -675,10 +683,11 @@ SharedPromise<std::monostate> ProcessInputless::cycle() {
   }
   if (skip)
     return scheduleTrivialPromise(factory.s.io);
+  auto &access(factory.s.getBestAccess(accesses));
   auto action(std::make_shared<Actions::List>());
-  action->inv = inv;
-  action->side = sideCrafter;
-  factory.s.enqueueAction(client, action);
+  action->inv = access.addr;
+  action->side = access.sideInv;
+  factory.s.enqueueAction(access.client, action);
   return action->then(factory.alive, [this](std::vector<SharedItemStack> &&items) {
     std::vector<SharedPromise<std::monostate>> promises;
     std::unordered_map<SharedItem, InputlessInfo, SharedItemHash, SharedItemEqual> availMap;
@@ -716,22 +725,22 @@ SharedPromise<double> ProcessReactor::getPV() {
     return result;
   } else if (hasTurbine) {
     std::vector<SharedPromise<SValue>> promises;
-    std::vector<SharedAction> actions;
     {
+      auto &access(factory.s.getBestAccess(accesses));
       auto action(std::make_shared<Actions::Call>());
-      action->inv = inv;
+      action->inv = access.addr;
       action->fn = "getHotFluidAmount";
       promises.emplace_back(action);
-      actions.emplace_back(std::move(action));
+      factory.s.enqueueAction(access.client, std::move(action));
     }
     {
+      auto &access(factory.s.getBestAccess(accesses));
       auto action(std::make_shared<Actions::Call>());
-      action->inv = inv;
+      action->inv = access.addr;
       action->fn = "getHotFluidAmountMax";
       promises.emplace_back(action);
-      actions.emplace_back(std::move(action));
+      factory.s.enqueueAction(access.client, std::move(action));
     }
-    factory.s.enqueueActionGroup(client, std::move(actions));
     return Promise<SValue>::all(promises)->then(factory.alive, [this](std::vector<SValue> &&args) {
       double pv;
       try {
@@ -744,10 +753,11 @@ SharedPromise<double> ProcessReactor::getPV() {
       return result;
     });
   } else {
+    auto &access(factory.s.getBestAccess(accesses));
     auto action(std::make_shared<Actions::Call>());
-    action->inv = inv;
+    action->inv = access.addr;
     action->fn = "getEnergyStored";
-    factory.s.enqueueAction(client, action);
+    factory.s.enqueueAction(access.client, action);
     return action->then(factory.alive, [this](SValue &&args) {
       double pv;
       try {
@@ -772,11 +782,12 @@ SharedPromise<std::monostate> ProcessReactorHysteresis::cycle() {
     if (on < 0)
       return scheduleTrivialPromise(factory.s.io);
     factory.log(name + ": " + (on ? "on" : "off"), 0xff4fff);
+    auto &access(factory.s.getBestAccess(accesses));
     auto action(std::make_shared<Actions::Call>());
-    action->inv = inv;
+    action->inv = access.addr;
     action->fn = "setActive";
     action->args = { static_cast<bool>(on) };
-    factory.s.enqueueAction(client, action);
+    factory.s.enqueueAction(access.client, action);
     return action->map(factory.alive, [this, on](auto&&) {
       wasOn = on;
       return std::monostate{};
@@ -791,11 +802,12 @@ SharedPromise<std::monostate> ProcessReactorProportional::cycle() {
     factory.log(name + ": " + std::to_string(iRod) + "%", 0xff4fff);
     if (iRod == prev)
       return scheduleTrivialPromise(factory.s.io);
+    auto &access(factory.s.getBestAccess(accesses));
     auto action(std::make_shared<Actions::Call>());
-    action->inv = inv;
+    action->inv = access.addr;
     action->fn = "setAllControlRodLevels";
     action->args = {rod};
-    factory.s.enqueueAction(client, action);
+    factory.s.enqueueAction(access.client, action);
     return action->map(factory.alive, [this, iRod](auto&&) {
       prev = iRod;
       return std::monostate{};
@@ -829,11 +841,12 @@ SharedPromise<std::monostate> ProcessReactorPID::cycle() {
       + ", O=" + std::to_string(100 - out) + "%", 0xff4fff);
     if (out == prevOut)
       return scheduleTrivialPromise(factory.s.io);
+    auto &access(factory.s.getBestAccess(accesses));
     auto action(std::make_shared<Actions::Call>());
-    action->inv = inv;
+    action->inv = access.addr;
     action->fn = "setAllControlRodLevels";
     action->args = {static_cast<double>(out)};
-    factory.s.enqueueAction(client, action);
+    factory.s.enqueueAction(access.client, action);
     return action->map(factory.alive, [this, out](auto&&) {
       prevOut = out;
       return std::monostate{};
@@ -861,11 +874,12 @@ SharedPromise<std::monostate> ProcessPlasticMixer::cycle() {
   }
   if (which == prev)
     return scheduleTrivialPromise(factory.s.io);
+  auto &access(factory.s.getBestAccess(accesses));
   auto action(std::make_shared<Actions::Call>());
-  action->inv = inv;
+  action->inv = access.addr;
   action->fn = "selectColor";
   action->args = {static_cast<double>(which)};
-  factory.s.enqueueAction(client, action);
+  factory.s.enqueueAction(access.client, action);
   return action->map(factory.alive, [this, which](auto&&) {
     prev = which;
     return std::monostate{};
@@ -875,11 +889,12 @@ SharedPromise<std::monostate> ProcessPlasticMixer::cycle() {
 SharedPromise<std::monostate> ProcessRedstoneConditional::cycle() {
   if (precondition && !precondition())
     return scheduleTrivialPromise(factory.s.io);
+  auto &access(factory.s.getBestAccess(accesses));
   auto action(std::make_shared<Actions::Call>());
-  action->inv = inv;
+  action->inv = access.addr;
   action->fn = "getInput";
-  action->args = {static_cast<double>(side)};
-  factory.s.enqueueAction(client, action);
+  action->args = {static_cast<double>(access.side)};
+  factory.s.enqueueAction(access.client, action);
   return action->then(factory.alive, [this](SValue &&arg) {
     double level;
     try {
@@ -901,11 +916,12 @@ SharedPromise<std::monostate> ProcessRedstoneEmitter::cycle() {
   int value(valueFn());
   if (value == prevValue)
     return scheduleTrivialPromise(factory.s.io);
+  auto &access(factory.s.getBestAccess(accesses));
   auto action(std::make_shared<Actions::Call>());
-  action->inv = inv;
+  action->inv = access.addr;
   action->fn = "setOutput";
-  action->args = {static_cast<double>(side), static_cast<double>(value)};
-  factory.s.enqueueAction(client, action);
+  action->args = {static_cast<double>(access.side), static_cast<double>(value)};
+  factory.s.enqueueAction(access.client, action);
   return action->map(factory.alive, [this, value](auto&&) {
     prevValue = value;
     return std::monostate{};
@@ -924,10 +940,11 @@ std::function<int()> ProcessRedstoneEmitter::makeNeeded(Factory &factory, std::s
 }
 
 SharedPromise<std::monostate> ProcessFluxNetwork::cycle() {
+  auto &access(factory.s.getBestAccess(accesses));
   auto action(std::make_shared<Actions::Call>());
-  action->inv = inv;
+  action->inv = access.addr;
   action->fn = "getEnergyInfo";
-  factory.s.enqueueAction(client, action);
+  factory.s.enqueueAction(access.client, action);
   return action->then(factory.alive, [this](SValue &&arg) {
     try {
       lastEnergy = std::get<double>(std::get<STable>(std::get<STable>(arg).at(1.0)).at("totalEnergy"));

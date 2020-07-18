@@ -6,9 +6,29 @@
 
 struct Factory;
 
+struct AccessAddr : Access {
+  std::string addr;
+  AccessAddr(std::string client, std::string addr)
+    :Access(std::move(client)), addr(std::move(addr)) {}
+};
+
+struct AccessBus : AccessAddr {
+  int sideBus;
+  AccessBus(std::string client, std::string addr, int sideBus)
+    :AccessAddr(std::move(client), std::move(addr)), sideBus(sideBus) {}
+};
+
+struct AccessInv : AccessBus {
+  int sideInv;
+  AccessInv(std::string client, std::string addr, int sideInv, int sideBus)
+    :AccessBus(std::move(client), std::move(addr), sideBus), sideInv(sideInv) {}
+};
+
 struct Process {
   Factory &factory;
-  Process(Factory &factory) :factory(factory) {}
+  std::string name;
+  Process(Factory &factory, std::string name)
+    :factory(factory), name(std::move(name)) {}
   virtual ~Process() = default;
   virtual SharedPromise<std::monostate> cycle() = 0;
 };
@@ -91,20 +111,12 @@ struct InputAvailInfo {
   InputAvailInfo() :needed() {}
 };
 
-struct BusAccess {
-  std::string client;
-  std::string inv;
-  int sideBus;
-  BusAccess(std::string client, std::string inv, int sideBus)
-    :client(std::move(client)), inv(std::move(inv)), sideBus(sideBus) {}
-};
-
 struct Factory {
   Server &s;
   const std::shared_ptr<std::monostate> alive{std::make_shared<std::monostate>()};
 private:
   int minCycleTime;
-  const std::string logClient;
+  std::vector<std::string> logClients;
   std::vector<std::pair<SharedItemFilter, int>> backups;
   std::vector<UniqueProcess> processes;
 
@@ -119,7 +131,7 @@ private:
   SharedPromise<std::monostate> updateAndBackupItems();
   void insertItem(std::vector<SharedPromise<std::monostate>> &promises, size_t slot, ItemStack stack);
 
-  std::vector<BusAccess> busAccesses;
+  std::vector<AccessBus> busAccesses;
   std::unordered_set<size_t> busAllocations;
   std::list<SharedPromise<size_t>> busWaitQueue;
   std::vector<size_t> busFreeQueue;
@@ -195,8 +207,8 @@ public:
   void busFree(size_t slot, bool hasItem);
   void busFree(const std::vector<size_t> &slots, bool hasItem);
 
-  Factory(Server &s, int minCycleTime, std::string logClient, std::vector<BusAccess> busAccesses)
-    :s(s), minCycleTime(minCycleTime), logClient(std::move(logClient)), busAccesses(std::move(busAccesses)) {}
+  Factory(Server &s, int minCycleTime, decltype(logClients) logClients, decltype(busAccesses) busAccesses)
+    :s(s), minCycleTime(minCycleTime), logClients(std::move(logClients)), busAccesses(std::move(busAccesses)) {}
   void addStorage(UniqueStorage storage) { storages.emplace_back(std::move(storage)); }
   void addBackup(SharedItemFilter filter, int size) { backups.emplace_back(std::move(filter), size); }
   void addProcess(UniqueProcess process) { processes.emplace_back(std::move(process)); }

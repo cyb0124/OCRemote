@@ -106,7 +106,7 @@ void Factory::doBusUpdate() {
   busState = BusState::RUNNING;
   auto &access(s.getBestAccess(busAccesses));
   auto action(std::make_shared<Actions::List>());
-  action->inv = access.inv;
+  action->inv = access.addr;
   action->side = access.sideBus;
   s.enqueueAction(access.client, action);
 
@@ -133,6 +133,7 @@ void Factory::doBusUpdate() {
       rThis.busWaitQueue.clear();
       endOfBusUpdate();
     }
+
     void onResult(std::monostate) override {
       if (wk.expired())
         return;
@@ -191,12 +192,14 @@ void Factory::scheduleBusUpdate() {
 
 void Factory::log(std::string msg, uint32_t color, double beep) {
   std::cout << msg << std::endl;
-  auto action(std::make_shared<Actions::Print>());
-  action->text = std::move(msg);
-  action->color = color;
-  action->beep = beep;
-  s.enqueueAction(logClient, action);
-  action->listen(std::make_shared<DummyListener<std::monostate>>());
+  for (auto &logClient : logClients) {
+    auto action(std::make_shared<Actions::Print>());
+    action->text = std::move(msg);
+    action->color = color;
+    action->beep = beep;
+    s.enqueueAction(logClient, action);
+    action->listen(std::make_shared<DummyListener<std::monostate>>());
+  }
 }
 
 ItemInfo &Factory::getOrAddItemInfo(const SharedItem &item) {
@@ -290,6 +293,8 @@ void Factory::busFree(size_t slot, bool hasItem) {
 }
 
 void Factory::busFree(const std::vector<size_t> &slots, bool hasItem) {
+  if (slots.empty())
+    return;
   if (!hasItem) {
     for (size_t slot : slots) {
       if (busWaitQueue.empty()) {
