@@ -237,13 +237,6 @@ inline SharedPromise<T> scheduleFailingPromise(F &dispatcher, std::string reason
   return result;
 }
 
-struct XNetCoord {
-  int x, y, z;
-  XNetCoord operator-(const XNetCoord &other) const {
-    return {x - other.x, y - other.y, z - other.z};
-  }
-};
-
 namespace Actions {
   enum {
     bottom = 0, down  = 0, yn = 0,
@@ -283,11 +276,6 @@ namespace Actions {
     int side;
     void dump(STable&) override;
     void onResult(SValue) override;
-  };
-
-  struct ListXN : List {
-    XNetCoord pos;
-    void dump(STable&) override;
   };
 
   struct ListME : Impl<std::vector<SharedItemStack>> {

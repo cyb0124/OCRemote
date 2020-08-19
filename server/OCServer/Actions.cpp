@@ -27,14 +27,6 @@ namespace Actions {
     Promise<std::vector<SharedItemStack>>::onResult(std::move(items));
   }
 
-  void ListXN::dump(STable &s) {
-    List::dump(s);
-    s["op"] = "listXN";
-    s["x"] = static_cast<double>(pos.x);
-    s["y"] = static_cast<double>(pos.y);
-    s["z"] = static_cast<double>(pos.z);
-  }
-
   void ListME::dump(STable &s) {
     s["op"] = "listME";
     s["inv"] = std::move(inv);

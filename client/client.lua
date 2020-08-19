@@ -210,23 +210,6 @@ while true do
               table.insert(result, item)
             end
           end
-        elseif p.op == "listXN" then
-          local pos, stacks = {x = p.x, y = p.y, z = p.z}
-          if p.side < 0 then
-            stacks = inv.getItems(pos)
-          else
-            stacks = inv.getItems(pos, p.side)
-          end
-          result = {}
-          for slot = 1, stacks.n do
-            local item = stacks[slot]
-            if item and item.name and item.size > 0 then
-              item.aspects = nil
-              result[slot] = item
-            elseif slot == stacks.n then
-              result[slot] = ''
-            end
-          end
         elseif p.op == "xferME" then
           local me = getInv(p.me)
           db.clear(1)
@@ -236,7 +219,6 @@ while true do
           me.setInterfaceConfiguration(1)
         elseif p.op == "call" then
           -- transferItem (OC): fromSide, toSide, [size, [fromSlot, [toSlot]]]
-          -- transferItem (XN): fromPos, fromSlot, size, toPos, [fromSide, [toSide]]
           result = {inv[p.fn](table.unpack(p.args))}
         else
           error("invalid op")
