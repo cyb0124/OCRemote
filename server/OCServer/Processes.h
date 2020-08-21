@@ -1,4 +1,5 @@
-#pragma once
+#ifndef _PROCESSES_H_
+#define _PROCESSES_H_
 #include "Factory.h"
 
 template<typename T>
@@ -223,3 +224,5 @@ struct ProcessFluxNetwork : ProcessAccess<AccessAddr> {
 
   SharedPromise<std::monostate> cycle() override;
 };
+
+#endif

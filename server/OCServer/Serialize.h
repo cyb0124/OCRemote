@@ -1,4 +1,5 @@
-#pragma once
+#ifndef _SERIALIZE_H_
+#define _SERIALIZE_H_
 #include <functional>
 #include <stdexcept>
 #include <optional>
@@ -80,3 +81,5 @@ public:
   Deserializer(decltype(cb) cb) :cb(std::move(cb)) { enter<Start>(); }
   void operator()(const char *data, size_t size) { s->shift(data, size); }
 };
+
+#endif

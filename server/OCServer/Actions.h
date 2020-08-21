@@ -1,4 +1,5 @@
-#pragma once
+#ifndef _ACTIONS_H_
+#define _ACTIONS_H_
 #include <vector>
 #include "Overload.h"
 #include "Item.h"
@@ -301,3 +302,5 @@ namespace Actions {
 }
 
 using SharedAction = std::shared_ptr<Actions::Base>;
+
+#endif

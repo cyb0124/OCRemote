@@ -1,4 +1,5 @@
-#pragma once
+#ifndef _FACTORY_H_
+#define _FACTORY_H_
 #include <queue>
 #include <unordered_set>
 #include "Server.h"
@@ -214,3 +215,5 @@ public:
   void addProcess(UniqueProcess process) { processes.emplace_back(std::move(process)); }
   void start();
 };
+
+#endif

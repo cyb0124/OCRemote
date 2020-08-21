@@ -1,4 +1,5 @@
-#pragma once
+#ifndef _WEAK_CALLBACK_H_
+#define _WEAK_CALLBACK_H_
 #include <memory>
 
 template<typename ThisT, typename CallbackFunctionT>
@@ -143,3 +144,5 @@ inline DeferredCallback<QueueT, decltype(&CallbackObjectT::operator())>
 makeDeferredCallback(QueueT queue, CallbackObjectT callback) {
   return {std::move(queue), std::move(callback)};
 }
+
+#endif

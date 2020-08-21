@@ -1,4 +1,5 @@
-#pragma once
+#ifndef _ITEM_H_
+#define _ITEM_H_
 #include "Serialize.h"
 
 struct Item {
@@ -86,3 +87,5 @@ template<typename F> SharedItemFilter inline filterFn(F fn) {
   };
   return std::make_shared<Impl>(std::move(fn));
 }
+
+#endif

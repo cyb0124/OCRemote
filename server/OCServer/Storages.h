@@ -1,4 +1,5 @@
-#pragma once
+#ifndef _STORAGES_H_
+#define _STORAGES_H_
 #include "Factory.h"
 
 struct StorageDrawer : public Storage {
@@ -63,3 +64,5 @@ struct ProviderME : Provider {
     :Provider(me.factory, size, -std::numeric_limits<int>::max()), me(me), item(std::move(item)) {}
   SharedPromise<std::monostate> extract(int size, size_t slot) override;
 };
+
+#endif
