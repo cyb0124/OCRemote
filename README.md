@@ -1,7 +1,7 @@
 # OCRemote
-OCRemote is an OpenComputers program by cyb0124 for item management and auto-crafting. Main features include:
-  - Extensive reuse of same machines for multiple recipes.
-  - Prioritization of recipes based on the current number of items stored. (e.g. deciding which crop to grow, or deciding which ore to process first.)
+OCRemote is an OpenComputers program by cyb0124 for storage-management and auto-crafting. Main features include:
+  - Reuse and parallelization of machines for multiple recipes.
+  - Prioritization of recipes based on the demand. (e.g. deciding which crop to grow, or deciding which ore to process first.)
   - Robust handling of multiple-input recipes to prevent clogging (e.g. for alloy furnaces).
   - Preventing recipes from using up the last seed/sapling/etc.
   - Processing excessive items (e.g. saplings from tree farm).
@@ -31,7 +31,7 @@ OCRemote doesn't analyze any tree structure for recipe dependencies; instead it 
   - **ProcessSlotted**\
     This process is intended for machines that can only run 1 recipe at once and the input items need to go into specific slot with the correct ratio. OCRemote will only execute recipes that input items match the items already in the machine.
   - **ProcessCraftingRobot**\
-    This process uses robots to handle all grid crafting recipes. It also allows non-consumable items in recipes (e.g. Pam's Harvestcraft recipes that require utensils, or master infusion crystal). Multiple robots can be used for parallelization.
+    This process uses robots to handle all grid crafting recipes. It also allows non-consumable items in recipes (e.g. Pam's Harvestcraft recipes that require cookwares, or master infusion crystal). Multiple robots can be used for parallelization.
   - **ProcessRFToolsControlWorkbench**\
     Same as ProcessCraftingRobot, but uses RFTools Control's Workbench as the crafter. In this case, non-consumable items are stored in a neighboring inventory.\
     ![Grid crafting with workbench](workbench2.gif "Grid crafting with workbench")
