@@ -1,0 +1,17 @@
+[package]
+name = "oc-remote"
+version = "0.1.0"
+authors = ["Yibo Cao <cyb@ieee.org>"]
+edition = "2018"
+
+[dependencies]
+tokio = { version = "1", features = ["rt", "net", "time", "signal", "macros"] }
+socket2 = "0"
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"
+lto = "true"
+codegen-units = 1
