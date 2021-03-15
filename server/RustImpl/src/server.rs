@@ -12,6 +12,14 @@ pub struct Server {
 impl Drop for Server {
     fn drop(&mut self) {
         self.acceptor.abort();
+        while let Some(client) = self.clients.take() {
+            self.clients = Rc::try_unwrap(client)
+                .map_err(|_| "client should be exclusively owned by server")
+                .unwrap()
+                .into_inner()
+                .next
+                .take()
+        }
     }
 }
 
