@@ -1,5 +1,6 @@
 #![feature(arc_new_cyclic)]
 
+mod lua_value;
 mod server;
 
 use server::Server;

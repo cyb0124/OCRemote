@@ -5,8 +5,9 @@ authors = ["Yibo Cao <cyb@ieee.org>"]
 edition = "2018"
 
 [dependencies]
-tokio = { version = "1", features = ["rt", "net", "time", "signal", "macros"] }
+tokio = { version = "1", features = ["rt", "net", "time", "signal", "macros", "io-util"] }
 socket2 = "0"
+fnv = "1"
 
 [profile.dev]
 panic = "abort"
