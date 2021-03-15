@@ -1,4 +1,5 @@
-use super::lua_value::Parser;
+use super::lua_value::{Parser, Value};
+use fnv::FnvHashMap;
 use socket2::{Domain, SockAddr, Socket, Type};
 use std::net::{Ipv6Addr, SocketAddr};
 use std::{cell::RefCell, fmt::Display, rc::Rc, rc::Weak};
@@ -8,6 +9,7 @@ use tokio::task::{spawn_local, JoinHandle};
 
 pub struct Server {
     clients: Option<Rc<RefCell<Client>>>,
+    logins: FnvHashMap<String, Weak<RefCell<Client>>>,
     acceptor: JoinHandle<()>,
 }
 
@@ -26,10 +28,11 @@ impl Drop for Server {
 }
 
 struct Client {
-    addr: SocketAddr,
+    log_header: String,
     next: Option<Rc<RefCell<Client>>>,
     prev: Option<Weak<RefCell<Client>>>,
     server: Weak<RefCell<Server>>,
+    login: Option<String>,
     reader: JoinHandle<()>,
 }
 
@@ -42,17 +45,42 @@ impl Drop for Client {
 
 impl Client {
     fn log(&self, x: &(impl Display + ?Sized)) {
-        println!("{}: {}", self.addr, x)
+        println!("{}: {}", self.log_header, x)
     }
 
-    fn disconnect(&mut self) {
+    fn disconnect_by_server(&mut self, server: &mut Server) {
+        if let Some(login) = &self.login {
+            server.logins.remove(login);
+        }
         if let Some(next) = self.next.as_ref() {
             next.borrow_mut().prev = self.prev.clone()
         }
         if let Some(prev) = self.prev.as_ref() {
             prev.upgrade().unwrap().borrow_mut().next = self.next.take()
         } else {
-            self.server.upgrade().unwrap().borrow_mut().clients = self.next.take()
+            server.clients = self.next.take()
+        }
+    }
+
+    fn disconnect(&mut self) {
+        let server = self.server.upgrade().unwrap();
+        let mut server = server.borrow_mut();
+        self.disconnect_by_server(&mut server)
+    }
+
+    fn on_packet(&mut self, client: &Weak<RefCell<Self>>, value: Value) -> Result<(), String> {
+        if let Some(_) = &self.login {
+            todo!()
+        } else if let Value::S(login) = value {
+            let server = self.server.upgrade().unwrap();
+            let mut server = server.borrow_mut();
+            self.log_header += &format!("[{}]", login);
+            self.log("logged in");
+            server.login(login.clone(), client.clone());
+            self.login = Some(login);
+            Ok(())
+        } else {
+            Err(format!("invalid login packet: {:?}", value))
         }
     }
 }
@@ -72,8 +100,9 @@ async fn reader_main(client: Weak<RefCell<Client>>, mut stream: OwnedReadHalf) {
                         this.disconnect()
                     }
                     Ok(n_read) => {
-                        let result = parser.shift(&data[..n_read], &mut |value| todo!());
-                        if let Err(e) = result {
+                        if let Err(e) = parser
+                            .shift(&data[..n_read], &mut |value| this.on_packet(&client, value))
+                        {
                             this.log(&format!("error decoding packet: {}", e));
                             this.disconnect()
                         }
@@ -109,10 +138,11 @@ async fn acceptor_main(server: Weak<RefCell<Server>>, listener: TcpListener) {
                 let (r, w) = stream.into_split();
                 this.clients = Some(Rc::new_cyclic(|weak| {
                     let client = Client {
-                        addr,
+                        log_header: addr.to_string(),
                         next: this.clients.take(),
                         prev: None,
                         server: server.clone(),
+                        login: None,
                         reader: spawn_local(reader_main(weak.clone(), r)),
                     };
                     if let Some(ref next) = client.next {
@@ -131,8 +161,19 @@ impl Server {
         Rc::new_cyclic(|weak| {
             RefCell::new(Server {
                 clients: None,
+                logins: FnvHashMap::default(),
                 acceptor: spawn_local(acceptor_main(weak.clone(), create_listener(port))),
             })
         })
+    }
+
+    fn login(&mut self, name: String, client: Weak<RefCell<Client>>) {
+        if let Some(old) = self.logins.insert(name, client) {
+            let old = old.upgrade().unwrap();
+            let mut old = old.borrow_mut();
+            old.log("logged in from another address");
+            old.login = None;
+            old.disconnect_by_server(self)
+        }
     }
 }
