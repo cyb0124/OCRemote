@@ -1,4 +1,4 @@
-use super::lua_value::Value;
+use super::lua_value::{Key, Table, Value};
 use std::{
     cell::RefCell,
     future::Future,
@@ -16,7 +16,7 @@ trait Action {
 struct ActionState<T: Action + ?Sized> {
     result: Option<Result<T::Output, String>>,
     waker: Option<Waker>,
-    request: T,
+    action: T,
 }
 
 pub trait ActionRequest {
@@ -27,7 +27,7 @@ pub trait ActionRequest {
 
 impl<T: Action + ?Sized> ActionRequest for ActionState<T> {
     fn make_request(&self) -> Value {
-        self.request.make_request()
+        self.action.make_request()
     }
 
     fn on_fail(&mut self, reason: String) {
@@ -66,5 +66,40 @@ impl<T: Action + ?Sized> Future for ActionFuture<T> {
             this.waker = Some(cx.waker().clone());
             Poll::Pending
         }
+    }
+}
+
+impl<T: Action> From<T> for ActionFuture<T> {
+    fn from(action: T) -> Self {
+        ActionFuture(Rc::new(RefCell::new(ActionState {
+            result: None,
+            waker: None,
+            action,
+        })))
+    }
+}
+
+pub struct Print {
+    text: String,
+    color: u32,
+    beep: Option<f64>,
+}
+
+impl Action for Print {
+    type Output = ();
+
+    fn make_request(&self) -> Value {
+        let mut result = Table::default();
+        result.insert(Key::S("op".to_owned()), Value::S("print".to_owned()));
+        result.insert(Key::S("color".to_owned()), Value::F(self.color as f64));
+        result.insert(Key::S("text".to_owned()), Value::S(self.text.clone()));
+        if let Some(beep) = self.beep {
+            result.insert(Key::S("beep".to_owned()), Value::F(beep));
+        }
+        Value::T(result)
+    }
+
+    fn parse_response(_response: Value) -> Result<(), String> {
+        Ok(())
     }
 }
