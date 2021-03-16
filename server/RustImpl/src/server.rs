@@ -1,4 +1,4 @@
-use super::action::{complete_request, Request, RequestState};
+use super::action::ActionRequest;
 use super::lua_value::{serialize, vec_to_table, Parser, Value};
 use fnv::FnvHashMap;
 use socket2::{Domain, SockAddr, Socket, Type};
@@ -46,9 +46,9 @@ struct Client {
     server: Weak<RefCell<Server>>,
     login: Option<String>,
     reader: JoinHandle<()>,
-    request_queue: VecDeque<Vec<Rc<RefCell<RequestState<dyn Request>>>>>,
+    request_queue: VecDeque<Vec<Rc<RefCell<dyn ActionRequest>>>>,
     request_queue_size: usize,
-    response_queue: VecDeque<Rc<RefCell<RequestState<dyn Request>>>>,
+    response_queue: VecDeque<Rc<RefCell<dyn ActionRequest>>>,
     writer: WriterState,
 }
 
@@ -62,11 +62,11 @@ impl Drop for Client {
         let reason = Lazy::new(|| format!("{} disconnected", self.name));
         for x in &self.request_queue {
             for x in x {
-                complete_request(x, Err(reason.clone()))
+                x.borrow_mut().on_fail(reason.clone())
             }
         }
         for x in &self.response_queue {
-            complete_request(x, Err(reason.clone()))
+            x.borrow_mut().on_fail(reason.clone())
         }
     }
 }
@@ -99,8 +99,7 @@ impl Client {
     fn on_packet(&mut self, client: &Weak<RefCell<Self>>, value: Value) -> Result<(), String> {
         if let Some(_) = &self.login {
             if let Some(x) = self.response_queue.pop_front() {
-                complete_request(&x, Ok(value));
-                Ok(())
+                x.borrow_mut().on_response(value)
             } else {
                 Err(format!("unexpected packet: {:?}", value))
             }
@@ -117,10 +116,10 @@ impl Client {
         }
     }
 
-    fn enqueue_request_group(
+    fn enqueue_action_group(
         &mut self,
         client: &Weak<RefCell<Self>>,
-        group: Vec<Rc<RefCell<RequestState<dyn Request>>>>,
+        group: Vec<Rc<RefCell<dyn ActionRequest>>>,
     ) {
         self.request_queue_size += group.len();
         self.request_queue.push_back(group);
@@ -144,7 +143,7 @@ async fn writer_main(client: Weak<RefCell<Client>>, mut stream: OwnedWriteHalf) 
                     this.request_queue_size -= group.len();
                     let mut value = Vec::new();
                     for x in group {
-                        value.push(x.borrow().request.make_request());
+                        value.push(x.borrow().make_request());
                         this.response_queue.push_back(x)
                     }
                     serialize(&Value::T(vec_to_table(value)), &mut data)
