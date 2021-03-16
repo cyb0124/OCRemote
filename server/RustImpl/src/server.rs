@@ -2,17 +2,20 @@ use super::action::ActionRequest;
 use super::lua_value::{serialize, vec_to_table, Parser, Value};
 use fnv::FnvHashMap;
 use socket2::{Domain, SockAddr, Socket, Type};
-use std::net::{Ipv6Addr, SocketAddr};
 use std::{
     cell::RefCell,
     collections::VecDeque,
     fmt::Display,
-    lazy::Lazy,
+    net::{Ipv6Addr, SocketAddr},
     rc::{Rc, Weak},
+    time::Duration,
 };
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::net::{tcp::OwnedReadHalf, tcp::OwnedWriteHalf, TcpListener};
-use tokio::task::{spawn_local, JoinHandle};
+use tokio::{
+    io::{AsyncReadExt, AsyncWriteExt},
+    net::{tcp::OwnedReadHalf, tcp::OwnedWriteHalf, TcpListener},
+    task::{spawn_local, JoinHandle},
+    time::sleep,
+};
 
 pub struct Server {
     clients: Option<Rc<RefCell<Client>>>,
@@ -50,6 +53,7 @@ struct Client {
     request_queue_size: usize,
     response_queue: VecDeque<Rc<RefCell<dyn ActionRequest>>>,
     writer: WriterState,
+    timeout: Option<JoinHandle<()>>,
 }
 
 impl Drop for Client {
@@ -57,9 +61,12 @@ impl Drop for Client {
         self.log("disconnected");
         self.reader.abort();
         if let WriterState::Writing(ref writer) = self.writer {
-            writer.abort();
+            writer.abort()
         }
-        let reason = Lazy::new(|| format!("{} disconnected", self.name));
+        if let Some(ref timeout) = self.timeout {
+            timeout.abort()
+        }
+        let reason = format!("{} disconnected", self.name);
         for x in &self.request_queue {
             for x in x {
                 x.borrow_mut().on_fail(reason.clone())
@@ -116,7 +123,7 @@ impl Client {
         }
     }
 
-    fn enqueue_action_group(
+    fn enqueue_request_group(
         &mut self,
         client: &Weak<RefCell<Self>>,
         group: Vec<Rc<RefCell<dyn ActionRequest>>>,
@@ -129,6 +136,32 @@ impl Client {
                 stream.take().unwrap(),
             )))
         }
+    }
+
+    fn update_timeout(&mut self, client: &Weak<RefCell<Self>>, restart: bool) {
+        if self.request_queue_size == 0 && self.response_queue.is_empty() {
+            if let Some(timeout) = self.timeout.take() {
+                timeout.abort()
+            }
+        } else {
+            if let Some(ref timeout) = self.timeout {
+                if restart {
+                    timeout.abort()
+                } else {
+                    return;
+                }
+            }
+            self.timeout = Some(spawn_local(timeout_main(client.clone())))
+        }
+    }
+}
+
+async fn timeout_main(client: Weak<RefCell<Client>>) {
+    sleep(Duration::from_secs(120)).await;
+    if let Some(this) = client.upgrade() {
+        let mut this = this.borrow_mut();
+        this.log("request timeout");
+        this.disconnect()
     }
 }
 
@@ -146,7 +179,8 @@ async fn writer_main(client: Weak<RefCell<Client>>, mut stream: OwnedWriteHalf) 
                         value.push(x.borrow().make_request());
                         this.response_queue.push_back(x)
                     }
-                    serialize(&Value::T(vec_to_table(value)), &mut data)
+                    serialize(&Value::T(vec_to_table(value)), &mut data);
+                    this.update_timeout(&client, false);
                 } else {
                     this.writer = WriterState::NotWriting(Some(stream));
                     break;
@@ -180,10 +214,18 @@ async fn reader_main(client: Weak<RefCell<Client>>, mut stream: OwnedReadHalf) {
                         break;
                     }
                     Ok(n_read) => {
-                        if let Err(e) = parser
-                            .shift(&data[..n_read], &mut |value| this.on_packet(&client, value))
-                        {
-                            this.log(&format!("error decoding packet: {}", e));
+                        if n_read > 0 {
+                            if let Err(e) = parser
+                                .shift(&data[..n_read], &mut |value| this.on_packet(&client, value))
+                            {
+                                this.log(&format!("error decoding packet: {}", e));
+                                this.disconnect();
+                                break;
+                            } else {
+                                this.update_timeout(&client, true)
+                            }
+                        } else {
+                            this.log("client disconnected");
                             this.disconnect();
                             break;
                         }
@@ -229,6 +271,7 @@ async fn acceptor_main(server: Weak<RefCell<Server>>, listener: TcpListener) {
                         request_queue_size: 0,
                         response_queue: VecDeque::new(),
                         writer: WriterState::NotWriting(Some(w)),
+                        timeout: None,
                     };
                     if let Some(ref next) = client.next {
                         next.borrow_mut().prev = Some(weak.clone())
@@ -259,6 +302,25 @@ impl Server {
             old.log("logged in from another address");
             old.login = None;
             old.disconnect_by_server(self)
+        }
+    }
+
+    pub fn enqueue_request_group<'a, T, Group>(
+        &self,
+        client: &str,
+        group: Vec<Rc<RefCell<dyn ActionRequest>>>,
+    ) {
+        if let Some(client) = self.logins.get(client) {
+            client
+                .upgrade()
+                .unwrap()
+                .borrow_mut()
+                .enqueue_request_group(client, group)
+        } else {
+            let reason = format!("{} isn't connected", client);
+            for x in group {
+                x.borrow_mut().on_fail(reason.clone())
+            }
         }
     }
 }

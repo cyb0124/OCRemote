@@ -1,5 +1,4 @@
 #![feature(arc_new_cyclic)]
-#![feature(once_cell)]
 
 mod action;
 mod lua_value;
