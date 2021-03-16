@@ -1,10 +1,17 @@
-use super::lua_value::{Parser, Value};
+use super::action::{complete_request, Request, RequestState};
+use super::lua_value::{serialize, vec_to_table, Parser, Value};
 use fnv::FnvHashMap;
 use socket2::{Domain, SockAddr, Socket, Type};
 use std::net::{Ipv6Addr, SocketAddr};
-use std::{cell::RefCell, fmt::Display, rc::Rc, rc::Weak};
-use tokio::io::AsyncReadExt;
-use tokio::net::{tcp::OwnedReadHalf, TcpListener};
+use std::{
+    cell::RefCell,
+    collections::VecDeque,
+    fmt::Display,
+    lazy::Lazy,
+    rc::{Rc, Weak},
+};
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::net::{tcp::OwnedReadHalf, tcp::OwnedWriteHalf, TcpListener};
 use tokio::task::{spawn_local, JoinHandle};
 
 pub struct Server {
@@ -27,25 +34,46 @@ impl Drop for Server {
     }
 }
 
+enum WriterState {
+    NotWriting(Option<OwnedWriteHalf>),
+    Writing(JoinHandle<()>),
+}
+
 struct Client {
-    log_header: String,
+    name: String,
     next: Option<Rc<RefCell<Client>>>,
     prev: Option<Weak<RefCell<Client>>>,
     server: Weak<RefCell<Server>>,
     login: Option<String>,
     reader: JoinHandle<()>,
+    request_queue: VecDeque<Vec<Rc<RefCell<RequestState<dyn Request>>>>>,
+    request_queue_size: usize,
+    response_queue: VecDeque<Rc<RefCell<RequestState<dyn Request>>>>,
+    writer: WriterState,
 }
 
 impl Drop for Client {
     fn drop(&mut self) {
         self.log("disconnected");
-        self.reader.abort()
+        self.reader.abort();
+        if let WriterState::Writing(ref writer) = self.writer {
+            writer.abort();
+        }
+        let reason = Lazy::new(|| format!("{} disconnected", self.name));
+        for x in &self.request_queue {
+            for x in x {
+                complete_request(x, Err(reason.clone()))
+            }
+        }
+        for x in &self.response_queue {
+            complete_request(x, Err(reason.clone()))
+        }
     }
 }
 
 impl Client {
     fn log(&self, x: &(impl Display + ?Sized)) {
-        println!("{}: {}", self.log_header, x)
+        println!("{}: {}", self.name, x)
     }
 
     fn disconnect_by_server(&mut self, server: &mut Server) {
@@ -70,17 +98,69 @@ impl Client {
 
     fn on_packet(&mut self, client: &Weak<RefCell<Self>>, value: Value) -> Result<(), String> {
         if let Some(_) = &self.login {
-            todo!()
+            if let Some(x) = self.response_queue.pop_front() {
+                complete_request(&x, Ok(value));
+                Ok(())
+            } else {
+                Err(format!("unexpected packet: {:?}", value))
+            }
         } else if let Value::S(login) = value {
             let server = self.server.upgrade().unwrap();
             let mut server = server.borrow_mut();
-            self.log_header += &format!("[{}]", login);
+            self.name += &format!("[{}]", login);
             self.log("logged in");
             server.login(login.clone(), client.clone());
             self.login = Some(login);
             Ok(())
         } else {
             Err(format!("invalid login packet: {:?}", value))
+        }
+    }
+
+    fn enqueue_request_group(
+        &mut self,
+        client: &Weak<RefCell<Self>>,
+        group: Vec<Rc<RefCell<RequestState<dyn Request>>>>,
+    ) {
+        self.request_queue_size += group.len();
+        self.request_queue.push_back(group);
+        if let WriterState::NotWriting(ref mut stream) = self.writer {
+            self.writer = WriterState::Writing(spawn_local(writer_main(
+                client.clone(),
+                stream.take().unwrap(),
+            )))
+        }
+    }
+}
+
+async fn writer_main(client: Weak<RefCell<Client>>, mut stream: OwnedWriteHalf) {
+    loop {
+        let mut data = Vec::new();
+        match client.upgrade() {
+            None => break,
+            Some(this) => {
+                let mut this = this.borrow_mut();
+                if let Some(group) = this.request_queue.pop_front() {
+                    this.request_queue_size -= group.len();
+                    let mut value = Vec::new();
+                    for x in group {
+                        value.push(x.borrow().request.make_request());
+                        this.response_queue.push_back(x)
+                    }
+                    serialize(&Value::T(vec_to_table(value)), &mut data)
+                } else {
+                    this.writer = WriterState::NotWriting(Some(stream));
+                    break;
+                }
+            }
+        }
+        if let Err(e) = stream.write_all(&data).await {
+            if let Some(this) = client.upgrade() {
+                let mut this = this.borrow_mut();
+                this.log(&format!("error writing: {}", e));
+                this.disconnect()
+            }
+            break;
         }
     }
 }
@@ -97,14 +177,16 @@ async fn reader_main(client: Weak<RefCell<Client>>, mut stream: OwnedReadHalf) {
                 match n_read {
                     Err(e) => {
                         this.log(&format!("error reading: {}", e));
-                        this.disconnect()
+                        this.disconnect();
+                        break;
                     }
                     Ok(n_read) => {
                         if let Err(e) = parser
                             .shift(&data[..n_read], &mut |value| this.on_packet(&client, value))
                         {
                             this.log(&format!("error decoding packet: {}", e));
-                            this.disconnect()
+                            this.disconnect();
+                            break;
                         }
                     }
                 }
@@ -138,12 +220,16 @@ async fn acceptor_main(server: Weak<RefCell<Server>>, listener: TcpListener) {
                 let (r, w) = stream.into_split();
                 this.clients = Some(Rc::new_cyclic(|weak| {
                     let client = Client {
-                        log_header: addr.to_string(),
+                        name: addr.to_string(),
                         next: this.clients.take(),
                         prev: None,
                         server: server.clone(),
                         login: None,
                         reader: spawn_local(reader_main(weak.clone(), r)),
+                        request_queue: VecDeque::new(),
+                        request_queue_size: 0,
+                        response_queue: VecDeque::new(),
+                        writer: WriterState::NotWriting(Some(w)),
                     };
                     if let Some(ref next) = client.next {
                         next.borrow_mut().prev = Some(weak.clone())
