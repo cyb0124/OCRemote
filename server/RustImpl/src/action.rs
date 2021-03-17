@@ -7,7 +7,7 @@ use std::{
     task::{Context, Poll, Waker},
 };
 
-trait Action {
+pub trait Action {
     type Output;
     fn make_request(&self) -> Value;
     fn parse_response(response: Value) -> Result<Self::Output, String>;
@@ -52,7 +52,13 @@ impl<T: Action + ?Sized> ActionRequest for ActionState<T> {
     }
 }
 
-struct ActionFuture<T: Action + ?Sized>(Rc<RefCell<ActionState<T>>>);
+pub struct ActionFuture<T: Action + ?Sized>(Rc<RefCell<ActionState<T>>>);
+
+impl<T: Action + ?Sized> Clone for ActionFuture<T> {
+    fn clone(&self) -> Self {
+        ActionFuture(self.0.clone())
+    }
+}
 
 impl<T: Action + ?Sized> Future for ActionFuture<T> {
     type Output = Result<T::Output, String>;
@@ -79,10 +85,16 @@ impl<T: Action> From<T> for ActionFuture<T> {
     }
 }
 
+impl<T: Action + 'static> From<ActionFuture<T>> for Rc<RefCell<dyn ActionRequest>> {
+    fn from(future: ActionFuture<T>) -> Self {
+        future.0
+    }
+}
+
 pub struct Print {
-    text: String,
-    color: u32,
-    beep: Option<f64>,
+    pub text: String,
+    pub color: u32,
+    pub beep: Option<f64>,
 }
 
 impl Action for Print {

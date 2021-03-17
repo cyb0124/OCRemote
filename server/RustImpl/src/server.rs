@@ -305,11 +305,7 @@ impl Server {
         }
     }
 
-    pub fn enqueue_request_group<'a, T, Group>(
-        &self,
-        client: &str,
-        group: Vec<Rc<RefCell<dyn ActionRequest>>>,
-    ) {
+    pub fn enqueue_request_group(&self, client: &str, group: Vec<Rc<RefCell<dyn ActionRequest>>>) {
         if let Some(client) = self.logins.get(client) {
             client
                 .upgrade()
