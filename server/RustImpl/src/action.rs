@@ -15,7 +15,7 @@ pub trait Action {
     fn parse_response(response: Value) -> Result<Self::Output, String>;
 }
 
-struct ActionState<T: Action + ?Sized> {
+struct ActionState<T: Action> {
     result: Option<Result<T::Output, String>>,
     waker: Option<Waker>,
     action: T,
@@ -27,7 +27,7 @@ pub trait ActionRequest {
     fn on_response(&mut self, result: Value) -> Result<(), String>;
 }
 
-impl<T: Action + ?Sized> ActionRequest for ActionState<T> {
+impl<T: Action> ActionRequest for ActionState<T> {
     fn make_request(&self) -> Value {
         self.action.make_request()
     }
@@ -54,15 +54,15 @@ impl<T: Action + ?Sized> ActionRequest for ActionState<T> {
     }
 }
 
-pub struct ActionFuture<T: Action + ?Sized>(Rc<RefCell<ActionState<T>>>);
+pub struct ActionFuture<T: Action>(Rc<RefCell<ActionState<T>>>);
 
-impl<T: Action + ?Sized> Clone for ActionFuture<T> {
+impl<T: Action> Clone for ActionFuture<T> {
     fn clone(&self) -> Self {
         ActionFuture(self.0.clone())
     }
 }
 
-impl<T: Action + ?Sized> Future for ActionFuture<T> {
+impl<T: Action> Future for ActionFuture<T> {
     type Output = Result<T::Output, String>;
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {

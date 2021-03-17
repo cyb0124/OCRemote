@@ -157,6 +157,10 @@ impl Client {
             self.timeout = Some(spawn_local(timeout_main(client.clone())))
         }
     }
+
+    fn estimate_load(&self) -> usize {
+        self.request_queue_size + self.response_queue.len()
+    }
 }
 
 async fn timeout_main(client: Weak<RefCell<Client>>) {
@@ -284,6 +288,10 @@ async fn acceptor_main(server: Weak<RefCell<Server>>, listener: TcpListener) {
     }
 }
 
+pub trait Access {
+    fn get_client(&self) -> &str;
+}
+
 impl Server {
     pub fn new(port: u16) -> Rc<RefCell<Self>> {
         Rc::new_cyclic(|weak| {
@@ -318,5 +326,27 @@ impl Server {
                 x.borrow_mut().on_fail(reason.clone())
             }
         }
+    }
+
+    fn estimate_load(&self, client: &str) -> usize {
+        if let Some(client) = self.logins.get(client) {
+            client.upgrade().unwrap().borrow().estimate_load()
+        } else {
+            usize::MAX
+        }
+    }
+
+    pub fn load_balance<'a, T: Access>(&self, iter: impl IntoIterator<Item = &'a T>) -> &'a T {
+        let mut iter = iter.into_iter();
+        let mut best_access = iter.next().unwrap();
+        let mut best_load = self.estimate_load(best_access.get_client());
+        for access in iter {
+            let load = self.estimate_load(access.get_client());
+            if load < best_load {
+                best_load = load;
+                best_access = access
+            }
+        }
+        best_access
     }
 }
