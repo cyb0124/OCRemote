@@ -6,6 +6,8 @@ edition = "2018"
 
 [dependencies]
 tokio = { version = "1", features = ["rt", "net", "time", "signal", "macros", "io-util"] }
+ordered-float = "2"
+num-traits = "0"
 socket2 = "0"
 fnv = "1"
 

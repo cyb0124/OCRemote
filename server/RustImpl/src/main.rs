@@ -2,6 +2,7 @@
 
 mod action;
 mod factory;
+mod item;
 mod lua_value;
 mod server;
 mod side;

@@ -6,6 +6,7 @@ use std::{
     cell::RefCell,
     collections::VecDeque,
     fmt::Display,
+    mem::replace,
     net::{Ipv6Addr, SocketAddr},
     rc::{Rc, Weak},
     time::Duration,
@@ -38,8 +39,9 @@ impl Drop for Server {
 }
 
 enum WriterState {
-    NotWriting(Option<OwnedWriteHalf>),
+    NotWriting(OwnedWriteHalf),
     Writing(JoinHandle<()>),
+    Invalid,
 }
 
 struct Client {
@@ -66,14 +68,14 @@ impl Drop for Client {
         if let Some(ref timeout) = self.timeout {
             timeout.abort()
         }
-        let reason = format!("{} disconnected", self.name);
+        self.name += " disconnected";
         for x in &self.request_queue {
             for x in x {
-                x.borrow_mut().on_fail(reason.clone())
+                x.borrow_mut().on_fail(self.name.clone())
             }
         }
         for x in &self.response_queue {
-            x.borrow_mut().on_fail(reason.clone())
+            x.borrow_mut().on_fail(self.name.clone())
         }
     }
 }
@@ -99,13 +101,13 @@ impl Client {
 
     fn disconnect(&mut self) {
         let server = self.server.upgrade().unwrap();
-        let mut server = server.borrow_mut();
-        self.disconnect_by_server(&mut server)
+        self.disconnect_by_server(&mut server.borrow_mut());
     }
 
     fn on_packet(&mut self, client: &Weak<RefCell<Self>>, value: Value) -> Result<(), String> {
         if let Some(_) = &self.login {
             if let Some(x) = self.response_queue.pop_front() {
+                self.update_timeout(client, true);
                 x.borrow_mut().on_response(value)
             } else {
                 Err(format!("unexpected packet: {:?}", value))
@@ -130,11 +132,12 @@ impl Client {
     ) {
         self.request_queue_size += group.len();
         self.request_queue.push_back(group);
-        if let WriterState::NotWriting(ref mut stream) = self.writer {
-            self.writer = WriterState::Writing(spawn_local(writer_main(
-                client.clone(),
-                stream.take().unwrap(),
-            )))
+        let writer = replace(&mut self.writer, WriterState::Invalid);
+        if let WriterState::NotWriting(stream) = writer {
+            self.update_timeout(client, false);
+            self.writer = WriterState::Writing(spawn_local(writer_main(client.clone(), stream)))
+        } else {
+            self.writer = writer
         }
     }
 
@@ -179,10 +182,9 @@ async fn writer_main(client: Weak<RefCell<Client>>, mut stream: OwnedWriteHalf) 
                         value.push(x.borrow().make_request());
                         this.response_queue.push_back(x)
                     }
-                    serialize(&Value::T(vec_to_table(value)), &mut data);
-                    this.update_timeout(&client, false);
+                    serialize(&Value::T(vec_to_table(value)), &mut data)
                 } else {
-                    this.writer = WriterState::NotWriting(Some(stream));
+                    this.writer = WriterState::NotWriting(stream);
                     break;
                 }
             }
@@ -221,8 +223,6 @@ async fn reader_main(client: Weak<RefCell<Client>>, mut stream: OwnedReadHalf) {
                                 this.log(&format!("error decoding packet: {}", e));
                                 this.disconnect();
                                 break;
-                            } else {
-                                this.update_timeout(&client, true)
                             }
                         } else {
                             this.log("client disconnected");
@@ -270,7 +270,7 @@ async fn acceptor_main(server: Weak<RefCell<Server>>, listener: TcpListener) {
                         request_queue: VecDeque::new(),
                         request_queue_size: 0,
                         response_queue: VecDeque::new(),
-                        writer: WriterState::NotWriting(Some(w)),
+                        writer: WriterState::NotWriting(w),
                         timeout: None,
                     };
                     if let Some(ref next) = client.next {

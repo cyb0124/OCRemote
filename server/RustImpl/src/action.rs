@@ -1,4 +1,6 @@
 use super::lua_value::{Key, Table, Value};
+use num_traits::cast::FromPrimitive;
+use ordered_float::NotNan;
 use std::{
     cell::RefCell,
     future::Future,
@@ -94,16 +96,19 @@ impl<T: Action + 'static> From<ActionFuture<T>> for Rc<RefCell<dyn ActionRequest
 pub struct Print {
     pub text: String,
     pub color: u32,
-    pub beep: Option<f64>,
+    pub beep: Option<NotNan<f64>>,
 }
 
 impl Action for Print {
     type Output = ();
 
     fn make_request(&self) -> Value {
-        let mut result = Table::default();
+        let mut result = Table::new();
         result.insert(Key::S("op".to_owned()), Value::S("print".to_owned()));
-        result.insert(Key::S("color".to_owned()), Value::F(self.color as f64));
+        result.insert(
+            Key::S("color".to_owned()),
+            Value::F(NotNan::from_u32(self.color).unwrap()),
+        );
         result.insert(Key::S("text".to_owned()), Value::S(self.text.clone()));
         if let Some(beep) = self.beep {
             result.insert(Key::S("beep".to_owned()), Value::F(beep));

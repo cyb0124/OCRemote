@@ -1,28 +1,94 @@
-use fnv::FnvHashMap;
-use std::{fmt::Display, io::Write, str::from_utf8};
+use num_traits::cast::{AsPrimitive, FromPrimitive};
+use ordered_float::NotNan;
+use std::{collections::BTreeMap, convert::TryFrom, io::Write, str::from_utf8};
 
-#[derive(PartialEq, Eq, Hash, Debug)]
+fn try_into_integer<I>(f: f64) -> Result<I, String>
+where
+    f64: AsPrimitive<I>,
+    I: AsPrimitive<f64>,
+{
+    let i = f.as_();
+    if i.as_() == f {
+        Ok(i)
+    } else {
+        Err(format!("non-integer: {}", f))
+    }
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Debug)]
 pub enum Key {
-    I(isize),
+    F(NotNan<f64>),
     S(String),
     B(bool),
 }
 
-pub type Table = FnvHashMap<Key, Value>;
+pub type Table = BTreeMap<Key, Value>;
 
-#[derive(Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Debug)]
 pub enum Value {
     N,
-    F(f64),
+    F(NotNan<f64>),
     S(String),
     B(bool),
     T(Table),
 }
 
+impl TryFrom<Value> for NotNan<f64> {
+    type Error = String;
+
+    fn try_from(value: Value) -> Result<Self, String> {
+        if let Value::F(result) = value {
+            Ok(result)
+        } else {
+            Err(format!("non-numeric: {:?}", value))
+        }
+    }
+}
+
+impl TryFrom<Value> for i32 {
+    type Error = String;
+
+    fn try_from(value: Value) -> Result<Self, String> {
+        try_into_integer(NotNan::try_from(value)?.into_inner())
+    }
+}
+
+impl TryFrom<Value> for i16 {
+    type Error = String;
+
+    fn try_from(value: Value) -> Result<Self, String> {
+        try_into_integer(NotNan::try_from(value)?.into_inner())
+    }
+}
+
+impl TryFrom<Value> for String {
+    type Error = String;
+
+    fn try_from(value: Value) -> Result<Self, String> {
+        if let Value::S(result) = value {
+            Ok(result)
+        } else {
+            Err(format!("non-string: {:?}", value))
+        }
+    }
+}
+
+impl TryFrom<Value> for bool {
+    type Error = String;
+
+    fn try_from(value: Value) -> Result<Self, String> {
+        if let Value::B(result) = value {
+            Ok(result)
+        } else {
+            Err(format!("non-boolean: {:?}", value))
+        }
+    }
+}
+
 pub fn vec_to_table(vec: Vec<Value>) -> Table {
-    let mut result = Table::default();
+    let mut result = Table::new();
     for (i, x) in vec.into_iter().enumerate() {
-        result.insert(Key::I((i + 1) as isize), x);
+        result.insert(Key::F(NotNan::from_usize(i + 1).unwrap()), x);
     }
     result
 }
@@ -30,18 +96,14 @@ pub fn vec_to_table(vec: Vec<Value>) -> Table {
 pub fn table_to_vec(table: Table) -> Result<Vec<Value>, String> {
     let mut result = Vec::new();
     for (k, v) in table.into_iter() {
-        if let Key::I(k) = k {
-            let k = k - 1;
-            if k < 0 {
-                return Err(format!("negative index: {}", k));
+        if let Key::F(k) = k {
+            let i = try_into_integer(k.into_inner() - 1.0)?;
+            if result.len() <= i {
+                result.resize_with(i + 1, || Value::N)
             }
-            let k = k as usize;
-            if result.len() <= k {
-                result.resize_with(k + 1, || Value::N)
-            }
-            result[k] = v
+            result[i] = v
         } else {
-            return Err(format!("non-integer index: {:?}", k));
+            return Err(format!("non-numeric index: {:?}", k));
         }
     }
     Ok(result)
@@ -62,7 +124,7 @@ fn serialize_bool(x: bool, out: &mut Vec<u8>) {
     out.push(if x { b'+' } else { b'-' })
 }
 
-fn serialize_num(x: &impl Display, out: &mut Vec<u8>) {
+fn serialize_num(x: NotNan<f64>, out: &mut Vec<u8>) {
     out.push(b'#');
     write!(out, "{}", x).unwrap();
     out.push(b'@')
@@ -70,7 +132,7 @@ fn serialize_num(x: &impl Display, out: &mut Vec<u8>) {
 
 fn serialize_key(x: &Key, out: &mut Vec<u8>) {
     match x {
-        Key::I(x) => serialize_num(x, out),
+        Key::F(x) => serialize_num(*x, out),
         Key::S(x) => serialize_string(x, out),
         Key::B(x) => serialize_bool(*x, out),
     }
@@ -79,7 +141,7 @@ fn serialize_key(x: &Key, out: &mut Vec<u8>) {
 pub fn serialize(x: &Value, out: &mut Vec<u8>) {
     match x {
         Value::N => out.push(b'!'),
-        Value::F(x) => serialize_num(x, out),
+        Value::F(x) => serialize_num(*x, out),
         Value::S(x) => serialize_string(x, out),
         Value::B(x) => serialize_bool(*x, out),
         Value::T(x) => {
@@ -100,11 +162,15 @@ enum State {
     S { result: Vec<u8>, escape: bool },
 }
 
-pub struct Parser(Vec<State>);
+pub struct Parser {
+    stack: Vec<State>,
+}
 
 impl Parser {
     pub fn new() -> Self {
-        Parser(vec![State::V])
+        Parser {
+            stack: vec![State::V],
+        }
     }
 
     fn reduce<T>(&mut self, mut value: Value, handler: &mut T) -> Result<(), String>
@@ -112,37 +178,31 @@ impl Parser {
         T: FnMut(Value) -> Result<(), String>,
     {
         loop {
-            match self.0.pop() {
+            match self.stack.pop() {
                 None => {
                     handler(value)?;
-                    self.0.push(State::V)
+                    self.stack.push(State::V)
                 }
                 Some(State::T { mut result, key }) => {
                     if let Some(key) = key {
                         result.insert(key, value);
-                        self.0.push(State::T { result, key: None });
-                        self.0.push(State::V)
+                        self.stack.push(State::T { result, key: None });
+                        self.stack.push(State::V)
                     } else {
                         match value {
                             Value::N => {
                                 value = Value::T(result);
                                 continue;
                             }
-                            Value::F(x) => {
-                                let i = x as isize;
-                                if i as f64 != x {
-                                    break Err(format!("non-integer key: {}", x));
-                                }
-                                self.0.push(State::T {
-                                    result,
-                                    key: Some(Key::I(i)),
-                                })
-                            }
-                            Value::S(x) => self.0.push(State::T {
+                            Value::F(x) => self.stack.push(State::T {
+                                result,
+                                key: Some(Key::F(x)),
+                            }),
+                            Value::S(x) => self.stack.push(State::T {
                                 result,
                                 key: Some(Key::S(x)),
                             }),
-                            Value::B(x) => self.0.push(State::T {
+                            Value::B(x) => self.stack.push(State::T {
                                 result,
                                 key: Some(Key::B(x)),
                             }),
@@ -161,25 +221,25 @@ impl Parser {
         T: FnMut(Value) -> Result<(), String>,
     {
         'outer: while data.len() > 0 {
-            match self.0.pop().unwrap() {
+            match self.stack.pop().unwrap() {
                 State::V => {
                     let (x, rem) = data.split_first().unwrap();
                     data = rem;
                     match x {
                         b'!' => self.reduce(Value::N, handler)?,
-                        b'#' => self.0.push(State::F(Vec::new())),
-                        b'@' => self.0.push(State::S {
+                        b'#' => self.stack.push(State::F(Vec::new())),
+                        b'@' => self.stack.push(State::S {
                             result: Vec::new(),
                             escape: false,
                         }),
                         b'+' => self.reduce(Value::B(true), handler)?,
                         b'-' => self.reduce(Value::B(false), handler)?,
                         b'=' => {
-                            self.0.push(State::T {
-                                result: Table::default(),
+                            self.stack.push(State::T {
+                                result: Table::new(),
                                 key: None,
                             });
-                            self.0.push(State::V)
+                            self.stack.push(State::V)
                         }
                         x => return Err(format!("invalid tag: {}", x)),
                     }
@@ -202,7 +262,7 @@ impl Parser {
                             result.push(*x)
                         }
                     }
-                    self.0.push(State::F(result))
+                    self.stack.push(State::F(result))
                 }
                 State::S {
                     mut result,
@@ -233,7 +293,7 @@ impl Parser {
                             result.push(*x)
                         }
                     }
-                    self.0.push(State::S { result, escape })
+                    self.stack.push(State::S { result, escape })
                 }
                 _ => unreachable!(),
             }
