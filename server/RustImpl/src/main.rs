@@ -7,8 +7,9 @@ mod lua_value;
 mod server;
 mod side;
 
-use factory::Factory;
+use factory::{BusAccess, Factory};
 use server::Server;
+use side::*;
 use std::time::Duration;
 use tokio::{signal::ctrl_c, task::LocalSet};
 
@@ -16,7 +17,16 @@ use tokio::{signal::ctrl_c, task::LocalSet};
 async fn main() {
     let tasks = LocalSet::new();
     tasks.spawn_local(async {
-        let factory = Factory::new(Server::new(1847), Duration::from_secs(1), vec!["center"]);
+        let factory = Factory::new(
+            Server::new(1847),
+            Duration::from_secs(1),
+            vec!["south"],
+            vec![BusAccess {
+                client: "south",
+                addr: "127",
+                side: UP,
+            }],
+        );
         ctrl_c().await.unwrap()
     });
     tasks.await

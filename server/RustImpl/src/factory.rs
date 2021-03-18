@@ -1,5 +1,5 @@
 use super::action::{ActionFuture, Print};
-use super::server::Server;
+use super::server::{Access, Server};
 use std::{
     cell::RefCell,
     rc::{Rc, Weak},
@@ -10,9 +10,22 @@ use tokio::{
     time::{sleep_until, Instant},
 };
 
+pub struct BusAccess {
+    pub client: &'static str,
+    pub addr: &'static str,
+    pub side: u8,
+}
+
+impl Access for BusAccess {
+    fn get_client(&self) -> &str {
+        self.client
+    }
+}
+
 pub struct Factory {
     server: Rc<RefCell<Server>>,
     log_clients: Vec<&'static str>,
+    bus_accesses: Vec<BusAccess>,
     task: JoinHandle<()>,
 }
 
@@ -27,11 +40,13 @@ impl Factory {
         server: Rc<RefCell<Server>>,
         min_cycle_time: Duration,
         log_clients: Vec<&'static str>,
+        bus_accesses: Vec<BusAccess>,
     ) -> Rc<RefCell<Factory>> {
         Rc::new_cyclic(|weak| {
             RefCell::new(Factory {
                 server,
                 log_clients,
+                bus_accesses,
                 task: spawn_local(factory_main(weak.clone(), min_cycle_time)),
             })
         })

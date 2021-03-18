@@ -85,6 +85,18 @@ impl TryFrom<Value> for bool {
     }
 }
 
+impl TryFrom<Value> for Table {
+    type Error = String;
+
+    fn try_from(value: Value) -> Result<Self, String> {
+        if let Value::T(result) = value {
+            Ok(result)
+        } else {
+            Err(format!("non-table: {:?}", value))
+        }
+    }
+}
+
 pub fn vec_to_table(vec: Vec<Value>) -> Table {
     let mut result = Table::new();
     for (i, x) in vec.into_iter().enumerate() {

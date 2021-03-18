@@ -36,13 +36,13 @@ impl Item {
     }
 }
 
-struct ItemStack {
+pub struct ItemStack {
     item: Rc<Item>,
     size: i32,
 }
 
 impl ItemStack {
-    fn parse(value: Value) -> Result<Self, String> {
+    pub fn parse(value: Value) -> Result<Self, String> {
         if let Value::T(mut table) = value {
             let mut get = |key: &'static str| {
                 table

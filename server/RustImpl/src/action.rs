@@ -1,8 +1,10 @@
-use super::lua_value::{Key, Table, Value};
+use super::item::ItemStack;
+use super::lua_value::{table_to_vec, Key, Table, Value};
 use num_traits::cast::FromPrimitive;
 use ordered_float::NotNan;
 use std::{
     cell::RefCell,
+    convert::TryInto,
     future::Future,
     pin::Pin,
     rc::Rc,
@@ -118,5 +120,36 @@ impl Action for Print {
 
     fn parse_response(_response: Value) -> Result<(), String> {
         Ok(())
+    }
+}
+
+pub struct List {
+    pub addr: &'static str,
+    pub side: u8,
+}
+
+impl Action for List {
+    type Output = Vec<Option<ItemStack>>;
+
+    fn make_request(&self) -> Value {
+        let mut result = Table::new();
+        result.insert(Key::S("op".to_owned()), Value::S("list".to_owned()));
+        result.insert(
+            Key::S("side".to_owned()),
+            Value::F(NotNan::from_u8(self.side).unwrap()),
+        );
+        result.insert(Key::S("inv".to_owned()), Value::S(self.addr.to_owned()));
+        Value::T(result)
+    }
+
+    fn parse_response(response: Value) -> Result<Vec<Option<ItemStack>>, String> {
+        table_to_vec(response.try_into()?)?
+            .into_iter()
+            .map(|x| match x {
+                Value::N => Ok(None),
+                x @ Value::T(_) => Ok(Some(ItemStack::parse(x)?)),
+                x => Err(format!("invalid item: {:?}", x)),
+            })
+            .collect()
     }
 }
