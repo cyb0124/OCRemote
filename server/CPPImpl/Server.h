@@ -36,7 +36,7 @@ private:
   void onPacket(SValue);
   void read();
   void send();
-  void updateTimer();
+  void updateTimer(bool restart);
 public:
   ~Client();
   Client(Server &s, boost::asio::ip::tcp::socket socket);
