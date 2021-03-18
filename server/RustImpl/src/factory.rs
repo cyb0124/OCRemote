@@ -1,5 +1,7 @@
 use super::action::{ActionFuture, Print};
+use super::item::Item;
 use super::server::{Access, Server};
+use fnv::FnvHashMap;
 use std::{
     cell::RefCell,
     rc::{Rc, Weak},
@@ -22,11 +24,31 @@ impl Access for BusAccess {
     }
 }
 
+pub struct InvAccess {
+    pub client: &'static str,
+    pub addr: &'static str,
+    pub bus_side: u8,
+    pub inv_side: u8,
+}
+
+impl Access for InvAccess {
+    fn get_client(&self) -> &str {
+        self.client
+    }
+}
+
+struct ItemInfo {
+    // TODO:
+}
+
 pub struct Factory {
     server: Rc<RefCell<Server>>,
     log_clients: Vec<&'static str>,
     bus_accesses: Vec<BusAccess>,
     task: JoinHandle<()>,
+    items: FnvHashMap<Rc<Item>, ItemInfo>,
+    name_map: FnvHashMap<String, Rc<Item>>,
+    label_map: FnvHashMap<String, Rc<Item>>,
 }
 
 impl Drop for Factory {
@@ -48,6 +70,9 @@ impl Factory {
                 log_clients,
                 bus_accesses,
                 task: spawn_local(factory_main(weak.clone(), min_cycle_time)),
+                items: FnvHashMap::default(),
+                name_map: FnvHashMap::default(),
+                label_map: FnvHashMap::default(),
             })
         })
     }
@@ -85,6 +110,15 @@ async fn factory_main(factory: Weak<RefCell<Factory>>, min_cycle_time: Duration)
         }
 
         // TODO:
+
+        if let Some(this) = factory.upgrade() {
+            let mut this = this.borrow_mut();
+            this.items.clear();
+            this.name_map.clear();
+            this.label_map.clear()
+        } else {
+            break;
+        }
         sleep_until(cycle_start_time + min_cycle_time).await;
         cycle_start_last = Some(cycle_start_time)
     }

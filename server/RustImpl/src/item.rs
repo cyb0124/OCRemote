@@ -4,7 +4,7 @@ use ordered_float::NotNan;
 use std::{convert::TryInto, rc::Rc};
 
 #[derive(PartialEq, Eq, Hash)]
-struct Item {
+pub struct Item {
     name: String,
     label: String,
     damage: i16,
