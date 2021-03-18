@@ -1,3 +1,4 @@
+use super::access::Access;
 use super::action::ActionRequest;
 use super::lua_value::{serialize, vec_to_table, Parser, Value};
 use fnv::FnvHashMap;
@@ -286,10 +287,6 @@ async fn acceptor_main(server: Weak<RefCell<Server>>, listener: TcpListener) {
             }
         }
     }
-}
-
-pub trait Access {
-    fn get_client(&self) -> &str;
 }
 
 impl Server {

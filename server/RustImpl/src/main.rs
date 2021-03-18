@@ -1,13 +1,16 @@
 #![feature(arc_new_cyclic)]
 
+mod access;
 mod action;
 mod factory;
 mod item;
 mod lua_value;
 mod server;
 mod side;
+mod storage;
 
-use factory::{BusAccess, Factory};
+use access::BusAccess;
+use factory::Factory;
 use server::Server;
 use side::*;
 use std::time::Duration;
