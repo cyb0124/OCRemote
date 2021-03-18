@@ -242,7 +242,7 @@ async fn reader_main(client: Weak<RefCell<Client>>, mut stream: OwnedReadHalf) {
 }
 
 fn create_listener(port: u16) -> TcpListener {
-    let socket = Socket::new(Domain::ipv6(), Type::stream(), None).unwrap();
+    let socket = Socket::new(Domain::IPV6, Type::STREAM, None).unwrap();
     socket.set_reuse_address(true).unwrap();
     socket.set_only_v6(false).unwrap();
     socket
@@ -253,7 +253,7 @@ fn create_listener(port: u16) -> TcpListener {
         .unwrap();
     socket.set_nonblocking(true).unwrap();
     socket.listen(128).unwrap();
-    TcpListener::from_std(socket.into_tcp_listener()).unwrap()
+    TcpListener::from_std(socket.into()).unwrap()
 }
 
 async fn acceptor_main(server: Weak<RefCell<Server>>, listener: TcpListener) {
