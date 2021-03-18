@@ -88,7 +88,6 @@ void Client::read() {
         s.removeClient(*this);
       }
       if (!wk.expired()) {
-        updateTimer();
         read();
       }
     }
@@ -103,6 +102,7 @@ void Client::onPacket(SValue p) {
     } else {
       responseQueue.front()->onResult(std::move(p));
       responseQueue.pop_front();
+      updateTimer(true);
     }
   } else {
     login = std::get<std::string>(p);
@@ -178,7 +178,7 @@ void Client::send() {
       }
     })
   );
-  updateTimer();
+  updateTimer(false);
 }
 
 void Client::enqueueActionGroup(std::vector<SharedAction> actions) {
@@ -191,10 +191,10 @@ size_t Client::countPending() const {
   return sendQueueTotal + responseQueue.size();
 }
 
-void Client::updateTimer() {
+void Client::updateTimer(bool restart) {
   if (sendQueue.empty() && responseQueue.empty()) {
     responseTimer.reset();
-  } else {
+  } else if (restart || !responseTimer) {
     responseTimer = std::make_shared<boost::asio::steady_timer>(s.io.io);
     responseTimer->expires_after(timeout());
     responseTimer->async_wait(makeWeakCallback(responseTimer, [this](const boost::system::error_code&) {
