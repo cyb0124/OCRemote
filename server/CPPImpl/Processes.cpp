@@ -423,7 +423,7 @@ SharedPromise<std::monostate> ProcessBuffered::cycle() {
       if (!resolved)
         continue;
       auto &inProc{inProcMap[resolved]};
-      int toProc{std::min({entry.toStock - inProc, factory.getAvail(resolved, entry.allowBackup)})};
+      int toProc{std::min({entry.toStock - inProc, std::max(0, factory.getAvail(resolved, entry.allowBackup) - entry.extraBackup)})};
       if (toProc <= 0)
         continue;
       auto plan{insertIntoInventory(items, resolved, toProc)};
