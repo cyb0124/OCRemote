@@ -26,3 +26,18 @@ impl Access for InvAccess {
         self.client
     }
 }
+
+pub struct MEAccess {
+    pub client: &'static str,
+    pub transposer_addr: &'static str,
+    pub me_addr: &'static str,
+    pub bus_side: u8,
+    pub me_side: u8,
+    pub interface_slot: usize,
+}
+
+impl Access for MEAccess {
+    fn get_client(&self) -> &str {
+        self.client
+    }
+}
