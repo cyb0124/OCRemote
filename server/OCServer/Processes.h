@@ -79,10 +79,10 @@ struct ProcessRFToolsControlWorkbench : ProcessAccess<AccessRFToolsControlWorkbe
 
 struct StockEntry {
   SharedItemFilter item;
-  int toStock;
+  int toStock, extraBackup;
   bool allowBackup;
-  StockEntry(SharedItemFilter item, int toStock, bool allowBackup = false)
-    :item(std::move(item)), toStock(toStock), allowBackup(allowBackup) {}
+  StockEntry(SharedItemFilter item, int toStock, bool allowBackup = false, int extraBackup = 0)
+    :item(std::move(item)), toStock(toStock), extraBackup(extraBackup), allowBackup(allowBackup) {}
 };
 
 struct ProcessBuffered : ProcessAccessInv {
