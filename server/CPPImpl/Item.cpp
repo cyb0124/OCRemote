@@ -93,10 +93,12 @@ InsertResult insertIntoInventory(std::vector<SharedItemStack> &inventory, const 
         firstEmptySlot.emplace(slot);
     } else if (*stack->item == *item) {
       int toProc{std::min(size, item->maxSize - stack->size)};
-      stack->size += toProc;
-      result.totalSize += toProc;
-      result.actions.emplace_back(slot, toProc);
-      size -= toProc;
+      if (toProc) {
+        stack->size += toProc;
+        result.totalSize += toProc;
+        result.actions.emplace_back(slot, toProc);
+        size -= toProc;
+      }
     }
   }
   if (size && firstEmptySlot.has_value()) {
