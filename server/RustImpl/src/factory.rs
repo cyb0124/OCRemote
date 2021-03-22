@@ -95,16 +95,6 @@ impl Factory {
         }
     }
 
-    fn reset(&mut self) {
-        for storage in &self.storages {
-            storage.borrow_mut().cleanup()
-        }
-        self.items.clear();
-        self.label_map.clear();
-        self.name_map.clear();
-        self.n_bus_updates = 0;
-    }
-
     pub fn register_stored_item(&mut self, item: Rc<Item>) -> &mut ItemInfo {
         match self.items.entry(item) {
             Entry::Occupied(x) => x.into_mut().get_mut(),
@@ -247,6 +237,15 @@ impl Factory {
             }
         }
     }
+
+    fn end_of_cycle(&mut self) {
+        for storage in &self.storages {
+            storage.borrow_mut().cleanup()
+        }
+        self.items.clear();
+        self.label_map.clear();
+        self.name_map.clear();
+    }
 }
 
 async fn factory_main(
@@ -273,7 +272,7 @@ async fn factory_main(
                 color: 0xFFFFFF,
                 beep: None,
             });
-            this.reset();
+            this.n_bus_updates = 0;
         }
         let result = async {
             update_storages(&factory).await?;
@@ -287,7 +286,7 @@ async fn factory_main(
             bus_task = this.bus_task.take();
             if let Err(e) = result {
                 this.log(Print {
-                    text: e,
+                    text: format!("cycle failed: {}", e),
                     color: 0xFF0000,
                     beep: Some(NotNan::new(880.0).unwrap()),
                 })
@@ -301,6 +300,7 @@ async fn factory_main(
         if let Some(task) = bus_task {
             task.into_future().await?
         }
+        alive(&factory)?.borrow_mut().end_of_cycle();
         sleep_until(cycle_start_time + min_cycle_time).await;
         cycle_start_last = Some(cycle_start_time)
     }
@@ -350,7 +350,7 @@ async fn bus_main(factory: Weak<RefCell<Factory>>) -> Result<(), String> {
         let mut this = this.borrow_mut();
         match result {
             Err(e) => {
-                let e = format!("bus: {}", e);
+                let e = format!("bus update failed: {}", e);
                 this.log(Print {
                     text: e.clone(),
                     color: 0xFF0000,
