@@ -41,7 +41,7 @@ pub struct Factory {
     bus_allocations: FnvHashSet<usize>,
     bus_wait_queue: VecDeque<LocalSender<usize>>,
     bus_free_queue: Vec<usize>,
-    bus_run_count: usize,
+    n_bus_updates: usize,
 }
 
 impl Factory {
@@ -69,7 +69,7 @@ impl Factory {
                 bus_allocations: FnvHashSet::default(),
                 bus_wait_queue: VecDeque::new(),
                 bus_free_queue: Vec::new(),
-                bus_run_count: 0,
+                n_bus_updates: 0,
             })
         })
     }
@@ -102,7 +102,7 @@ impl Factory {
         self.items.clear();
         self.label_map.clear();
         self.name_map.clear();
-        self.bus_run_count = 0;
+        self.n_bus_updates = 0;
     }
 
     pub fn register_stored_item(&mut self, item: Rc<Item>) -> &mut ItemInfo {
@@ -180,7 +180,6 @@ impl Factory {
         let (sender, receiver) = make_local_one_shot();
         self.bus_wait_queue.push_back(sender);
         if self.bus_task.is_none() {
-            self.bus_run_count += 1;
             self.bus_task = Some(spawn(bus_main(factory.clone())))
         }
         receiver
@@ -196,11 +195,17 @@ impl Factory {
 
     fn bus_deposit(
         &mut self,
+        factory: &Weak<RefCell<Factory>>,
         slots: impl IntoIterator<Item = usize>,
     ) {
         if self.bus_task.is_none() {
+            let mut ever_freed = false;
             for slot in slots {
                 self.bus_allocations.remove(&slot);
+                ever_freed = true
+            }
+            if ever_freed {
+                self.bus_task = Some(spawn(bus_main(factory.clone())))
             }
         } else {
             self.bus_free_queue.extend(slots)
@@ -258,9 +263,9 @@ async fn factory_main(
             let mut text = format!("n_cycles={}", n_cycles);
             if let Some(last) = cycle_start_last {
                 text += &format!(
-                    ", cycle_time={:.03}, bus_run_count={}",
+                    ", cycle_time={:.03}, n_bus_updates={}",
                     (cycle_start_time - last).as_secs_f32(),
-                    this.bus_run_count
+                    this.n_bus_updates
                 )
             }
             this.log(Print {
@@ -275,25 +280,24 @@ async fn factory_main(
             run_processes(&factory).await
         }
         .await;
-        let bus_task = {
+        let mut bus_task;
+        {
             let this = alive(&factory)?;
             let mut this = this.borrow_mut();
+            bus_task = this.bus_task.take();
             if let Err(e) = result {
                 this.log(Print {
                     text: e,
                     color: 0xFF0000,
                     beep: Some(NotNan::new(880.0).unwrap()),
-                });
-                this.bus_ever_run = true
+                })
             } else {
                 n_cycles += 1;
+                if bus_task.is_none() && this.n_bus_updates == 0 {
+                    bus_task = Some(spawn(bus_main(factory.clone())))
+                }
             }
-            if this.bus_ever_run {
-                this.bus_task.take()
-            } else {
-                Some(spawn(bus_main(factory.clone())))
-            }
-        };
+        }
         if let Some(task) = bus_task {
             task.into_future().await?
         }
@@ -355,22 +359,19 @@ async fn bus_main(factory: Weak<RefCell<Factory>>) -> Result<(), String> {
                 for sender in take(&mut this.bus_wait_queue) {
                     sender.send(Err(e.clone()))
                 }
-                break Ok(())
+                break Ok(());
             }
-            Ok(done) => {
-                if done {
-                    break Ok(())
-                }
-            }
+            Ok(true) => (),
+            Ok(false) => break Ok(()),
         }
-        this.bus_run_count += 1
     }
 }
 
 async fn bus_update(factory: &Weak<RefCell<Factory>>) -> Result<bool, String> {
     let action = {
         let this = alive(factory)?;
-        let this = this.borrow();
+        let mut this = this.borrow_mut();
+        this.n_bus_updates += 1;
         let server = this.server.borrow_mut();
         let access = server.load_balance(&this.bus_accesses);
         let action = ActionFuture::from(List {
@@ -401,11 +402,14 @@ async fn bus_update(factory: &Weak<RefCell<Factory>>) -> Result<bool, String> {
             this.bus_wait_queue.pop_front().unwrap().send(Ok(slot))
         }
     }
+    let ever_deposited = !tasks.is_empty();
     join_all(tasks).await?;
     let this = alive(factory)?;
     let mut this = this.borrow_mut();
+    let mut ever_freed = false;
     for slot in take(&mut this.bus_free_queue) {
         this.bus_allocations.remove(&slot);
+        ever_freed = true
     }
-    Ok(this.bus_wait_queue.is_empty())
+    Ok(ever_freed || ever_deposited && !this.bus_wait_queue.is_empty())
 }
