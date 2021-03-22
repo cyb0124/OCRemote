@@ -259,12 +259,12 @@ async fn factory_main(
         {
             let this = alive(&factory)?;
             let mut this = this.borrow_mut();
-            let mut text = format!("n_cycles={}", n_cycles);
+            let mut text = format!("Cycle {}", n_cycles);
             if let Some(last) = cycle_start_last {
                 text += &format!(
-                    ", cycle_time={:.03}, n_bus_updates={}",
-                    (cycle_start_time - last).as_secs_f32(),
-                    this.n_bus_updates
+                    ", nBusUpdates={}, cycleTime={:.03}",
+                    this.n_bus_updates,
+                    (cycle_start_time - last).as_secs_f32()
                 )
             }
             this.log(Print {
@@ -359,11 +359,12 @@ async fn bus_main(factory: Weak<RefCell<Factory>>) -> Result<(), String> {
                 for sender in take(&mut this.bus_wait_queue) {
                     sender.send(Err(e.clone()))
                 }
-                break Ok(());
             }
-            Ok(true) => (),
-            Ok(false) => break Ok(()),
+            Ok(true) => continue,
+            Ok(false) => (),
         }
+        this.bus_task = None;
+        break Ok(());
     }
 }
 
