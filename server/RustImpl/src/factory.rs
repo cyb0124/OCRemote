@@ -141,10 +141,9 @@ impl Factory {
 
     fn log(&self, action: Print) {
         println!("{}", action.text);
-        let action = ActionFuture::from(action);
         let server = self.server.borrow();
         for client in &self.log_clients {
-            server.enqueue_request_group(client, vec![action.clone().into()]);
+            server.enqueue_request_group(client, vec![ActionFuture::from(action.clone()).into()]);
         }
     }
 

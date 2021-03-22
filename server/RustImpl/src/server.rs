@@ -165,7 +165,7 @@ async fn writer_main(client: Weak<RefCell<Client>>, mut stream: OwnedWriteHalf) 
                 this.request_queue_size -= group.len();
                 let mut value = Vec::new();
                 for x in group {
-                    value.push(x.borrow().make_request());
+                    value.push(x.borrow_mut().make_request());
                     this.response_queue.push_back(x)
                 }
                 serialize(&Value::T(vec_to_table(value)), &mut data)
