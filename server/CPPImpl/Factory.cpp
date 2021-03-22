@@ -49,7 +49,6 @@ void Factory::endOfCycle() {
   items.clear();
   nameMap.clear();
   labelMap.clear();
-  busEverUpdated = false;
   cycleDelayTimer = std::make_shared<boost::asio::steady_timer>(s.io.io);
   cycleDelayTimer->expires_at(cycleStartTime + std::chrono::milliseconds(minCycleTime));
   cycleDelayTimer->async_wait(makeWeakCallback(cycleDelayTimer, [this](const boost::system::error_code &ec) {
@@ -80,6 +79,7 @@ SharedPromise<std::monostate> Factory::updateAndBackupItems() {
 }
 
 void Factory::insertItem(std::vector<SharedPromise<std::monostate>> &promises, size_t slot, ItemStack stack) {
+  log(stack.item->label + "*" + std::to_string(stack.size), 0xffa500);
   while (stack.size > 0) {
     Storage *bestStorage{};
     int bestPriority;
@@ -93,7 +93,7 @@ void Factory::insertItem(std::vector<SharedPromise<std::monostate>> &promises, s
       }
     }
     if (!bestStorage) {
-      promises.emplace_back(scheduleFailingPromise<std::monostate>(s.io, "Storage is full"));
+      promises.emplace_back(scheduleFailingPromise<std::monostate>(s.io, "storage is full"));
       break;
     }
     auto result{bestStorage->sink(stack, slot)};
@@ -103,6 +103,7 @@ void Factory::insertItem(std::vector<SharedPromise<std::monostate>> &promises, s
 }
 
 void Factory::doBusUpdate() {
+  ++nBusUpdates;
   busState = BusState::RUNNING;
   auto &access(s.getBestAccess(busAccesses));
   auto action(std::make_shared<Actions::List>());
@@ -154,8 +155,7 @@ void Factory::doBusUpdate() {
         continue;
       auto &stack(items[i]);
       if (stack) {
-        log(stack->item->label + "*" + std::to_string(stack->size), 0xffa500);
-        insertItem(promises, i, *stack);
+        insertItem(promises, i, std::move(*stack));
         everInserted = true;
       } else {
         freeSlots.emplace_back(i);
@@ -183,7 +183,6 @@ void Factory::doBusUpdate() {
 }
 
 void Factory::scheduleBusUpdate() {
-  busEverUpdated = true;
   if (busState == BusState::IDLE)
     doBusUpdate();
   else
@@ -316,11 +315,12 @@ void Factory::busFree(const std::vector<size_t> &slots, bool hasItem) {
 void Factory::start() {
   auto now(std::chrono::steady_clock::now());
   std::ostringstream os;
-  os << "Cycle " << currentCycleNum << ", lastCycleTime=";
+  os << "n_cycles=" << nCycles << ", n_bus_updates=" << nBusUpdates << ", cycle_time=";
   os.precision(3);
   os << std::fixed << std::chrono::duration_cast<std::chrono::milliseconds>(now - cycleStartTime).count() * 1E-3f;
   log(os.str());
   cycleStartTime = now;
+  nBusUpdates = 0;
 
   struct TailListener : Listener<std::monostate> {
     Factory &rThis;
@@ -330,7 +330,7 @@ void Factory::start() {
 
     void onFail(std::string cause) override {
       if (wk.expired()) return;
-      rThis.log("Cycle failed: " + cause, 0xff0000u, 880.f);
+      rThis.log("cycle failed: " + cause, 0xff0000u, 880.f);
       if (rThis.busState == BusState::IDLE)
         rThis.endOfCycle();
       else
@@ -339,9 +339,9 @@ void Factory::start() {
 
     void onResult(std::monostate result) override {
       if (wk.expired()) return;
-      ++rThis.currentCycleNum;
+      ++rThis.nCycles;
       if (rThis.busState == BusState::IDLE) {
-        if (rThis.busEverUpdated) {
+        if (rThis.nBusUpdates) {
           rThis.endOfCycle();
         } else {
           rThis.endOfCycleAfterBusUpdate = true;

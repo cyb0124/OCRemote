@@ -4,7 +4,7 @@
 
 template<typename ThisT, typename CallbackFunctionT>
 class WeakCallback {
-  static_assert(sizeof(ThisT) < 0, "Deduction Failed");
+  static_assert(sizeof(ThisT) < 0, "deduction Failed");
 };
 
 template<typename ThisT, typename CallbackObjectT, typename ...Ts>
@@ -36,7 +36,7 @@ makeWeakCallback(std::weak_ptr<ThisT> pThis, CallbackObjectT callback) {
 
 template<typename ThisT, typename QueueT, typename CallbackFunctionT>
 class WeakDeferredCallback {
-  static_assert(sizeof(ThisT) < 0, "Deduction Failed");
+  static_assert(sizeof(ThisT) < 0, "deduction Failed");
 };
 
 template<typename ThisT, typename CallbackObjectT, typename ...Ts>
@@ -119,7 +119,7 @@ public:
 
 template<typename QueueT, typename CallbackFunctionT>
 class DeferredCallback {
-  static_assert(sizeof(QueueT) < 0, "Deduction Failed");
+  static_assert(sizeof(QueueT) < 0, "deduction Failed");
 };
 
 template<typename QueueT, typename CallbackObjectT, typename ...Ts>
