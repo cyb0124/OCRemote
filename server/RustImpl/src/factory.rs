@@ -3,7 +3,7 @@ use super::action::{ActionFuture, List, Print};
 use super::item::{Filter, Item, ItemStack};
 use super::process::Process;
 use super::server::Server;
-use super::storage::{DepositResult, Provider, Storage};
+use super::storage::{DepositResult, Extractor, Provider, Storage};
 use super::utils::{
     alive, join_all, make_local_one_shot, spawn, AbortOnDrop, LocalReceiver, LocalSender,
 };
@@ -11,6 +11,7 @@ use fnv::{FnvHashMap, FnvHashSet};
 use ordered_float::NotNan;
 use std::{
     cell::RefCell,
+    cmp::min,
     collections::{hash_map::Entry, BinaryHeap, VecDeque},
     mem::take,
     rc::{Rc, Weak},
@@ -24,6 +25,50 @@ pub struct ItemInfo {
     providers: BinaryHeap<Provider>,
 }
 
+impl ItemInfo {
+    pub fn provide(&mut self, provider: Provider) {
+        let n_avail = provider.n_avail.get();
+        if n_avail > 0 {
+            self.n_avail += n_avail;
+            self.providers.push(provider)
+        }
+    }
+
+    pub fn reserve(&mut self, mut size: i32) -> Reservation {
+        let mut extractors = Vec::new();
+        while size > 0 {
+            let best = self.providers.peek().unwrap();
+            let mut n_avail = best.n_avail.get();
+            let to_reserve = min(size, n_avail);
+            extractors.push((best.extractor.clone(), to_reserve));
+            self.n_avail -= to_reserve;
+            n_avail -= to_reserve;
+            size -= to_reserve;
+            if n_avail <= 0 {
+                self.providers.pop();
+            } else {
+                best.n_avail.set(n_avail);
+            }
+        }
+        Reservation { extractors }
+    }
+}
+
+pub struct Reservation {
+    extractors: Vec<(Rc<dyn Extractor>, i32)>,
+}
+
+impl Reservation {
+    pub async fn extract(self, bus_slot: usize) -> Result<(), String> {
+        let tasks = self
+            .extractors
+            .into_iter()
+            .map(|(extractor, size)| extractor.extract(size, bus_slot))
+            .collect();
+        join_all(tasks).await
+    }
+}
+
 pub struct Factory {
     _task: AbortOnDrop<Result<(), String>>,
     server: Rc<RefCell<Server>>,
@@ -33,7 +78,7 @@ pub struct Factory {
     backups: Vec<(Filter, i32)>,
     processes: Vec<Rc<RefCell<dyn Process>>>,
 
-    items: FnvHashMap<Rc<Item>, RefCell<ItemInfo>>,
+    pub items: FnvHashMap<Rc<Item>, RefCell<ItemInfo>>,
     label_map: FnvHashMap<String, Vec<Rc<Item>>>,
     name_map: FnvHashMap<String, Vec<Rc<Item>>>,
 

@@ -1,6 +1,6 @@
 use super::item::{Item, ItemStack};
 use super::utils::AbortOnDrop;
-use std::{cell::Cell, cmp::Ordering};
+use std::{cell::Cell, cmp::Ordering, rc::Rc};
 
 pub struct DepositResult {
     pub n_deposited: i32,
@@ -19,9 +19,9 @@ pub trait Extractor {
 }
 
 pub struct Provider {
-    n_avail: Cell<i32>,
     priority: i32,
-    extractor: Box<dyn Extractor>,
+    pub n_avail: Cell<i32>,
+    pub extractor: Rc<dyn Extractor>,
 }
 
 impl PartialEq<Provider> for Provider {

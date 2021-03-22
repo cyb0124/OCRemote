@@ -6,6 +6,7 @@ mod factory;
 mod item;
 mod lua_value;
 mod process;
+mod recipe;
 mod server;
 mod side;
 mod storage;
@@ -13,6 +14,7 @@ mod utils;
 
 use access::BusAccess;
 use factory::Factory;
+use item::Filter;
 use server::Server;
 use side::*;
 use std::time::Duration;
@@ -25,13 +27,17 @@ async fn main() {
         let factory = Factory::new(
             Server::new(1847),
             Duration::from_secs(1),
-            vec!["south"],
+            vec!["1a"],
             vec![BusAccess {
-                client: "south",
-                addr: "127",
+                client: "1a",
+                addr: "e50",
                 side: UP,
             }],
         );
+        {
+            let mut factory = factory.borrow_mut();
+            factory.add_backup(Filter::Label("Potato"), 32);
+        }
         ctrl_c().await.unwrap()
     });
     tasks.await
