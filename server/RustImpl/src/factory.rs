@@ -1,19 +1,19 @@
 use super::access::BusAccess;
 use super::action::{ActionFuture, List, Print};
-use super::item::{Filter, Item};
+use super::item::{Filter, Item, ItemStack};
 use super::process::Process;
 use super::server::Server;
-use super::storage::{Provider, Storage};
-use super::utils::{join_all, spawn, AbortOnDrop};
+use super::storage::{DepositResult, Provider, Storage};
+use super::utils::{
+    alive, join_all, make_local_one_shot, spawn, AbortOnDrop, LocalReceiver, LocalSender,
+};
 use fnv::{FnvHashMap, FnvHashSet};
 use ordered_float::NotNan;
 use std::{
     cell::RefCell,
     collections::{hash_map::Entry, BinaryHeap, VecDeque},
-    future::Future,
-    pin::Pin,
+    mem::take,
     rc::{Rc, Weak},
-    task::{Context, Poll, Waker},
     time::Duration,
 };
 use tokio::time::{sleep_until, Instant};
@@ -24,45 +24,8 @@ pub struct ItemInfo {
     providers: BinaryHeap<Provider>,
 }
 
-struct BusState {
-    dirty: bool,
-    task: Option<AbortOnDrop<()>>,
-}
-
-struct BusWaitState {
-    result: Option<Result<usize, String>>,
-    waker: Option<Waker>,
-}
-
-struct BusWait(Rc<RefCell<BusWaitState>>);
-
-impl Future for BusWait {
-    type Output = Result<usize, String>;
-
-    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        let this = self.get_mut();
-        let mut this = this.0.borrow_mut();
-        if let Some(result) = this.result.take() {
-            Poll::Ready(result)
-        } else {
-            this.waker = Some(cx.waker().clone());
-            Poll::Pending
-        }
-    }
-}
-
-fn complete_bus_wait(state: &Weak<RefCell<BusWaitState>>, result: Result<usize, String>) {
-    if let Some(state) = state.upgrade() {
-        let mut state = state.borrow_mut();
-        state.result = Some(result);
-        if let Some(waker) = state.waker.take() {
-            waker.wake()
-        }
-    }
-}
-
 pub struct Factory {
-    task: AbortOnDrop<()>,
+    _task: AbortOnDrop<Result<(), String>>,
     server: Rc<RefCell<Server>>,
     log_clients: Vec<&'static str>,
     bus_accesses: Vec<BusAccess>,
@@ -74,19 +37,11 @@ pub struct Factory {
     label_map: FnvHashMap<String, Vec<Rc<Item>>>,
     name_map: FnvHashMap<String, Vec<Rc<Item>>>,
 
-    bus_state: Option<BusState>,
+    bus_task: Option<AbortOnDrop<Result<(), String>>>,
     bus_allocations: FnvHashSet<usize>,
-    bus_pending_frees: Vec<usize>,
-    bus_wait_queue: VecDeque<Weak<RefCell<BusWaitState>>>,
-    bus_ever_updated: bool,
-}
-
-impl Drop for Factory {
-    fn drop(&mut self) {
-        for state in &self.bus_wait_queue {
-            complete_bus_wait(state, Err("factory stopped".to_owned()))
-        }
-    }
+    bus_wait_queue: VecDeque<LocalSender<usize>>,
+    bus_free_queue: Vec<usize>,
+    bus_run_count: usize,
 }
 
 impl Factory {
@@ -98,7 +53,7 @@ impl Factory {
     ) -> Rc<RefCell<Factory>> {
         Rc::new_cyclic(|weak| {
             RefCell::new(Factory {
-                task: spawn(factory_main(weak.clone(), min_cycle_time)),
+                _task: spawn(factory_main(weak.clone(), min_cycle_time)),
                 server,
                 log_clients,
                 bus_accesses,
@@ -110,11 +65,11 @@ impl Factory {
                 label_map: FnvHashMap::default(),
                 name_map: FnvHashMap::default(),
 
-                bus_state: None,
+                bus_task: None,
                 bus_allocations: FnvHashSet::default(),
-                bus_pending_frees: Vec::new(),
                 bus_wait_queue: VecDeque::new(),
-                bus_ever_updated: false,
+                bus_free_queue: Vec::new(),
+                bus_run_count: 0,
             })
         })
     }
@@ -138,6 +93,16 @@ impl Factory {
         for client in &self.log_clients {
             server.enqueue_request_group(client, vec![action.clone().into()]);
         }
+    }
+
+    fn reset(&mut self) {
+        for storage in &self.storages {
+            storage.borrow_mut().cleanup()
+        }
+        self.items.clear();
+        self.label_map.clear();
+        self.name_map.clear();
+        self.bus_run_count = 0;
     }
 
     pub fn register_stored_item(&mut self, item: Rc<Item>) -> &mut ItemInfo {
@@ -211,27 +176,19 @@ impl Factory {
         best
     }
 
-    fn bus_allocate(&mut self, factory: &Weak<RefCell<Factory>>) -> BusWait {
-        let result = Rc::new(RefCell::new(BusWaitState {
-            result: None,
-            waker: None,
-        }));
-        self.bus_wait_queue.push_back(Rc::downgrade(&result));
-        if let Some(ref mut state) = self.bus_state {
-            state.dirty = true
-        } else {
-            self.bus_ever_updated = true;
-            self.bus_state = Some(BusState {
-                dirty: false,
-                task: Some(spawn(bus_main(factory.clone()))),
-            })
+    fn bus_allocate(&mut self, factory: &Weak<RefCell<Factory>>) -> LocalReceiver<usize> {
+        let (sender, receiver) = make_local_one_shot();
+        self.bus_wait_queue.push_back(sender);
+        if self.bus_task.is_none() {
+            self.bus_run_count += 1;
+            self.bus_task = Some(spawn(bus_main(factory.clone())))
         }
-        BusWait(result)
+        receiver
     }
 
     fn bus_free(&mut self, slot: usize) {
         if let Some(state) = self.bus_wait_queue.pop_front() {
-            complete_bus_wait(&state, Ok(slot))
+            state.send(Ok(slot))
         } else {
             self.bus_allocations.remove(&slot);
         }
@@ -239,117 +196,128 @@ impl Factory {
 
     fn bus_deposit(
         &mut self,
-        factory: &Weak<RefCell<Factory>>,
         slots: impl IntoIterator<Item = usize>,
     ) {
-        if self.bus_state.is_none() {
+        if self.bus_task.is_none() {
             for slot in slots {
                 self.bus_allocations.remove(&slot);
             }
-            self.bus_ever_updated = true;
-            self.bus_state = Some(BusState {
-                dirty: false,
-                task: Some(spawn(bus_main(factory.clone()))),
-            })
         } else {
-            self.bus_pending_frees.extend(slots)
+            self.bus_free_queue.extend(slots)
         }
     }
 
-    fn cleanup(&mut self) {
-        for storage in &self.storages {
-            storage.borrow_mut().cleanup()
+    fn deposit(
+        &self,
+        bus_slot: usize,
+        mut stack: ItemStack,
+        tasks: &mut Vec<AbortOnDrop<Result<(), String>>>,
+    ) {
+        self.log(Print {
+            text: format!("{}*{}", stack.item.label, stack.size),
+            color: 0xFFA500,
+            beep: None,
+        });
+        while stack.size > 0 {
+            let mut best: Option<(&Rc<RefCell<dyn Storage>>, i32)> = None;
+            for storage in &self.storages {
+                let priority = storage.borrow_mut().deposit_priority(&stack.item);
+                if let Some(priority) = priority {
+                    if let Some((_, best)) = best {
+                        if priority <= best {
+                            continue;
+                        }
+                    }
+                    best = Some((storage, priority))
+                }
+            }
+            if let Some((storage, _)) = best {
+                let DepositResult { n_deposited, task } =
+                    storage.borrow_mut().deposit(&stack, bus_slot);
+                stack.size -= n_deposited;
+                tasks.push(task)
+            } else {
+                tasks.push(spawn(async { Err("storage is full".to_owned()) }));
+                break;
+            }
         }
-        self.items.clear();
-        self.label_map.clear();
-        self.name_map.clear();
-        self.bus_ever_updated = false
     }
 }
 
-async fn factory_main(factory: Weak<RefCell<Factory>>, min_cycle_time: Duration) {
+async fn factory_main(
+    factory: Weak<RefCell<Factory>>,
+    min_cycle_time: Duration,
+) -> Result<(), String> {
     let mut cycle_start_last: Option<Instant> = None;
-    let mut n_cycles = 0usize;
-    async {
-        loop {
-            let cycle_start_time = Instant::now();
-            let mut text = format!("Cycle {}", n_cycles);
+    let mut n_cycles: usize = 0;
+    loop {
+        let cycle_start_time = Instant::now();
+        {
+            let this = alive(&factory)?;
+            let mut this = this.borrow_mut();
+            let mut text = format!("n_cycles={}", n_cycles);
             if let Some(last) = cycle_start_last {
                 text += &format!(
-                    ", lastCycleTime={:.03}",
-                    (cycle_start_time - last).as_secs_f32()
+                    ", cycle_time={:.03}, bus_run_count={}",
+                    (cycle_start_time - last).as_secs_f32(),
+                    this.bus_run_count
                 )
             }
-            factory.upgrade()?.borrow().log(Print {
+            this.log(Print {
                 text,
                 color: 0xFFFFFF,
                 beep: None,
             });
-            let result = async {
-                update_storages(&factory).await?;
-                run_processes(&factory).await
-            }
-            .await;
-            let bus_task = if let Err(e) = result {
-                if let Some(e) = e {
-                    let this = factory.upgrade()?;
-                    let mut this = this.borrow_mut();
-                    this.log(Print {
-                        text: format!("Cycle failed: {}", e),
-                        color: 0xFF0000,
-                        beep: Some(NotNan::new(880.0).unwrap()),
-                    });
-                    this.bus_state
-                        .as_mut()
-                        .map(|state| state.task.take().unwrap())
-                } else {
-                    return Option::<!>::None;
-                }
+            this.reset();
+        }
+        let result = async {
+            update_storages(&factory).await?;
+            run_processes(&factory).await
+        }
+        .await;
+        let bus_task = {
+            let this = alive(&factory)?;
+            let mut this = this.borrow_mut();
+            if let Err(e) = result {
+                this.log(Print {
+                    text: e,
+                    color: 0xFF0000,
+                    beep: Some(NotNan::new(880.0).unwrap()),
+                });
+                this.bus_ever_run = true
             } else {
                 n_cycles += 1;
-                let this = factory.upgrade()?;
-                let mut this = this.borrow_mut();
-                if let Some(ref mut state) = this.bus_state {
-                    Some(state.task.take().unwrap())
-                } else if this.bus_ever_updated {
-                    None
-                } else {
-                    this.bus_state = Some(BusState {
-                        dirty: false,
-                        task: None,
-                    });
-                    Some(spawn(bus_main(factory.clone())))
-                }
-            };
-            if let Some(task) = bus_task {
-                task.into_future().await
             }
-            factory.upgrade()?.borrow_mut().cleanup();
-            sleep_until(cycle_start_time + min_cycle_time).await;
-            cycle_start_last = Some(cycle_start_time)
+            if this.bus_ever_run {
+                this.bus_task.take()
+            } else {
+                Some(spawn(bus_main(factory.clone())))
+            }
+        };
+        if let Some(task) = bus_task {
+            task.into_future().await?
         }
+        sleep_until(cycle_start_time + min_cycle_time).await;
+        cycle_start_last = Some(cycle_start_time)
     }
-    .await;
 }
 
-async fn update_storages(factory: &Weak<RefCell<Factory>>) -> Result<(), Option<String>> {
-    let tasks = factory
-        .upgrade()
-        .ok_or(None)?
+async fn update_storages(factory: &Weak<RefCell<Factory>>) -> Result<(), String> {
+    let tasks = alive(factory)?
         .borrow()
         .storages
         .iter()
         .map(|storage| storage.borrow().update())
         .collect();
     join_all(tasks).await?;
-    let this = factory.upgrade().ok_or(None)?;
+    let this = alive(factory)?;
     let this = this.borrow();
-    let mut total = 0;
+    let mut n_total = 0;
     for (_, item) in &this.items {
-        total += item.borrow().n_avail
+        n_total += item.borrow().n_avail
     }
     this.log(Print {
-        text: format!("storage: {} items, {} types", total, this.items.len()),
+        text: format!("storage: {} items, {} types", n_total, this.items.len()),
         color: 0x00FF00,
         beep: None,
     });
@@ -361,10 +329,8 @@ async fn update_storages(factory: &Weak<RefCell<Factory>>) -> Result<(), Option<
     Ok(())
 }
 
-async fn run_processes(factory: &Weak<RefCell<Factory>>) -> Result<(), Option<String>> {
-    let tasks = factory
-        .upgrade()
-        .ok_or(None)?
+async fn run_processes(factory: &Weak<RefCell<Factory>>) -> Result<(), String> {
+    let tasks = alive(factory)?
         .borrow()
         .processes
         .iter()
@@ -373,39 +339,73 @@ async fn run_processes(factory: &Weak<RefCell<Factory>>) -> Result<(), Option<St
     join_all(tasks).await
 }
 
-async fn bus_main(factory: Weak<RefCell<Factory>>) {
+async fn bus_main(factory: Weak<RefCell<Factory>>) -> Result<(), String> {
     loop {
-        let result = async {
-            let action = {
-                let this = factory.upgrade().ok_or(None)?;
-                let this = this.borrow();
-                let mut server = this.server.borrow_mut();
-                let access = server.load_balance(&this.bus_accesses);
-                let action = ActionFuture::from(List {
-                    addr: access.addr,
-                    side: access.side,
+        let result = bus_update(&factory).await;
+        let this = alive(&factory)?;
+        let mut this = this.borrow_mut();
+        match result {
+            Err(e) => {
+                let e = format!("bus: {}", e);
+                this.log(Print {
+                    text: e.clone(),
+                    color: 0xFF0000,
+                    beep: Some(NotNan::new(880.0).unwrap()),
                 });
-                server.enqueue_request_group(access.client, vec![action.clone().into()]);
-                action
-            };
-            let items = action.await;
-            {
-                let this = factory.upgrade().ok_or(None)?;
-                let this = this.borrow_mut();
+                for sender in take(&mut this.bus_wait_queue) {
+                    sender.send(Err(e.clone()))
+                }
+                break Ok(())
             }
-
-            Result::<(), Option<String>>::Ok(())
+            Ok(done) => {
+                if done {
+                    break Ok(())
+                }
+            }
         }
-        .await;
-        if let Some(this) = factory.upgrade() {
-            let mut this = this.borrow_mut();
-            if let Err(e) = result {
-                todo!()
-            } else {
-                todo!()
+        this.bus_run_count += 1
+    }
+}
+
+async fn bus_update(factory: &Weak<RefCell<Factory>>) -> Result<bool, String> {
+    let action = {
+        let this = alive(factory)?;
+        let this = this.borrow();
+        let server = this.server.borrow_mut();
+        let access = server.load_balance(&this.bus_accesses);
+        let action = ActionFuture::from(List {
+            addr: access.addr,
+            side: access.side,
+        });
+        server.enqueue_request_group(access.client, vec![action.clone().into()]);
+        action
+    };
+    let stacks = action.await?;
+    let mut tasks = Vec::new();
+    {
+        let this = alive(factory)?;
+        let mut this = this.borrow_mut();
+        let mut free_slots = Vec::new();
+        for (slot, stack) in stacks.into_iter().enumerate() {
+            if !this.bus_allocations.contains(&slot) {
+                if let Some(stack) = stack {
+                    this.deposit(slot, stack, &mut tasks);
+                } else {
+                    free_slots.push(slot)
+                }
             }
-        } else {
-            break;
+        }
+        while !free_slots.is_empty() && !this.bus_wait_queue.is_empty() {
+            let slot = free_slots.pop().unwrap();
+            this.bus_allocations.insert(slot);
+            this.bus_wait_queue.pop_front().unwrap().send(Ok(slot))
         }
     }
+    join_all(tasks).await?;
+    let this = alive(factory)?;
+    let mut this = this.borrow_mut();
+    for slot in take(&mut this.bus_free_queue) {
+        this.bus_allocations.remove(&slot);
+    }
+    Ok(this.bus_wait_queue.is_empty())
 }

@@ -1,5 +1,4 @@
 #![feature(arc_new_cyclic)]
-#![feature(never_type)]
 
 mod access;
 mod action;

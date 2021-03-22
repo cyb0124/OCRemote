@@ -37,8 +37,8 @@ impl Item {
 }
 
 pub struct ItemStack {
-    item: Rc<Item>,
-    size: i32,
+    pub item: Rc<Item>,
+    pub size: i32,
 }
 
 impl ItemStack {

@@ -3,19 +3,19 @@ use super::utils::AbortOnDrop;
 use std::{cell::Cell, cmp::Ordering};
 
 pub struct DepositResult {
-    n_deposited: i32,
-    task: AbortOnDrop<Result<(), Option<String>>>,
+    pub n_deposited: i32,
+    pub task: AbortOnDrop<Result<(), String>>,
 }
 
 pub trait Storage {
-    fn update(&self) -> AbortOnDrop<Result<(), Option<String>>>;
+    fn update(&self) -> AbortOnDrop<Result<(), String>>;
     fn cleanup(&mut self);
     fn deposit_priority(&mut self, item: &Item) -> Option<i32>;
     fn deposit(&mut self, stack: &ItemStack, bus_slot: usize) -> DepositResult;
 }
 
 pub trait Extractor {
-    fn extract(&self, size: i32, bus_slot: usize) -> AbortOnDrop<Result<(), Option<String>>>;
+    fn extract(&self, size: i32, bus_slot: usize) -> AbortOnDrop<Result<(), String>>;
 }
 
 pub struct Provider {
