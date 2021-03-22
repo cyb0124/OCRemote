@@ -104,20 +104,20 @@ void Factory::insertItem(std::vector<SharedPromise<std::monostate>> &promises, s
 
 void Factory::doBusUpdate() {
   ++nBusUpdates;
-  busState = BusState::RUNNING;
+  isBusRunning = true;
   auto &access(s.getBestAccess(busAccesses));
   auto action(std::make_shared<Actions::List>());
   action->inv = access.addr;
   action->side = access.sideBus;
   s.enqueueAction(access.client, action);
 
-  struct TailListener : Listener<std::monostate> {
+  struct TailListener : Listener<bool> {
     Factory &rThis;
     std::weak_ptr<std::monostate> wk;
     TailListener(Factory &rThis) :rThis(rThis), wk(rThis.alive) {}
 
     void endOfBusUpdate() {
-      rThis.busState = BusState::IDLE;
+      rThis.isBusRunning = false;
       if (rThis.endOfCycleAfterBusUpdate) {
         rThis.endOfCycleAfterBusUpdate = false;
         rThis.endOfCycle();
@@ -135,10 +135,10 @@ void Factory::doBusUpdate() {
       endOfBusUpdate();
     }
 
-    void onResult(std::monostate) override {
+    void onResult(bool restart) override {
       if (wk.expired())
         return;
-      if (rThis.busState == BusState::RESTART) {
+      if (restart) {
         rThis.doBusUpdate();
       } else {
         endOfBusUpdate();
@@ -149,14 +149,12 @@ void Factory::doBusUpdate() {
   action->then(alive, [this](std::vector<SharedItemStack> &&items) {
     std::vector<SharedPromise<std::monostate>> promises;
     std::vector<size_t> freeSlots;
-    bool everInserted(false);
     for (size_t i{}; i < items.size(); ++i) {
       if (busAllocations.find(i) != busAllocations.end())
         continue;
       auto &stack(items[i]);
       if (stack) {
         insertItem(promises, i, std::move(*stack));
-        everInserted = true;
       } else {
         freeSlots.emplace_back(i);
       }
@@ -168,25 +166,18 @@ void Factory::doBusUpdate() {
       s.io([cont(std::move(busWaitQueue.front())), slot]() { cont->onResult(slot); });
       busWaitQueue.pop_front();
     }
+    if (promises.empty())
+      return scheduleTrivialPromise(s.io)->mapTo(false);
+    return Promise<std::monostate>::all(promises)->mapTo(true);
+  })->map(alive, [this](bool everInserted) {
     if (!busFreeQueue.empty()) {
       for (size_t slot : busFreeQueue)
         busAllocations.erase(slot);
       busFreeQueue.clear();
-      busState = BusState::RESTART;
-    } else if (everInserted && !busWaitQueue.empty()) {
-      busState = BusState::RESTART;
+      return true;
     }
-    if (promises.empty())
-      return scheduleTrivialPromise(s.io);
-    return Promise<std::monostate>::all(promises)->mapTo(std::monostate{});
+    return everInserted && !busWaitQueue.empty();
   })->listen(std::make_shared<TailListener>(*this));
-}
-
-void Factory::scheduleBusUpdate() {
-  if (busState == BusState::IDLE)
-    doBusUpdate();
-  else
-    busState = BusState::RESTART;
 }
 
 void Factory::log(std::string msg, uint32_t color, double beep) {
@@ -271,7 +262,8 @@ Reservation Factory::reserve(const std::string &reason, const SharedItem &item, 
 SharedPromise<size_t> Factory::busAllocate() {
   auto promise(std::make_shared<Promise<size_t>>());
   busWaitQueue.emplace_back(promise);
-  scheduleBusUpdate();
+  if (!isBusRunning)
+    doBusUpdate();
   return promise;
 }
 
@@ -283,11 +275,11 @@ void Factory::busFree(size_t slot, bool hasItem) {
       s.io([cont(std::move(busWaitQueue.front())), slot]() { cont->onResult(slot); });
       busWaitQueue.pop_front();
     }
-  } else if (busState == BusState::IDLE) {
-    busAllocations.erase(slot);
-    scheduleBusUpdate();
-  } else {
+  } else if (isBusRunning) {
     busFreeQueue.emplace_back(slot);
+  } else {
+    busAllocations.erase(slot);
+    doBusUpdate();
   }
 }
 
@@ -303,19 +295,19 @@ void Factory::busFree(const std::vector<size_t> &slots, bool hasItem) {
         busWaitQueue.pop_front();
       }
     }
-  } else if (busState == BusState::IDLE) {
+  } else if (isBusRunning) {
+    busFreeQueue.insert(busFreeQueue.end(), slots.begin(), slots.end());
+  } else {
     for (size_t slot : slots)
       busAllocations.erase(slot);
-    scheduleBusUpdate();
-  } else {
-    busFreeQueue.insert(busFreeQueue.end(), slots.begin(), slots.end());
+    doBusUpdate();
   }
 }
 
 void Factory::start() {
   auto now(std::chrono::steady_clock::now());
   std::ostringstream os;
-  os << "n_cycles=" << nCycles << ", n_bus_updates=" << nBusUpdates << ", cycle_time=";
+  os << "Cycle " << nCycles << ", nBusUpdates=" << nBusUpdates << ", cycleTime=";
   os.precision(3);
   os << std::fixed << std::chrono::duration_cast<std::chrono::milliseconds>(now - cycleStartTime).count() * 1E-3f;
   log(os.str());
@@ -331,24 +323,24 @@ void Factory::start() {
     void onFail(std::string cause) override {
       if (wk.expired()) return;
       rThis.log("cycle failed: " + cause, 0xff0000u, 880.f);
-      if (rThis.busState == BusState::IDLE)
-        rThis.endOfCycle();
-      else
+      if (rThis.isBusRunning)
         rThis.endOfCycleAfterBusUpdate = true;
+      else
+        rThis.endOfCycle();
     }
 
     void onResult(std::monostate result) override {
       if (wk.expired()) return;
       ++rThis.nCycles;
-      if (rThis.busState == BusState::IDLE) {
+      if (rThis.isBusRunning) {
+        rThis.endOfCycleAfterBusUpdate = true;
+      } else {
         if (rThis.nBusUpdates) {
           rThis.endOfCycle();
         } else {
           rThis.endOfCycleAfterBusUpdate = true;
-          rThis.scheduleBusUpdate();
+          rThis.doBusUpdate();
         }
-      } else {
-        rThis.endOfCycleAfterBusUpdate = true;
       }
     }
   };

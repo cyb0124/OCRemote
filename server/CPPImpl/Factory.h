@@ -136,11 +136,9 @@ private:
   std::unordered_set<size_t> busAllocations;
   std::list<SharedPromise<size_t>> busWaitQueue;
   std::vector<size_t> busFreeQueue;
-  bool endOfCycleAfterBusUpdate{};
+  bool isBusRunning{}, endOfCycleAfterBusUpdate{};
   size_t nBusUpdates{};
-  enum class BusState { IDLE, RUNNING, RESTART } busState{BusState::IDLE};
   void doBusUpdate();
-  void scheduleBusUpdate();
 public:
   void log(std::string msg, uint32_t color = 0xffffffu, double beep = -1.f);
   ItemInfo &getOrAddItemInfo(const SharedItem &item);
