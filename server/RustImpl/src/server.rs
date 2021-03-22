@@ -1,7 +1,7 @@
 use super::access::Access;
 use super::action::ActionRequest;
 use super::lua_value::{serialize, vec_to_table, Parser, Value};
-use super::utils::{spawn, AbortOnDrop};
+use super::util::{spawn, AbortOnDrop};
 use fnv::FnvHashMap;
 use socket2::{Domain, SockAddr, Socket, Type};
 use std::{

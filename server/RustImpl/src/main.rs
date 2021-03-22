@@ -10,7 +10,7 @@ mod recipe;
 mod server;
 mod side;
 mod storage;
-mod utils;
+mod util;
 
 use access::BusAccess;
 use factory::Factory;

@@ -4,7 +4,7 @@ use super::item::{Filter, Item, ItemStack};
 use super::process::Process;
 use super::server::Server;
 use super::storage::{DepositResult, Extractor, Provider, Storage};
-use super::utils::{
+use super::util::{
     alive, join_all, make_local_one_shot, spawn, AbortOnDrop, LocalReceiver, LocalSender,
 };
 use fnv::{FnvHashMap, FnvHashSet};

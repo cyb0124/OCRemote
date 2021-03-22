@@ -1,5 +1,5 @@
 use super::item::{Item, ItemStack};
-use super::utils::AbortOnDrop;
+use super::util::AbortOnDrop;
 use std::{cell::Cell, cmp::Ordering, rc::Rc};
 
 pub struct DepositResult {
