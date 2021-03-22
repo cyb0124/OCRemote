@@ -121,7 +121,7 @@ private:
   std::vector<std::pair<SharedItemFilter, int>> backups;
   std::vector<UniqueProcess> processes;
 
-  size_t currentCycleNum{};
+  size_t nCycles{};
   std::chrono::steady_clock::time_point cycleStartTime{std::chrono::steady_clock::now()};
   std::shared_ptr<boost::asio::steady_timer> cycleDelayTimer;
   void endOfCycle();
@@ -136,7 +136,8 @@ private:
   std::unordered_set<size_t> busAllocations;
   std::list<SharedPromise<size_t>> busWaitQueue;
   std::vector<size_t> busFreeQueue;
-  bool endOfCycleAfterBusUpdate{}, busEverUpdated{};
+  bool endOfCycleAfterBusUpdate{};
+  size_t nBusUpdates{};
   enum class BusState { IDLE, RUNNING, RESTART } busState{BusState::IDLE};
   void doBusUpdate();
   void scheduleBusUpdate();
