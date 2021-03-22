@@ -20,7 +20,7 @@ pub trait Extractor {
 
 pub struct Provider {
     priority: i32,
-    pub n_avail: Cell<i32>,
+    pub n_provided: Cell<i32>,
     pub extractor: Rc<dyn Extractor>,
 }
 

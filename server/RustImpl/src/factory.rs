@@ -11,7 +11,7 @@ use fnv::{FnvHashMap, FnvHashSet};
 use ordered_float::NotNan;
 use std::{
     cell::RefCell,
-    cmp::min,
+    cmp::{max, min},
     collections::{hash_map::Entry, BinaryHeap, VecDeque},
     mem::take,
     rc::{Rc, Weak},
@@ -20,34 +20,42 @@ use std::{
 use tokio::time::{sleep_until, Instant};
 
 pub struct ItemInfo {
-    n_avail: i32,
+    pub n_stored: i32,
     n_backup: i32,
     providers: BinaryHeap<Provider>,
 }
 
 impl ItemInfo {
     pub fn provide(&mut self, provider: Provider) {
-        let n_avail = provider.n_avail.get();
-        if n_avail > 0 {
-            self.n_avail += n_avail;
+        let n_provided = provider.n_provided.get();
+        if n_provided > 0 {
+            self.n_stored += n_provided;
             self.providers.push(provider)
         }
     }
 
-    pub fn reserve(&mut self, mut size: i32) -> Reservation {
+    pub fn get_availability(&self, allow_backup: bool, extra_backup: i32) -> i32 {
+        let mut result = self.n_stored - extra_backup;
+        if !allow_backup {
+            result -= self.n_backup;
+        }
+        max(0, result)
+    }
+
+    fn reserve(&mut self, mut size: i32) -> Reservation {
         let mut extractors = Vec::new();
         while size > 0 {
             let best = self.providers.peek().unwrap();
-            let mut n_avail = best.n_avail.get();
-            let to_reserve = min(size, n_avail);
+            let mut n_provided = best.n_provided.get();
+            let to_reserve = min(size, n_provided);
             extractors.push((best.extractor.clone(), to_reserve));
-            self.n_avail -= to_reserve;
-            n_avail -= to_reserve;
+            self.n_stored -= to_reserve;
+            n_provided -= to_reserve;
             size -= to_reserve;
-            if n_avail <= 0 {
+            if n_provided <= 0 {
                 self.providers.pop();
             } else {
-                best.n_avail.set(n_avail);
+                best.n_provided.set(n_provided);
             }
         }
         Reservation { extractors }
@@ -78,7 +86,7 @@ pub struct Factory {
     backups: Vec<(Filter, i32)>,
     processes: Vec<Rc<RefCell<dyn Process>>>,
 
-    pub items: FnvHashMap<Rc<Item>, RefCell<ItemInfo>>,
+    items: FnvHashMap<Rc<Item>, RefCell<ItemInfo>>,
     label_map: FnvHashMap<String, Vec<Rc<Item>>>,
     name_map: FnvHashMap<String, Vec<Rc<Item>>>,
 
@@ -154,8 +162,8 @@ impl Factory {
                     .or_default()
                     .push(item.clone());
                 x.insert(RefCell::new(ItemInfo {
-                    n_avail: 0.into(),
-                    n_backup: 0.into(),
+                    n_stored: 0,
+                    n_backup: 0,
                     providers: BinaryHeap::new(),
                 }))
                 .get_mut()
@@ -163,14 +171,14 @@ impl Factory {
         }
     }
 
-    pub fn get_item<'a>(
+    pub fn search_item<'a>(
         &'a self,
         filter: &Filter,
     ) -> Option<(&'a Rc<Item>, &'a RefCell<ItemInfo>)> {
         let mut best: Option<(&'a Rc<Item>, &'a RefCell<ItemInfo>)> = None;
         let mut on_candidate = |(new_item, new_info): (&'a Rc<Item>, &'a RefCell<ItemInfo>)| {
             if let Some((_, old_info)) = best {
-                if new_info.borrow().n_avail <= old_info.borrow().n_avail {
+                if new_info.borrow().n_stored <= old_info.borrow().n_stored {
                     return;
                 }
             }
@@ -211,7 +219,7 @@ impl Factory {
         best
     }
 
-    fn bus_allocate(&mut self, factory: &Weak<RefCell<Factory>>) -> LocalReceiver<usize> {
+    pub fn bus_allocate(&mut self, factory: &Weak<RefCell<Factory>>) -> LocalReceiver<usize> {
         let (sender, receiver) = make_local_one_shot();
         self.bus_wait_queue.push_back(sender);
         if self.bus_task.is_none() {
@@ -220,7 +228,7 @@ impl Factory {
         receiver
     }
 
-    fn bus_free(&mut self, slot: usize) {
+    pub fn bus_free(&mut self, slot: usize) {
         if let Some(state) = self.bus_wait_queue.pop_front() {
             state.send(Ok(slot))
         } else {
@@ -228,7 +236,7 @@ impl Factory {
         }
     }
 
-    fn bus_deposit(
+    pub fn bus_deposit(
         &mut self,
         factory: &Weak<RefCell<Factory>>,
         slots: impl IntoIterator<Item = usize>,
@@ -281,6 +289,15 @@ impl Factory {
                 break;
             }
         }
+    }
+
+    pub fn reserve_item(&self, reason: &str, item: &Rc<Item>, size: i32) -> Reservation {
+        self.log(Print {
+            text: format!("{}: {}*{}", reason, item.label, size),
+            color: 0x55ABEC,
+            beep: None,
+        });
+        self.items.get(item).unwrap().borrow_mut().reserve(size)
     }
 
     fn end_of_cycle(&mut self) {
@@ -363,7 +380,7 @@ async fn update_storages(factory: &Weak<RefCell<Factory>>) -> Result<(), String>
     let this = this.borrow();
     let mut n_total = 0;
     for (_, item) in &this.items {
-        n_total += item.borrow().n_avail
+        n_total += item.borrow().n_stored
     }
     this.log(Print {
         text: format!("storage: {} items, {} types", n_total, this.items.len()),
@@ -371,7 +388,7 @@ async fn update_storages(factory: &Weak<RefCell<Factory>>) -> Result<(), String>
         beep: None,
     });
     for (filter, n_backup) in &this.backups {
-        if let Some((_, info)) = this.get_item(filter) {
+        if let Some((_, info)) = this.search_item(filter) {
             info.borrow_mut().n_backup += n_backup
         }
     }

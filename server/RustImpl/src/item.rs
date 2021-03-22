@@ -7,11 +7,11 @@ use std::{cmp::min, convert::TryInto, rc::Rc};
 pub struct Item {
     pub label: String,
     pub name: String,
-    damage: i16,
-    max_damage: i16,
-    max_size: i32,
-    has_tag: bool,
-    others: Table,
+    pub damage: i16,
+    pub max_damage: i16,
+    pub max_size: i32,
+    pub has_tag: bool,
+    pub others: Table,
 }
 
 impl Item {
