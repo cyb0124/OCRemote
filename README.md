@@ -1,5 +1,6 @@
 # OCRemote
 OCRemote is an OpenComputers program by cyb0124 for storage-management and auto-crafting. Main features include:
+  - Full automation for multi-step crafting and keeping items in-stock.
   - Reuse and parallelization of machines for multiple recipes.
   - Prioritization of recipes based on the demand. (e.g. deciding which crop to grow, or deciding which ore to process first.)
   - Robust handling of multiple-input recipes to prevent clogging (e.g. for alloy furnaces).
@@ -8,10 +9,10 @@ OCRemote is an OpenComputers program by cyb0124 for storage-management and auto-
 
 OCRemote is designed for survival/expert-mode gameplay in modpacks such as Enigmatica 2 and Project Ozone 3. When used correctly, it can completely replace ME-system based auto processing both in early game and in late game. It has been tested to function correctly in Sponge-based public servers.
 
-## Server and clients
-OCRemote includes a TCP server program written in C++ that needs be run outside the minecraft world. All decision-makings happen in the server. The computers in minecraft world merely execute the commands sent by the server. Multiple clients can connect to the same server, which allows parallelization of inventory manipulation operations.
+## Server, Clients and the Asynchronous Architecture
+OCRemote includes a TCP server program written in C++ running outside the Minecraft world. All decision-makings happen in the server. The computers in minecraft world connect to the server as clients to execute world-interaction tasks scheduled by the server. Multiple clients can connect to the same server to parallelize task execution and balance the load. In OCRemote, crafting processes can be interleaved with each other. For example, when a process starts, it needs to send a task to a computer to query the inventory of the machine, and wait for the response. Then, it needs to allocate some temporary storage space for transporting items to the machine, and if none is available, add itself to a wait-queue so that it can be resumed when space becomes available. During the waiting, other computers tasked by other processes could have moved items in and out of the storages, or transported items between machines. The design of OCRemote's server makes sure race conditions caused by reentrance are correctly handled so that no inconsistency could be caused by the asynchronous process execution.
 
-Note: it is safe to terminate the server at any time. However, it is not safe to shutdown the computer in minecraft while the server is running, as it may cause incomplete set of input items to be sent to machines.
+Note: it is safe to terminate the server at any time. However, it is not safe to shutdown the computer in Minecraft while the server is running, as it may cause incomplete set of input items to be sent to machines.
 
 ## Bus
 OCRemote requires a shared inventory to move items around. This inventory is called as the "bus" in the source code. The bus can be implemented using EnderStorage's ender chests, or using ActuallyAdditions' item lasers.\
