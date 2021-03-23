@@ -2,13 +2,10 @@ use super::access::InvAccess;
 use super::action::{ActionFuture, Call, List};
 use super::factory::Factory;
 use super::item::{Filter, Item, ItemStack};
-use super::lua_value::Value;
 use super::util::{alive, spawn, AbortOnDrop};
-use num_traits::cast::FromPrimitive;
-use ordered_float::NotNan;
 use std::{
     cell::{Cell, RefCell},
-    cmp::Ordering,
+    cmp::{min, Ordering},
     rc::{Rc, Weak},
 };
 
@@ -20,8 +17,8 @@ pub struct DepositResult {
 pub trait Storage {
     fn update(&self) -> AbortOnDrop<Result<(), String>>;
     fn cleanup(&mut self);
-    fn deposit_priority(&mut self, item: &Item) -> Option<i32>;
-    fn deposit(&self, stack: &ItemStack, bus_slot: usize) -> DepositResult;
+    fn deposit_priority(&mut self, item: &Rc<Item>) -> Option<i32>;
+    fn deposit(&mut self, stack: &ItemStack, bus_slot: usize) -> DepositResult;
 }
 
 pub trait IntoStorage {
@@ -60,8 +57,185 @@ impl Ord for Provider {
 
 pub struct ChestConfig {
     pub accesses: Vec<InvAccess>,
-    pub content: Vec<Option<ItemStack>>,
-    pub slot_to_deposit: usize,
+}
+
+struct ChestStorage {
+    weak: Weak<RefCell<ChestStorage>>,
+    config: ChestConfig,
+    stacks: Vec<Option<ItemStack>>,
+    inv_slot_to_deposit: usize,
+    factory: Weak<RefCell<Factory>>,
+}
+
+struct ChestExtractor {
+    weak: Weak<RefCell<ChestStorage>>,
+    inv_slot: usize,
+}
+
+impl IntoStorage for ChestConfig {
+    fn into_storage(self, factory: Weak<RefCell<Factory>>) -> Rc<RefCell<dyn Storage>> {
+        Rc::new_cyclic(|weak| {
+            RefCell::new(ChestStorage {
+                weak: weak.clone(),
+                config: self,
+                stacks: Vec::new(),
+                inv_slot_to_deposit: 0,
+                factory,
+            })
+        })
+    }
+}
+
+impl Storage for ChestStorage {
+    fn update(&self) -> AbortOnDrop<Result<(), String>> {
+        let weak = self.weak.clone();
+        spawn(async move {
+            let action;
+            {
+                let this = alive(&weak)?;
+                let this = this.borrow();
+                let factory = alive(&this.factory)?;
+                let factory = factory.borrow();
+                let server = factory.borrow_server();
+                let access = server.load_balance(&this.config.accesses);
+                action = ActionFuture::from(List {
+                    addr: access.addr,
+                    side: access.inv_side,
+                });
+                server.enqueue_request_group(access.client, vec![action.clone().into()]);
+            }
+            let stacks = action.await?;
+            let this = alive(&weak)?;
+            let mut this = this.borrow_mut();
+            this.stacks = stacks;
+            let factory = alive(&this.factory)?;
+            let mut factory = factory.borrow_mut();
+            for (inv_slot, stack) in this.stacks.iter().enumerate() {
+                if let Some(stack) = stack {
+                    factory
+                        .register_stored_item(stack.item.clone())
+                        .provide(Provider {
+                            priority: -stack.size,
+                            n_provided: stack.size.into(),
+                            extractor: Rc::new(ChestExtractor {
+                                weak: weak.clone(),
+                                inv_slot,
+                            }),
+                        });
+                }
+            }
+            Ok(())
+        })
+    }
+
+    fn cleanup(&mut self) {
+        self.stacks.clear()
+    }
+
+    fn deposit_priority(&mut self, item: &Rc<Item>) -> Option<i32> {
+        let mut empty_slot = None;
+        let mut size_of_best_slot = None;
+        for (inv_slot, stack) in self.stacks.iter().enumerate() {
+            if let Some(stack) = stack {
+                if stack.item == *item && stack.size < item.max_size {
+                    if let Some(best_size) = size_of_best_slot {
+                        if stack.size <= best_size {
+                            continue;
+                        }
+                    }
+                    size_of_best_slot = Some(stack.size);
+                    self.inv_slot_to_deposit = inv_slot
+                }
+            } else {
+                empty_slot = Some(inv_slot)
+            }
+        }
+        size_of_best_slot.or_else(|| {
+            empty_slot.map(|x| {
+                self.inv_slot_to_deposit = x;
+                i32::MIN
+            })
+        })
+    }
+
+    fn deposit(&mut self, stack: &ItemStack, bus_slot: usize) -> DepositResult {
+        let inv_slot = self.inv_slot_to_deposit;
+        let inv_stack = &mut self.stacks[inv_slot];
+        let n_deposited;
+        if let Some(inv_stack) = inv_stack {
+            n_deposited = min(stack.size, inv_stack.item.max_size - inv_stack.size);
+            inv_stack.size += n_deposited
+        } else {
+            n_deposited = stack.size;
+            *inv_stack = Some(stack.clone())
+        }
+        let weak = self.weak.clone();
+        let task = spawn(async move {
+            let action;
+            {
+                let this = alive(&weak)?;
+                let this = this.borrow();
+                let factory = alive(&this.factory)?;
+                let factory = factory.borrow();
+                let server = factory.borrow_server();
+                let access = server.load_balance(&this.config.accesses);
+                action = ActionFuture::from(Call {
+                    addr: access.addr,
+                    func: "transferItem",
+                    args: vec![
+                        access.bus_side.into(),
+                        access.inv_side.into(),
+                        n_deposited.into(),
+                        (bus_slot + 1).into(),
+                        (inv_slot + 1).into(),
+                    ],
+                });
+                server.enqueue_request_group(access.client, vec![action.clone().into()]);
+            }
+            action.await.map(|_| ())
+        });
+        DepositResult { n_deposited, task }
+    }
+}
+
+impl Extractor for ChestExtractor {
+    fn extract(&self, size: i32, bus_slot: usize) -> AbortOnDrop<Result<(), String>> {
+        let weak = self.weak.clone();
+        let inv_slot = self.inv_slot;
+        spawn(async move {
+            let action;
+            {
+                let this = alive(&weak)?;
+                let this = this.borrow();
+                let factory = alive(&this.factory)?;
+                let factory = factory.borrow();
+                let server = factory.borrow_server();
+                let access = server.load_balance(&this.config.accesses);
+                action = ActionFuture::from(Call {
+                    addr: access.addr,
+                    func: "transferItem",
+                    args: vec![
+                        access.inv_side.into(),
+                        access.bus_side.into(),
+                        size.into(),
+                        (inv_slot + 1).into(),
+                        (bus_slot + 1).into(),
+                    ],
+                });
+                server.enqueue_request_group(access.client, vec![action.clone().into()]);
+            }
+            action.await?;
+            let this = alive(&weak)?;
+            let mut this = this.borrow_mut();
+            let inv_stack = &mut this.stacks[inv_slot];
+            let inv_size = &mut inv_stack.as_mut().unwrap().size;
+            *inv_size -= size;
+            if *inv_size <= 0 {
+                *inv_stack = None;
+            }
+            Ok(())
+        })
+    }
 }
 
 pub struct DrawerConfig {
@@ -77,7 +251,7 @@ struct DrawerStorage {
 
 struct DrawerExtractor {
     weak: Weak<RefCell<DrawerStorage>>,
-    slot: usize,
+    inv_slot: usize,
 }
 
 impl IntoStorage for DrawerConfig {
@@ -115,14 +289,14 @@ impl Storage for DrawerStorage {
             let this = this.borrow();
             let factory = alive(&this.factory)?;
             let mut factory = factory.borrow_mut();
-            for (slot, stack) in stacks.into_iter().enumerate() {
+            for (inv_slot, stack) in stacks.into_iter().enumerate() {
                 if let Some(stack) = stack {
                     factory.register_stored_item(stack.item).provide(Provider {
                         priority: i32::MIN,
                         n_provided: stack.size.into(),
                         extractor: Rc::new(DrawerExtractor {
                             weak: weak.clone(),
-                            slot,
+                            inv_slot,
                         }),
                     });
                 }
@@ -133,7 +307,7 @@ impl Storage for DrawerStorage {
 
     fn cleanup(&mut self) {}
 
-    fn deposit_priority(&mut self, item: &Item) -> Option<i32> {
+    fn deposit_priority(&mut self, item: &Rc<Item>) -> Option<i32> {
         for filter in &self.config.filters {
             if filter.apply(item) {
                 return Some(i32::MAX);
@@ -142,7 +316,7 @@ impl Storage for DrawerStorage {
         None
     }
 
-    fn deposit(&self, stack: &ItemStack, bus_slot: usize) -> DepositResult {
+    fn deposit(&mut self, stack: &ItemStack, bus_slot: usize) -> DepositResult {
         let weak = self.weak.clone();
         let n_deposited = stack.size;
         let task = spawn(async move {
@@ -174,6 +348,31 @@ impl Storage for DrawerStorage {
 
 impl Extractor for DrawerExtractor {
     fn extract(&self, size: i32, bus_slot: usize) -> AbortOnDrop<Result<(), String>> {
-        todo!()
+        let weak = self.weak.clone();
+        let inv_slot = self.inv_slot;
+        spawn(async move {
+            let action;
+            {
+                let this = alive(&weak)?;
+                let this = this.borrow();
+                let factory = alive(&this.factory)?;
+                let factory = factory.borrow();
+                let server = factory.borrow_server();
+                let access = server.load_balance(&this.config.accesses);
+                action = ActionFuture::from(Call {
+                    addr: access.addr,
+                    func: "transferItem",
+                    args: vec![
+                        access.inv_side.into(),
+                        access.bus_side.into(),
+                        size.into(),
+                        (inv_slot + 1).into(),
+                        (bus_slot + 1).into(),
+                    ],
+                });
+                server.enqueue_request_group(access.client, vec![action.clone().into()]);
+            }
+            action.await.map(|_| ())
+        })
     }
 }

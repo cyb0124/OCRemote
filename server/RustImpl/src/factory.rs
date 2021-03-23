@@ -281,7 +281,7 @@ impl Factory {
             }
             if let Some((storage, _)) = best {
                 let DepositResult { n_deposited, task } =
-                    storage.borrow().deposit(&stack, bus_slot);
+                    storage.borrow_mut().deposit(&stack, bus_slot);
                 stack.size -= n_deposited;
                 tasks.push(task)
             } else {

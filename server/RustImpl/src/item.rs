@@ -25,6 +25,7 @@ impl Item {
     }
 }
 
+#[derive(Clone)]
 pub struct ItemStack {
     pub item: Rc<Item>,
     pub size: i32,
