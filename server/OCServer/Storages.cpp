@@ -93,7 +93,7 @@ std::optional<int> StorageChest::sinkPriority(const Item &item) {
     return maxSize;
   } else if (emptySlot.has_value()) {
     slotToSink = *emptySlot;
-    return std::numeric_limits<int>::min();
+    return std::numeric_limits<int>::min() + 1;
   } else {
     return std::nullopt;
   }
