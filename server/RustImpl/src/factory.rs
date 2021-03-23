@@ -10,7 +10,7 @@ use super::util::{
 use fnv::{FnvHashMap, FnvHashSet};
 use ordered_float::NotNan;
 use std::{
-    cell::RefCell,
+    cell::{Ref, RefCell},
     cmp::{max, min},
     collections::{hash_map::Entry, BinaryHeap, VecDeque},
     mem::take,
@@ -77,12 +77,17 @@ impl Reservation {
     }
 }
 
+pub struct FactoryConfig {
+    pub server: Rc<RefCell<Server>>,
+    pub min_cycle_time: Duration,
+    pub log_clients: Vec<&'static str>,
+    pub bus_accesses: Vec<BusAccess>,
+}
+
 pub struct Factory {
     weak: Weak<RefCell<Factory>>,
     _task: AbortOnDrop<Result<(), String>>,
-    pub server: Rc<RefCell<Server>>,
-    log_clients: Vec<&'static str>,
-    bus_accesses: Vec<BusAccess>,
+    config: FactoryConfig,
     storages: Vec<Rc<RefCell<dyn Storage>>>,
     backups: Vec<(Filter, i32)>,
     processes: Vec<Rc<RefCell<dyn Process>>>,
@@ -98,20 +103,13 @@ pub struct Factory {
     n_bus_updates: usize,
 }
 
-impl Factory {
-    pub fn new(
-        server: Rc<RefCell<Server>>,
-        min_cycle_time: Duration,
-        log_clients: Vec<&'static str>,
-        bus_accesses: Vec<BusAccess>,
-    ) -> Rc<RefCell<Factory>> {
+impl FactoryConfig {
+    pub fn into_factory(self) -> Rc<RefCell<Factory>> {
         Rc::new_cyclic(|weak| {
             RefCell::new(Factory {
                 weak: weak.clone(),
-                _task: spawn(factory_main(weak.clone(), min_cycle_time)),
-                server,
-                log_clients,
-                bus_accesses,
+                _task: spawn(factory_main(weak.clone())),
+                config: self,
                 storages: Vec::new(),
                 backups: Vec::new(),
                 processes: Vec::new(),
@@ -128,7 +126,9 @@ impl Factory {
             })
         })
     }
+}
 
+impl Factory {
     pub fn add_storage(&mut self, storage: Rc<RefCell<dyn Storage>>) {
         self.storages.push(storage)
     }
@@ -141,10 +141,14 @@ impl Factory {
         self.processes.push(process)
     }
 
+    pub fn borrow_server(&self) -> Ref<Server> {
+        self.config.server.borrow()
+    }
+
     fn log(&self, action: Print) {
         println!("{}", action.text);
-        let server = self.server.borrow();
-        for client in &self.log_clients {
+        let server = self.borrow_server();
+        for client in &self.config.log_clients {
             server.enqueue_request_group(client, vec![ActionFuture::from(action.clone()).into()]);
         }
     }
@@ -307,10 +311,7 @@ impl Factory {
     }
 }
 
-async fn factory_main(
-    factory: Weak<RefCell<Factory>>,
-    min_cycle_time: Duration,
-) -> Result<(), String> {
+async fn factory_main(factory: Weak<RefCell<Factory>>) -> Result<(), String> {
     let mut cycle_start_last: Option<Instant> = None;
     let mut n_cycles: usize = 0;
     loop {
@@ -359,23 +360,24 @@ async fn factory_main(
         if let Some(task) = bus_task {
             task.into_future().await?
         }
-        alive(&factory)?.borrow_mut().end_of_cycle();
+        let min_cycle_time = {
+            let this = alive(&factory)?;
+            let mut this = this.borrow_mut();
+            this.end_of_cycle();
+            this.config.min_cycle_time
+        };
         sleep_until(cycle_start_time + min_cycle_time).await;
         cycle_start_last = Some(cycle_start_time)
     }
 }
 
 async fn update_storages(factory: &Weak<RefCell<Factory>>) -> Result<(), String> {
-    let tasks;
-    {
-        let this = alive(factory)?;
-        let this = this.borrow();
-        tasks = this
-            .storages
-            .iter()
-            .map(|storage| storage.borrow().update(&this, factory))
-            .collect();
-    }
+    let tasks = alive(factory)?
+        .borrow()
+        .storages
+        .iter()
+        .map(|storage| storage.borrow().update())
+        .collect();
     join_all(tasks).await?;
     let this = alive(factory)?;
     let this = this.borrow();
@@ -432,19 +434,19 @@ async fn bus_main(factory: Weak<RefCell<Factory>>) -> Result<(), String> {
 }
 
 async fn bus_update(factory: &Weak<RefCell<Factory>>) -> Result<bool, String> {
-    let action = {
+    let action;
+    {
         let this = alive(factory)?;
         let mut this = this.borrow_mut();
         this.n_bus_updates += 1;
-        let server = this.server.borrow_mut();
-        let access = server.load_balance(&this.bus_accesses);
-        let action = ActionFuture::from(List {
+        let server = this.borrow_server();
+        let access = server.load_balance(&this.config.bus_accesses);
+        action = ActionFuture::from(List {
             addr: access.addr,
             side: access.side,
         });
         server.enqueue_request_group(access.client, vec![action.clone().into()]);
-        action
-    };
+    }
     let stacks = action.await?;
     let mut tasks = Vec::new();
     {

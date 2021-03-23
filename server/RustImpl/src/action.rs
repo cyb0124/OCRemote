@@ -13,7 +13,7 @@ use std::{
 
 pub trait Action {
     type Output;
-    fn make_request(self) -> Value;
+    fn build_request(self) -> Value;
     fn parse_response(response: Value) -> Result<Self::Output, String>;
 }
 
@@ -24,14 +24,14 @@ struct ActionState<T: Action> {
 }
 
 pub trait ActionRequest {
-    fn make_request(&mut self) -> Value;
+    fn build_request(&mut self) -> Value;
     fn on_fail(&mut self, reason: String);
     fn on_response(&mut self, result: Value) -> Result<(), String>;
 }
 
 impl<T: Action> ActionRequest for ActionState<T> {
-    fn make_request(&mut self) -> Value {
-        self.action.take().unwrap().make_request()
+    fn build_request(&mut self) -> Value {
+        self.action.take().unwrap().build_request()
     }
 
     fn on_fail(&mut self, reason: String) {
@@ -105,7 +105,7 @@ pub struct Print {
 impl Action for Print {
     type Output = ();
 
-    fn make_request(self) -> Value {
+    fn build_request(self) -> Value {
         let mut result = Table::new();
         result.insert(Key::S("op".to_owned()), Value::S("print".to_owned()));
         result.insert(
@@ -132,7 +132,7 @@ pub struct List {
 impl Action for List {
     type Output = Vec<Option<ItemStack>>;
 
-    fn make_request(self) -> Value {
+    fn build_request(self) -> Value {
         let mut result = Table::new();
         result.insert(Key::S("op".to_owned()), Value::S("list".to_owned()));
         result.insert(
@@ -162,7 +162,7 @@ pub struct ListME {
 impl Action for ListME {
     type Output = Vec<ItemStack>;
 
-    fn make_request(self) -> Value {
+    fn build_request(self) -> Value {
         let mut result = Table::new();
         result.insert(Key::S("op".to_owned()), Value::S("listME".to_owned()));
         result.insert(Key::S("inv".to_owned()), Value::S(self.addr.to_owned()));
@@ -189,7 +189,7 @@ pub struct XferME {
 impl Action for XferME {
     type Output = ();
 
-    fn make_request(self) -> Value {
+    fn build_request(self) -> Value {
         let mut result = Table::new();
         result.insert(Key::S("op".to_owned()), Value::S("xferME".to_owned()));
         result.insert(Key::S("me".to_owned()), Value::S(self.me_addr.to_owned()));
@@ -227,7 +227,7 @@ pub struct Call {
 impl Action for Call {
     type Output = Value;
 
-    fn make_request(self) -> Value {
+    fn build_request(self) -> Value {
         let mut result = Table::new();
         result.insert(Key::S("op".to_owned()), Value::S("call".to_owned()));
         result.insert(Key::S("inv".to_owned()), Value::S(self.addr.to_owned()));

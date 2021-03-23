@@ -15,11 +15,7 @@ pub struct DepositResult {
 }
 
 pub trait Storage {
-    fn update(
-        &self,
-        factory: &Factory,
-        weak_factory: &Weak<RefCell<Factory>>,
-    ) -> AbortOnDrop<Result<(), String>>;
+    fn update(&self) -> AbortOnDrop<Result<(), String>>;
     fn cleanup(&mut self);
     fn deposit_priority(&mut self, item: &Item) -> Option<i32>;
     fn deposit(&mut self, stack: &ItemStack, bus_slot: usize) -> DepositResult;
@@ -66,12 +62,9 @@ struct Drawer {
     filters: Vec<Filter>,
 }
 
+/*
 impl Storage for Drawer {
-    fn update(
-        &self,
-        factory: &Factory,
-        weak_factory: &Weak<RefCell<Factory>>,
-    ) -> AbortOnDrop<Result<(), String>> {
+    fn update(&self) -> AbortOnDrop<Result<(), String>> {
         let server = factory.server.borrow();
         let access = server.load_balance(&self.accesses);
         let action = ActionFuture::from(List {
@@ -79,7 +72,7 @@ impl Storage for Drawer {
             side: access.inv_side,
         });
         server.enqueue_request_group(access.client, vec![action.clone().into()]);
-        let factory = weak_factory.clone();
+        let factory = factory.weak.clone();
         spawn(async move {
             let stacks = action.await?;
             let factory = alive(&factory)?;
@@ -99,3 +92,4 @@ impl Storage for Drawer {
 
     fn deposit(&mut self, stack: &ItemStack, bus_slot: usize) -> DepositResult {}
 }
+*/
