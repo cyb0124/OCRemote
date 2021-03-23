@@ -45,6 +45,7 @@ enum WriterState {
 }
 
 struct Client {
+    weak: Weak<RefCell<Client>>,
     name: String,
     next: Option<Rc<RefCell<Client>>>,
     prev: Option<Weak<RefCell<Client>>>,
@@ -97,10 +98,10 @@ impl Client {
         self.disconnect_by_server(&mut server.borrow_mut());
     }
 
-    fn on_packet(&mut self, client: &Weak<RefCell<Self>>, value: Value) -> Result<(), String> {
+    fn on_packet(&mut self, value: Value) -> Result<(), String> {
         if let Some(_) = &self.login {
             if let Some(x) = self.response_queue.pop_front() {
-                self.update_timeout(client, true);
+                self.update_timeout(true);
                 x.borrow_mut().on_response(value)
             } else {
                 Err(format!("unexpected packet: {:?}", value))
@@ -110,7 +111,7 @@ impl Client {
             let mut server = server.borrow_mut();
             self.name += &format!("[{}]", login);
             self.log("logged in");
-            server.login(login.clone(), client.clone());
+            server.login(login.clone(), self.weak.clone());
             self.login = Some(login);
             Ok(())
         } else {
@@ -118,27 +119,23 @@ impl Client {
         }
     }
 
-    fn enqueue_request_group(
-        &mut self,
-        client: &Weak<RefCell<Self>>,
-        group: Vec<Rc<RefCell<dyn ActionRequest>>>,
-    ) {
+    fn enqueue_request_group(&mut self, group: Vec<Rc<RefCell<dyn ActionRequest>>>) {
         self.request_queue_size += group.len();
         self.request_queue.push_back(group);
         let writer = replace(&mut self.writer, WriterState::Invalid);
         if let WriterState::NotWriting(stream) = writer {
-            self.update_timeout(client, false);
-            self.writer = WriterState::Writing(spawn(writer_main(client.clone(), stream)))
+            self.update_timeout(false);
+            self.writer = WriterState::Writing(spawn(writer_main(self.weak.clone(), stream)))
         } else {
             self.writer = writer
         }
     }
 
-    fn update_timeout(&mut self, client: &Weak<RefCell<Self>>, restart: bool) {
+    fn update_timeout(&mut self, restart: bool) {
         if self.request_queue_size == 0 && self.response_queue.is_empty() {
             self.timeout = None
         } else if restart || self.timeout.is_none() {
-            self.timeout = Some(spawn(timeout_main(client.clone())))
+            self.timeout = Some(spawn(timeout_main(self.weak.clone())))
         }
     }
 
@@ -202,9 +199,7 @@ async fn reader_main(client: Weak<RefCell<Client>>, mut stream: OwnedReadHalf) {
                 }
                 Ok(n_read) => {
                     if n_read > 0 {
-                        if let Err(e) = parser
-                            .shift(&data[..n_read], &mut |value| this.on_packet(&client, value))
-                        {
+                        if let Err(e) = parser.shift(&data[..n_read], &mut |x| this.on_packet(x)) {
                             this.log(&format!("error decoding packet: {}", e));
                             this.disconnect();
                             break;
@@ -247,6 +242,7 @@ async fn acceptor_main(server: Weak<RefCell<Server>>, listener: TcpListener) {
                 let (r, w) = stream.into_split();
                 this.clients = Some(Rc::new_cyclic(|weak| {
                     let client = Client {
+                        weak: weak.clone(),
                         name: addr.to_string(),
                         next: this.clients.take(),
                         prev: None,
@@ -297,7 +293,7 @@ impl Server {
                 .upgrade()
                 .unwrap()
                 .borrow_mut()
-                .enqueue_request_group(client, group)
+                .enqueue_request_group(group)
         } else {
             let reason = format!("{} isn't connected", client);
             for x in group {

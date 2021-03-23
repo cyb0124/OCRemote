@@ -2,7 +2,7 @@ use super::access::InvAccess;
 use super::action::{ActionFuture, List};
 use super::factory::Factory;
 use super::item::{Filter, Item, ItemStack};
-use super::util::{spawn, AbortOnDrop, alive};
+use super::util::{alive, spawn, AbortOnDrop};
 use std::{
     cell::{Cell, RefCell},
     cmp::Ordering,

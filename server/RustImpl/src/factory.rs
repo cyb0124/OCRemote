@@ -78,6 +78,7 @@ impl Reservation {
 }
 
 pub struct Factory {
+    weak: Weak<RefCell<Factory>>,
     _task: AbortOnDrop<Result<(), String>>,
     pub server: Rc<RefCell<Server>>,
     log_clients: Vec<&'static str>,
@@ -106,6 +107,7 @@ impl Factory {
     ) -> Rc<RefCell<Factory>> {
         Rc::new_cyclic(|weak| {
             RefCell::new(Factory {
+                weak: weak.clone(),
                 _task: spawn(factory_main(weak.clone(), min_cycle_time)),
                 server,
                 log_clients,
@@ -218,11 +220,11 @@ impl Factory {
         best
     }
 
-    pub fn bus_allocate(&mut self, factory: &Weak<RefCell<Factory>>) -> LocalReceiver<usize> {
+    pub fn bus_allocate(&mut self) -> LocalReceiver<usize> {
         let (sender, receiver) = make_local_one_shot();
         self.bus_wait_queue.push_back(sender);
         if self.bus_task.is_none() {
-            self.bus_task = Some(spawn(bus_main(factory.clone())))
+            self.bus_task = Some(spawn(bus_main(self.weak.clone())))
         }
         receiver
     }
@@ -235,11 +237,7 @@ impl Factory {
         }
     }
 
-    pub fn bus_deposit(
-        &mut self,
-        factory: &Weak<RefCell<Factory>>,
-        slots: impl IntoIterator<Item = usize>,
-    ) {
+    pub fn bus_deposit(&mut self, slots: impl IntoIterator<Item = usize>) {
         if self.bus_task.is_none() {
             let mut ever_freed = false;
             for slot in slots {
@@ -247,7 +245,7 @@ impl Factory {
                 ever_freed = true
             }
             if ever_freed {
-                self.bus_task = Some(spawn(bus_main(factory.clone())))
+                self.bus_task = Some(spawn(bus_main(self.weak.clone())))
             }
         } else {
             self.bus_free_queue.extend(slots)
