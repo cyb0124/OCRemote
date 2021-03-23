@@ -79,7 +79,7 @@ impl Reservation {
 
 pub struct Factory {
     _task: AbortOnDrop<Result<(), String>>,
-    server: Rc<RefCell<Server>>,
+    pub server: Rc<RefCell<Server>>,
     log_clients: Vec<&'static str>,
     bus_accesses: Vec<BusAccess>,
     storages: Vec<Rc<RefCell<dyn Storage>>>,
@@ -368,12 +368,16 @@ async fn factory_main(
 }
 
 async fn update_storages(factory: &Weak<RefCell<Factory>>) -> Result<(), String> {
-    let tasks = alive(factory)?
-        .borrow()
-        .storages
-        .iter()
-        .map(|storage| storage.borrow().update())
-        .collect();
+    let tasks;
+    {
+        let this = alive(factory)?;
+        let this = this.borrow();
+        tasks = this
+            .storages
+            .iter()
+            .map(|storage| storage.borrow().update(&this, factory))
+            .collect();
+    }
     join_all(tasks).await?;
     let this = alive(factory)?;
     let this = this.borrow();

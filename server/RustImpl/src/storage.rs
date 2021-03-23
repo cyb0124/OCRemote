@@ -1,6 +1,13 @@
-use super::item::{Item, ItemStack};
-use super::util::AbortOnDrop;
-use std::{cell::Cell, cmp::Ordering, rc::Rc};
+use super::access::InvAccess;
+use super::action::{ActionFuture, List};
+use super::factory::Factory;
+use super::item::{Filter, Item, ItemStack};
+use super::util::{spawn, AbortOnDrop, alive};
+use std::{
+    cell::{Cell, RefCell},
+    cmp::Ordering,
+    rc::{Rc, Weak},
+};
 
 pub struct DepositResult {
     pub n_deposited: i32,
@@ -8,7 +15,11 @@ pub struct DepositResult {
 }
 
 pub trait Storage {
-    fn update(&self) -> AbortOnDrop<Result<(), String>>;
+    fn update(
+        &self,
+        factory: &Factory,
+        weak_factory: &Weak<RefCell<Factory>>,
+    ) -> AbortOnDrop<Result<(), String>>;
     fn cleanup(&mut self);
     fn deposit_priority(&mut self, item: &Item) -> Option<i32>;
     fn deposit(&mut self, stack: &ItemStack, bus_slot: usize) -> DepositResult;
@@ -42,4 +53,49 @@ impl Ord for Provider {
     fn cmp(&self, other: &Self) -> Ordering {
         self.priority.cmp(&other.priority)
     }
+}
+
+struct Chest {
+    accesses: Vec<InvAccess>,
+    content: Vec<Option<ItemStack>>,
+    slot_to_deposit: usize,
+}
+
+struct Drawer {
+    accesses: Vec<InvAccess>,
+    filters: Vec<Filter>,
+}
+
+impl Storage for Drawer {
+    fn update(
+        &self,
+        factory: &Factory,
+        weak_factory: &Weak<RefCell<Factory>>,
+    ) -> AbortOnDrop<Result<(), String>> {
+        let server = factory.server.borrow();
+        let access = server.load_balance(&self.accesses);
+        let action = ActionFuture::from(List {
+            addr: access.addr,
+            side: access.inv_side,
+        });
+        server.enqueue_request_group(access.client, vec![action.clone().into()]);
+        let factory = weak_factory.clone();
+        spawn(async move {
+            let stacks = action.await?;
+            let factory = alive(&factory)?;
+            let factory = factory.borrow_mut();
+            for (slot, stack) in stacks.into_iter().enumerate() {
+                if let Some(stack) = stack {
+                    factory.register_stored_item(stack.item).provide();
+                }
+            }
+            Ok(())
+        })
+    }
+
+    fn cleanup(&mut self) {}
+
+    fn deposit_priority(&mut self, item: &Item) -> Option<i32> {}
+
+    fn deposit(&mut self, stack: &ItemStack, bus_slot: usize) -> DepositResult {}
 }
