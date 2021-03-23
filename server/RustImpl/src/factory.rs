@@ -439,7 +439,7 @@ async fn bus_update(factory: &Weak<RefCell<Factory>>) -> Result<bool, String> {
         let mut this = this.borrow_mut();
         this.n_bus_updates += 1;
         let server = this.borrow_server();
-        let access = server.load_balance(&this.config.bus_accesses);
+        let access = server.load_balance(&this.config.bus_accesses).1;
         action = ActionFuture::from(List {
             addr: access.addr,
             side: access.side,

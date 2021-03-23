@@ -13,7 +13,7 @@ pub struct Item {
 }
 
 impl Item {
-    fn serialize(&self) -> Value {
+    pub fn serialize(&self) -> Value {
         let mut result = self.others.clone();
         result.insert("label".into(), self.label.clone().into());
         result.insert("name".into(), self.name.clone().into());

@@ -1,11 +1,13 @@
-use super::access::InvAccess;
-use super::action::{ActionFuture, Call, List};
+use super::access::{InvAccess, MEAccess};
+use super::action::{ActionFuture, Call, List, ListME, XferME};
 use super::factory::Factory;
 use super::item::{Filter, Item, ItemStack};
 use super::util::{alive, spawn, AbortOnDrop};
+use fnv::FnvHashMap;
 use std::{
     cell::{Cell, RefCell},
     cmp::{min, Ordering},
+    collections::hash_map::Entry,
     rc::{Rc, Weak},
 };
 
@@ -62,9 +64,9 @@ pub struct ChestConfig {
 struct ChestStorage {
     weak: Weak<RefCell<ChestStorage>>,
     config: ChestConfig,
+    factory: Weak<RefCell<Factory>>,
     stacks: Vec<Option<ItemStack>>,
     inv_slot_to_deposit: usize,
-    factory: Weak<RefCell<Factory>>,
 }
 
 struct ChestExtractor {
@@ -78,9 +80,9 @@ impl IntoStorage for ChestConfig {
             RefCell::new(ChestStorage {
                 weak: weak.clone(),
                 config: self,
+                factory,
                 stacks: Vec::new(),
                 inv_slot_to_deposit: 0,
-                factory,
             })
         })
     }
@@ -97,7 +99,7 @@ impl Storage for ChestStorage {
                 let factory = alive(&this.factory)?;
                 let factory = factory.borrow();
                 let server = factory.borrow_server();
-                let access = server.load_balance(&this.config.accesses);
+                let access = server.load_balance(&this.config.accesses).1;
                 action = ActionFuture::from(List {
                     addr: access.addr,
                     side: access.inv_side,
@@ -153,7 +155,7 @@ impl Storage for ChestStorage {
         size_of_best_slot.or_else(|| {
             empty_slot.map(|x| {
                 self.inv_slot_to_deposit = x;
-                i32::MIN
+                i32::MIN + 1
             })
         })
     }
@@ -178,7 +180,7 @@ impl Storage for ChestStorage {
                 let factory = alive(&this.factory)?;
                 let factory = factory.borrow();
                 let server = factory.borrow_server();
-                let access = server.load_balance(&this.config.accesses);
+                let access = server.load_balance(&this.config.accesses).1;
                 action = ActionFuture::from(Call {
                     addr: access.addr,
                     func: "transferItem",
@@ -210,7 +212,7 @@ impl Extractor for ChestExtractor {
                 let factory = alive(&this.factory)?;
                 let factory = factory.borrow();
                 let server = factory.borrow_server();
-                let access = server.load_balance(&this.config.accesses);
+                let access = server.load_balance(&this.config.accesses).1;
                 action = ActionFuture::from(Call {
                     addr: access.addr,
                     func: "transferItem",
@@ -277,7 +279,7 @@ impl Storage for DrawerStorage {
                 let factory = alive(&this.factory)?;
                 let factory = factory.borrow();
                 let server = factory.borrow_server();
-                let access = server.load_balance(&this.config.accesses);
+                let access = server.load_balance(&this.config.accesses).1;
                 action = ActionFuture::from(List {
                     addr: access.addr,
                     side: access.inv_side,
@@ -327,7 +329,7 @@ impl Storage for DrawerStorage {
                 let factory = alive(&this.factory)?;
                 let factory = factory.borrow();
                 let server = factory.borrow_server();
-                let access = server.load_balance(&this.config.accesses);
+                let access = server.load_balance(&this.config.accesses).1;
                 action = ActionFuture::from(Call {
                     addr: access.addr,
                     func: "transferItem",
@@ -358,7 +360,7 @@ impl Extractor for DrawerExtractor {
                 let factory = alive(&this.factory)?;
                 let factory = factory.borrow();
                 let server = factory.borrow_server();
-                let access = server.load_balance(&this.config.accesses);
+                let access = server.load_balance(&this.config.accesses).1;
                 action = ActionFuture::from(Call {
                     addr: access.addr,
                     func: "transferItem",
@@ -367,6 +369,156 @@ impl Extractor for DrawerExtractor {
                         access.bus_side.into(),
                         size.into(),
                         (inv_slot + 1).into(),
+                        (bus_slot + 1).into(),
+                    ],
+                });
+                server.enqueue_request_group(access.client, vec![action.clone().into()]);
+            }
+            action.await.map(|_| ())
+        })
+    }
+}
+
+pub struct MEConfig {
+    accesses: Vec<MEAccess>,
+}
+
+struct MEStorage {
+    weak: Weak<RefCell<MEStorage>>,
+    config: MEConfig,
+    factory: Weak<RefCell<Factory>>,
+    access_for_item: FnvHashMap<Rc<Item>, usize>,
+}
+
+struct MEExtractor {
+    weak: Weak<RefCell<MEStorage>>,
+    item: Rc<Item>,
+}
+
+impl IntoStorage for MEConfig {
+    fn into_storage(self, factory: Weak<RefCell<Factory>>) -> Rc<RefCell<dyn Storage>> {
+        Rc::new_cyclic(|weak| {
+            RefCell::new(MEStorage {
+                weak: weak.clone(),
+                config: self,
+                factory,
+                access_for_item: FnvHashMap::default(),
+            })
+        })
+    }
+}
+
+impl Storage for MEStorage {
+    fn update(&self) -> AbortOnDrop<Result<(), String>> {
+        let weak = self.weak.clone();
+        spawn(async move {
+            let action;
+            {
+                let this = alive(&weak)?;
+                let this = this.borrow();
+                let factory = alive(&this.factory)?;
+                let factory = factory.borrow();
+                let server = factory.borrow_server();
+                let access = server.load_balance(&this.config.accesses).1;
+                action = ActionFuture::from(ListME {
+                    addr: access.me_addr,
+                });
+                server.enqueue_request_group(access.client, vec![action.clone().into()]);
+            }
+            let stacks = action.await?;
+            let this = alive(&weak)?;
+            let this = this.borrow();
+            let factory = alive(&this.factory)?;
+            let mut factory = factory.borrow_mut();
+            for mut stack in stacks.into_iter() {
+                Rc::get_mut(&mut stack.item)
+                    .unwrap()
+                    .others
+                    .remove(&"isCraftable".into());
+                factory
+                    .register_stored_item(stack.item.clone())
+                    .provide(Provider {
+                        priority: i32::MAX,
+                        n_provided: stack.size.into(),
+                        extractor: Rc::new(MEExtractor {
+                            weak: weak.clone(),
+                            item: stack.item,
+                        }),
+                    })
+            }
+            Ok(())
+        })
+    }
+
+    fn cleanup(&mut self) {
+        self.access_for_item.clear()
+    }
+
+    fn deposit_priority(&mut self, _item: &Rc<Item>) -> Option<i32> {
+        Some(i32::MIN)
+    }
+
+    fn deposit(&mut self, stack: &ItemStack, bus_slot: usize) -> DepositResult {
+        let weak = self.weak.clone();
+        let n_deposited = stack.size;
+        let task = spawn(async move {
+            let action;
+            {
+                let this = alive(&weak)?;
+                let this = this.borrow();
+                let factory = alive(&this.factory)?;
+                let factory = factory.borrow();
+                let server = factory.borrow_server();
+                let access = server.load_balance(&this.config.accesses).1;
+                action = ActionFuture::from(Call {
+                    addr: access.transposer_addr,
+                    func: "transferItem",
+                    args: vec![
+                        access.bus_side.into(),
+                        access.me_side.into(),
+                        n_deposited.into(),
+                        (bus_slot + 1).into(),
+                        9.into(),
+                    ],
+                });
+                server.enqueue_request_group(access.client, vec![action.clone().into()]);
+            }
+            action.await.map(|_| ())
+        });
+        DepositResult { n_deposited, task }
+    }
+}
+
+impl Extractor for MEExtractor {
+    fn extract(&self, size: i32, bus_slot: usize) -> AbortOnDrop<Result<(), String>> {
+        let weak = self.weak.clone();
+        let item = self.item.clone();
+        spawn(async move {
+            let action;
+            {
+                let this = alive(&weak)?;
+                let mut this = this.borrow_mut();
+                let this = &mut *this;
+                let factory = alive(&this.factory)?;
+                let factory = factory.borrow();
+                let server = factory.borrow_server();
+                let accesses = &this.config.accesses;
+                let access = *this
+                    .access_for_item
+                    .entry(item.clone())
+                    .or_insert_with(|| server.load_balance(accesses).0);
+                let access = &this.config.accesses[access];
+                action = ActionFuture::from(XferME {
+                    me_addr: access.me_addr,
+                    me_slot: access.me_slot,
+                    filter: item.serialize(),
+                    size,
+                    transposer_addr: access.transposer_addr,
+                    transposer_args: vec![
+                        access.me_side.into(),
+                        access.bus_side.into(),
+                        size.into(),
+                        (access.me_slot + 1).into(),
                         (bus_slot + 1).into(),
                     ],
                 });
