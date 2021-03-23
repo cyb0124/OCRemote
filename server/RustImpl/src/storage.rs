@@ -7,7 +7,6 @@ use fnv::FnvHashMap;
 use std::{
     cell::{Cell, RefCell},
     cmp::{min, Ordering},
-    collections::hash_map::Entry,
     rc::{Rc, Weak},
 };
 

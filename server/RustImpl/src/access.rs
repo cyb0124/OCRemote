@@ -33,6 +33,7 @@ pub struct MEAccess {
     pub me_addr: &'static str,
     pub bus_side: u8,
     pub me_side: u8,
+    // 0-7 are valid. 8 is for deposit.
     pub me_slot: usize,
 }
 
