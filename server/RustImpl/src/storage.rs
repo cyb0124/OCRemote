@@ -1,8 +1,11 @@
 use super::access::InvAccess;
-use super::action::{ActionFuture, List};
+use super::action::{ActionFuture, Call, List};
 use super::factory::Factory;
 use super::item::{Filter, Item, ItemStack};
+use super::lua_value::Value;
 use super::util::{alive, spawn, AbortOnDrop};
+use num_traits::cast::FromPrimitive;
+use ordered_float::NotNan;
 use std::{
     cell::{Cell, RefCell},
     cmp::Ordering,
@@ -18,7 +21,11 @@ pub trait Storage {
     fn update(&self) -> AbortOnDrop<Result<(), String>>;
     fn cleanup(&mut self);
     fn deposit_priority(&mut self, item: &Item) -> Option<i32>;
-    fn deposit(&mut self, stack: &ItemStack, bus_slot: usize) -> DepositResult;
+    fn deposit(&self, stack: &ItemStack, bus_slot: usize) -> DepositResult;
+}
+
+pub trait IntoStorage {
+    fn into_storage(self, factory: Weak<RefCell<Factory>>) -> Rc<RefCell<dyn Storage>>;
 }
 
 pub trait Extractor {
@@ -51,35 +58,73 @@ impl Ord for Provider {
     }
 }
 
-struct Chest {
-    accesses: Vec<InvAccess>,
-    content: Vec<Option<ItemStack>>,
-    slot_to_deposit: usize,
+pub struct ChestConfig {
+    pub accesses: Vec<InvAccess>,
+    pub content: Vec<Option<ItemStack>>,
+    pub slot_to_deposit: usize,
 }
 
-struct Drawer {
-    accesses: Vec<InvAccess>,
-    filters: Vec<Filter>,
+pub struct DrawerConfig {
+    pub accesses: Vec<InvAccess>,
+    pub filters: Vec<Filter>,
 }
 
-/*
-impl Storage for Drawer {
+struct DrawerStorage {
+    weak: Weak<RefCell<DrawerStorage>>,
+    config: DrawerConfig,
+    factory: Weak<RefCell<Factory>>,
+}
+
+struct DrawerExtractor {
+    weak: Weak<RefCell<DrawerStorage>>,
+    slot: usize,
+}
+
+impl IntoStorage for DrawerConfig {
+    fn into_storage(self, factory: Weak<RefCell<Factory>>) -> Rc<RefCell<dyn Storage>> {
+        Rc::new_cyclic(|weak| {
+            RefCell::new(DrawerStorage {
+                weak: weak.clone(),
+                config: self,
+                factory,
+            })
+        })
+    }
+}
+
+impl Storage for DrawerStorage {
     fn update(&self) -> AbortOnDrop<Result<(), String>> {
-        let server = factory.server.borrow();
-        let access = server.load_balance(&self.accesses);
-        let action = ActionFuture::from(List {
-            addr: access.addr,
-            side: access.inv_side,
-        });
-        server.enqueue_request_group(access.client, vec![action.clone().into()]);
-        let factory = factory.weak.clone();
+        let weak = self.weak.clone();
         spawn(async move {
+            let action;
+            {
+                let this = alive(&weak)?;
+                let this = this.borrow();
+                let factory = alive(&this.factory)?;
+                let factory = factory.borrow();
+                let server = factory.borrow_server();
+                let access = server.load_balance(&this.config.accesses);
+                action = ActionFuture::from(List {
+                    addr: access.addr,
+                    side: access.inv_side,
+                });
+                server.enqueue_request_group(access.client, vec![action.clone().into()]);
+            }
             let stacks = action.await?;
-            let factory = alive(&factory)?;
-            let factory = factory.borrow_mut();
+            let this = alive(&weak)?;
+            let this = this.borrow();
+            let factory = alive(&this.factory)?;
+            let mut factory = factory.borrow_mut();
             for (slot, stack) in stacks.into_iter().enumerate() {
                 if let Some(stack) = stack {
-                    factory.register_stored_item(stack.item).provide();
+                    factory.register_stored_item(stack.item).provide(Provider {
+                        priority: i32::MIN,
+                        n_provided: stack.size.into(),
+                        extractor: Rc::new(DrawerExtractor {
+                            weak: weak.clone(),
+                            slot,
+                        }),
+                    });
                 }
             }
             Ok(())
@@ -88,8 +133,47 @@ impl Storage for Drawer {
 
     fn cleanup(&mut self) {}
 
-    fn deposit_priority(&mut self, item: &Item) -> Option<i32> {}
+    fn deposit_priority(&mut self, item: &Item) -> Option<i32> {
+        for filter in &self.config.filters {
+            if filter.apply(item) {
+                return Some(i32::MAX);
+            }
+        }
+        None
+    }
 
-    fn deposit(&mut self, stack: &ItemStack, bus_slot: usize) -> DepositResult {}
+    fn deposit(&self, stack: &ItemStack, bus_slot: usize) -> DepositResult {
+        let weak = self.weak.clone();
+        let n_deposited = stack.size;
+        let task = spawn(async move {
+            let action;
+            {
+                let this = alive(&weak)?;
+                let this = this.borrow();
+                let factory = alive(&this.factory)?;
+                let factory = factory.borrow();
+                let server = factory.borrow_server();
+                let access = server.load_balance(&this.config.accesses);
+                action = ActionFuture::from(Call {
+                    addr: access.addr,
+                    func: "transferItem",
+                    args: vec![
+                        access.bus_side.into(),
+                        access.inv_side.into(),
+                        n_deposited.into(),
+                        (bus_slot + 1).into(),
+                    ],
+                });
+                server.enqueue_request_group(access.client, vec![action.clone().into()]);
+            }
+            action.await.map(|_| ())
+        });
+        DepositResult { n_deposited, task }
+    }
 }
-*/
+
+impl Extractor for DrawerExtractor {
+    fn extract(&self, size: i32, bus_slot: usize) -> AbortOnDrop<Result<(), String>> {
+        todo!()
+    }
+}

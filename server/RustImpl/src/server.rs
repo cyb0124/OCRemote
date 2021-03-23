@@ -165,7 +165,7 @@ async fn writer_main(client: Weak<RefCell<Client>>, mut stream: OwnedWriteHalf) 
                     value.push(x.borrow_mut().build_request());
                     this.response_queue.push_back(x)
                 }
-                serialize(&Value::T(vec_to_table(value)), &mut data)
+                serialize(&vec_to_table(value).into(), &mut data)
             } else {
                 this.writer = WriterState::NotWriting(stream);
                 break;

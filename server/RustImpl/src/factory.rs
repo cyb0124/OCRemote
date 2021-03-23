@@ -1,14 +1,13 @@
 use super::access::BusAccess;
 use super::action::{ActionFuture, List, Print};
 use super::item::{Filter, Item, ItemStack};
-use super::process::Process;
+use super::process::{IntoProcess, Process};
 use super::server::Server;
-use super::storage::{DepositResult, Extractor, Provider, Storage};
+use super::storage::{DepositResult, Extractor, IntoStorage, Provider, Storage};
 use super::util::{
     alive, join_all, make_local_one_shot, spawn, AbortOnDrop, LocalReceiver, LocalSender,
 };
 use fnv::{FnvHashMap, FnvHashSet};
-use ordered_float::NotNan;
 use std::{
     cell::{Ref, RefCell},
     cmp::{max, min},
@@ -129,16 +128,16 @@ impl FactoryConfig {
 }
 
 impl Factory {
-    pub fn add_storage(&mut self, storage: Rc<RefCell<dyn Storage>>) {
-        self.storages.push(storage)
+    pub fn add_storage(&mut self, storage: impl IntoStorage) {
+        self.storages.push(storage.into_storage(self.weak.clone()))
     }
 
     pub fn add_backup(&mut self, filter: Filter, n_backup: i32) {
         self.backups.push((filter, n_backup))
     }
 
-    pub fn add_process(&mut self, process: Rc<RefCell<dyn Process>>) {
-        self.processes.push(process)
+    pub fn add_process(&mut self, process: impl IntoProcess) {
+        self.processes.push(process.into_process(self.weak.clone()))
     }
 
     pub fn borrow_server(&self) -> Ref<Server> {
@@ -282,7 +281,7 @@ impl Factory {
             }
             if let Some((storage, _)) = best {
                 let DepositResult { n_deposited, task } =
-                    storage.borrow_mut().deposit(&stack, bus_slot);
+                    storage.borrow().deposit(&stack, bus_slot);
                 stack.size -= n_deposited;
                 tasks.push(task)
             } else {
@@ -348,7 +347,7 @@ async fn factory_main(factory: Weak<RefCell<Factory>>) -> Result<(), String> {
                 this.log(Print {
                     text: format!("cycle failed: {}", e),
                     color: 0xFF0000,
-                    beep: Some(NotNan::new(880.0).unwrap()),
+                    beep: Some(880.0),
                 })
             } else {
                 n_cycles += 1;
@@ -419,7 +418,7 @@ async fn bus_main(factory: Weak<RefCell<Factory>>) -> Result<(), String> {
                 this.log(Print {
                     text: e.clone(),
                     color: 0xFF0000,
-                    beep: Some(NotNan::new(880.0).unwrap()),
+                    beep: Some(880.0),
                 });
                 for sender in take(&mut this.bus_wait_queue) {
                     sender.send(Err(e.clone()))

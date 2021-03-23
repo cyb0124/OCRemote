@@ -22,6 +22,18 @@ pub enum Key {
     B(bool),
 }
 
+impl From<usize> for Key {
+    fn from(number: usize) -> Key {
+        Key::F(NotNan::from_usize(number).unwrap())
+    }
+}
+
+impl From<&str> for Key {
+    fn from(string: &str) -> Key {
+        Key::S(string.to_owned())
+    }
+}
+
 pub type Table = BTreeMap<Key, Value>;
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Debug)]
@@ -31,6 +43,66 @@ pub enum Value {
     S(String),
     B(bool),
     T(Table),
+}
+
+impl From<u8> for Value {
+    fn from(number: u8) -> Value {
+        Value::F(NotNan::from_u8(number).unwrap())
+    }
+}
+
+impl From<i16> for Value {
+    fn from(number: i16) -> Value {
+        Value::F(NotNan::from_i16(number).unwrap())
+    }
+}
+
+impl From<i32> for Value {
+    fn from(number: i32) -> Value {
+        Value::F(NotNan::from_i32(number).unwrap())
+    }
+}
+
+impl From<u32> for Value {
+    fn from(number: u32) -> Value {
+        Value::F(NotNan::from_u32(number).unwrap())
+    }
+}
+
+impl From<usize> for Value {
+    fn from(number: usize) -> Value {
+        Value::F(NotNan::from_usize(number).unwrap())
+    }
+}
+
+impl From<f64> for Value {
+    fn from(number: f64) -> Value {
+        Value::F(NotNan::new(number).unwrap())
+    }
+}
+
+impl From<&str> for Value {
+    fn from(string: &str) -> Value {
+        Value::S(string.to_owned())
+    }
+}
+
+impl From<String> for Value {
+    fn from(string: String) -> Value {
+        Value::S(string)
+    }
+}
+
+impl From<bool> for Value {
+    fn from(boolean: bool) -> Value {
+        Value::B(boolean)
+    }
+}
+
+impl From<Table> for Value {
+    fn from(table: Table) -> Value {
+        Value::T(table)
+    }
 }
 
 impl TryFrom<Value> for NotNan<f64> {
@@ -100,7 +172,7 @@ impl TryFrom<Value> for Table {
 pub fn vec_to_table(vec: Vec<Value>) -> Table {
     let mut result = Table::new();
     for (i, x) in vec.into_iter().enumerate() {
-        result.insert(Key::F(NotNan::from_usize(i + 1).unwrap()), x);
+        result.insert((i + 1).into(), x);
     }
     result
 }

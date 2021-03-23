@@ -1,7 +1,5 @@
 use super::item::ItemStack;
-use super::lua_value::{table_to_vec, vec_to_table, Key, Table, Value};
-use num_traits::cast::FromPrimitive;
-use ordered_float::NotNan;
+use super::lua_value::{table_to_vec, vec_to_table, Table, Value};
 use std::{
     cell::RefCell,
     convert::TryInto,
@@ -99,7 +97,7 @@ impl<T: Action + 'static> From<ActionFuture<T>> for Rc<RefCell<dyn ActionRequest
 pub struct Print {
     pub text: String,
     pub color: u32,
-    pub beep: Option<NotNan<f64>>,
+    pub beep: Option<f64>,
 }
 
 impl Action for Print {
@@ -107,16 +105,13 @@ impl Action for Print {
 
     fn build_request(self) -> Value {
         let mut result = Table::new();
-        result.insert(Key::S("op".to_owned()), Value::S("print".to_owned()));
-        result.insert(
-            Key::S("color".to_owned()),
-            Value::F(NotNan::from_u32(self.color).unwrap()),
-        );
-        result.insert(Key::S("text".to_owned()), Value::S(self.text));
+        result.insert("op".into(), "print".into());
+        result.insert("color".into(), self.color.into());
+        result.insert("text".into(), self.text.into());
         if let Some(beep) = self.beep {
-            result.insert(Key::S("beep".to_owned()), Value::F(beep));
+            result.insert("beep".into(), beep.into());
         }
-        Value::T(result)
+        result.into()
     }
 
     fn parse_response(_response: Value) -> Result<(), String> {
@@ -134,13 +129,10 @@ impl Action for List {
 
     fn build_request(self) -> Value {
         let mut result = Table::new();
-        result.insert(Key::S("op".to_owned()), Value::S("list".to_owned()));
-        result.insert(
-            Key::S("side".to_owned()),
-            Value::F(NotNan::from_u8(self.side).unwrap()),
-        );
-        result.insert(Key::S("inv".to_owned()), Value::S(self.addr.to_owned()));
-        Value::T(result)
+        result.insert("op".into(), "list".into());
+        result.insert("side".into(), self.side.into());
+        result.insert("inv".into(), self.addr.into());
+        result.into()
     }
 
     fn parse_response(response: Value) -> Result<Vec<Option<ItemStack>>, String> {
@@ -148,8 +140,7 @@ impl Action for List {
             .into_iter()
             .map(|x| match x {
                 Value::N => Ok(None),
-                x @ Value::T(_) => Ok(Some(ItemStack::parse(x)?)),
-                x => Err(format!("invalid item: {:?}", x)),
+                x => ItemStack::parse(x).map(|x| Some(x)),
             })
             .collect()
     }
@@ -164,9 +155,9 @@ impl Action for ListME {
 
     fn build_request(self) -> Value {
         let mut result = Table::new();
-        result.insert(Key::S("op".to_owned()), Value::S("listME".to_owned()));
-        result.insert(Key::S("inv".to_owned()), Value::S(self.addr.to_owned()));
-        Value::T(result)
+        result.insert("op".into(), "listME".into());
+        result.insert("inv".into(), self.addr.into());
+        result.into()
     }
 
     fn parse_response(response: Value) -> Result<Vec<ItemStack>, String> {
@@ -191,26 +182,14 @@ impl Action for XferME {
 
     fn build_request(self) -> Value {
         let mut result = Table::new();
-        result.insert(Key::S("op".to_owned()), Value::S("xferME".to_owned()));
-        result.insert(Key::S("me".to_owned()), Value::S(self.me_addr.to_owned()));
-        result.insert(
-            Key::S("entry".to_owned()),
-            Value::F(NotNan::from_usize(self.me_slot).unwrap()),
-        );
-        result.insert(Key::S("filter".to_owned()), self.filter);
-        result.insert(
-            Key::S("size".to_owned()),
-            Value::F(NotNan::from_i32(self.size).unwrap()),
-        );
-        result.insert(
-            Key::S("inv".to_owned()),
-            Value::S(self.transposer_addr.to_owned()),
-        );
-        result.insert(
-            Key::S("args".to_owned()),
-            Value::T(vec_to_table(self.transposer_args)),
-        );
-        Value::T(result)
+        result.insert("op".into(), "xferME".into());
+        result.insert("me".into(), self.me_addr.into());
+        result.insert("entry".into(), self.me_slot.into());
+        result.insert("filter".into(), self.filter);
+        result.insert("size".into(), self.size.into());
+        result.insert("inv".into(), self.transposer_addr.into());
+        result.insert("args".into(), vec_to_table(self.transposer_args).into());
+        result.into()
     }
 
     fn parse_response(_response: Value) -> Result<(), String> {
@@ -229,11 +208,11 @@ impl Action for Call {
 
     fn build_request(self) -> Value {
         let mut result = Table::new();
-        result.insert(Key::S("op".to_owned()), Value::S("call".to_owned()));
-        result.insert(Key::S("inv".to_owned()), Value::S(self.addr.to_owned()));
-        result.insert(Key::S("fn".to_owned()), Value::S(self.func.to_owned()));
-        result.insert(Key::S("args".to_owned()), Value::T(vec_to_table(self.args)));
-        Value::T(result)
+        result.insert("op".into(), "call".into());
+        result.insert("inv".into(), self.addr.into());
+        result.insert("fn".into(), self.func.into());
+        result.insert("args".into(), vec_to_table(self.args).into());
+        result.into()
     }
 
     fn parse_response(response: Value) -> Result<Value, String> {

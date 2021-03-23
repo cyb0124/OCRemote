@@ -1,6 +1,4 @@
-use super::lua_value::{Key, Table, Value};
-use num_traits::cast::FromPrimitive;
-use ordered_float::NotNan;
+use super::lua_value::{Table, Value};
 use std::{cmp::min, convert::TryInto, rc::Rc};
 
 #[derive(PartialEq, Eq, Hash)]
@@ -17,22 +15,13 @@ pub struct Item {
 impl Item {
     fn serialize(&self) -> Value {
         let mut result = self.others.clone();
-        result.insert(Key::S("label".to_owned()), Value::S(self.label.clone()));
-        result.insert(Key::S("name".to_owned()), Value::S(self.name.clone()));
-        result.insert(
-            Key::S("damage".to_owned()),
-            Value::F(NotNan::from_i16(self.damage).unwrap()),
-        );
-        result.insert(
-            Key::S("maxDamage".to_owned()),
-            Value::F(NotNan::from_i16(self.max_damage).unwrap()),
-        );
-        result.insert(
-            Key::S("maxSize".to_owned()),
-            Value::F(NotNan::from_i32(self.max_size).unwrap()),
-        );
-        result.insert(Key::S("hasTag".to_owned()), Value::B(self.has_tag));
-        Value::T(result)
+        result.insert("label".into(), self.label.clone().into());
+        result.insert("name".into(), self.name.clone().into());
+        result.insert("damage".into(), self.damage.into());
+        result.insert("maxDamage".into(), self.max_damage.into());
+        result.insert("maxSize".into(), self.max_size.into());
+        result.insert("hasTag".into(), self.has_tag.into());
+        result.into()
     }
 }
 
@@ -46,7 +35,7 @@ impl ItemStack {
         if let Value::T(mut table) = value {
             let mut get = |key: &'static str| {
                 table
-                    .remove(&Key::S(key.to_owned()))
+                    .remove(&key.into())
                     .ok_or_else(|| format!("key not found: {}", key))
             };
             let size = get("size")?.try_into()?;
@@ -132,7 +121,7 @@ pub enum Filter {
 }
 
 impl Filter {
-    fn apply(&self, item: &Item) -> bool {
+    pub fn apply(&self, item: &Item) -> bool {
         match self {
             Filter::Label(label) => item.label == *label,
             Filter::Name(name) => item.name == *name,
