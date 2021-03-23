@@ -53,7 +53,7 @@ struct StorageME : Storage {
   StorageME(Factory &factory, std::vector<AccessME> accesses) :Storage(factory), accesses(std::move(accesses)) {}
   void endOfCycle() override { accessForItem.clear(); }
   SharedPromise<std::monostate> update() override;
-  std::optional<int> sinkPriority(const Item&) override { return std::numeric_limits<int>::max(); }
+  std::optional<int> sinkPriority(const Item&) override { return std::numeric_limits<int>::min(); }
   std::pair<int, SharedPromise<std::monostate>> sink(const ItemStack&, size_t slot) override;
 };
 
@@ -61,7 +61,7 @@ struct ProviderME : Provider {
   StorageME &me;
   SharedItem item;
   ProviderME(StorageME &me, SharedItem item, int size)
-    :Provider(me.factory, size, -std::numeric_limits<int>::max()), me(me), item(std::move(item)) {}
+    :Provider(me.factory, size, std::numeric_limits<int>::max()), me(me), item(std::move(item)) {}
   SharedPromise<std::monostate> extract(int size, size_t slot) override;
 };
 
