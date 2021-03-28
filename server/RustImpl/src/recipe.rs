@@ -20,21 +20,10 @@ pub trait Input {
 macro_rules! impl_input {
     ($i:ident) => {
         impl Input for $i {
-            fn get_item(&self) -> &Filter {
-                &self.item
-            }
-
-            fn get_size(&self) -> i32 {
-                self.size
-            }
-
-            fn get_allow_backup(&self) -> bool {
-                self.allow_backup
-            }
-
-            fn get_extra_backup(&self) -> i32 {
-                self.extra_backup
-            }
+            fn get_item(&self) -> &Filter { &self.item }
+            fn get_size(&self) -> i32 { self.size }
+            fn get_allow_backup(&self) -> bool { self.allow_backup }
+            fn get_extra_backup(&self) -> i32 { self.extra_backup }
 
             fn allow_backup(mut self) -> Self {
                 self.allow_backup = true;

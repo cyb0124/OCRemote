@@ -140,9 +140,7 @@ impl Factory {
         self.processes.push(process.into_process(self.weak.clone()))
     }
 
-    pub fn borrow_server(&self) -> Ref<Server> {
-        self.config.server.borrow()
-    }
+    pub fn borrow_server(&self) -> Ref<Server> { self.config.server.borrow() }
 
     fn log(&self, action: Print) {
         println!("{}", action.text);

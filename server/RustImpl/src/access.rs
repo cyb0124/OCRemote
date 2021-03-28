@@ -5,9 +5,7 @@ pub trait Access {
 macro_rules! impl_access {
     ($i:ident) => {
         impl Access for $i {
-            fn get_client(&self) -> &str {
-                self.client
-            }
+            fn get_client(&self) -> &str { self.client }
         }
     };
 }

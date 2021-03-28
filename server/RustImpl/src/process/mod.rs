@@ -19,7 +19,4 @@ pub trait IntoProcess {
 
 pub type SlotFilter = Box<dyn Fn(usize) -> bool>;
 pub type ExtractFilter = Box<dyn Fn(usize, &ItemStack) -> bool>;
-
-pub fn extract_all(_slot: usize, _stack: &ItemStack) -> bool {
-    true
-}
+pub fn extract_all(_slot: usize, _stack: &ItemStack) -> bool { true }

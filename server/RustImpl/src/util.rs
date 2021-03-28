@@ -18,9 +18,7 @@ impl<T> Drop for AbortOnDrop<T> {
 }
 
 impl<T> AbortOnDrop<T> {
-    pub async fn into_future(mut self) -> T {
-        self.0.take().unwrap().await.unwrap()
-    }
+    pub async fn into_future(mut self) -> T { self.0.take().unwrap().await.unwrap() }
 }
 
 pub fn spawn<T: 'static>(future: impl Future<Output = T> + 'static) -> AbortOnDrop<T> {
@@ -85,9 +83,7 @@ impl<T> Drop for LocalSender<T> {
 }
 
 impl<T> LocalSender<T> {
-    pub fn send(self, result: Result<T, String>) {
-        send(self.0.as_ref().unwrap(), result)
-    }
+    pub fn send(self, result: Result<T, String>) { send(self.0.as_ref().unwrap(), result) }
 }
 
 pub fn make_local_one_shot<T>() -> (LocalSender<T>, LocalReceiver<T>) {

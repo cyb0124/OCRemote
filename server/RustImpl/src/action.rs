@@ -28,9 +28,7 @@ pub trait ActionRequest {
 }
 
 impl<T: Action> ActionRequest for ActionState<T> {
-    fn build_request(&mut self) -> Value {
-        self.action.take().unwrap().build_request()
-    }
+    fn build_request(&mut self) -> Value { self.action.take().unwrap().build_request() }
 
     fn on_fail(&mut self, reason: String) {
         self.result = Some(Err(reason));
@@ -57,9 +55,7 @@ impl<T: Action> ActionRequest for ActionState<T> {
 pub struct ActionFuture<T: Action>(Rc<RefCell<ActionState<T>>>);
 
 impl<T: Action> Clone for ActionFuture<T> {
-    fn clone(&self) -> Self {
-        ActionFuture(self.0.clone())
-    }
+    fn clone(&self) -> Self { ActionFuture(self.0.clone()) }
 }
 
 impl<T: Action> Future for ActionFuture<T> {
@@ -88,9 +84,7 @@ impl<T: Action> From<T> for ActionFuture<T> {
 }
 
 impl<T: Action + 'static> From<ActionFuture<T>> for Rc<RefCell<dyn ActionRequest>> {
-    fn from(future: ActionFuture<T>) -> Self {
-        future.0
-    }
+    fn from(future: ActionFuture<T>) -> Self { future.0 }
 }
 
 #[derive(Clone)]
@@ -114,9 +108,7 @@ impl Action for Print {
         result.into()
     }
 
-    fn parse_response(_response: Value) -> Result<(), String> {
-        Ok(())
-    }
+    fn parse_response(_response: Value) -> Result<(), String> { Ok(()) }
 }
 
 pub struct List {
@@ -192,9 +184,7 @@ impl Action for XferME {
         result.into()
     }
 
-    fn parse_response(_response: Value) -> Result<(), String> {
-        Ok(())
-    }
+    fn parse_response(_response: Value) -> Result<(), String> { Ok(()) }
 }
 
 pub struct Call {
@@ -215,7 +205,5 @@ impl Action for Call {
         result.into()
     }
 
-    fn parse_response(response: Value) -> Result<Value, String> {
-        Ok(response)
-    }
+    fn parse_response(response: Value) -> Result<Value, String> { Ok(response) }
 }

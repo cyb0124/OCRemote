@@ -37,23 +37,17 @@ pub struct Provider {
 }
 
 impl PartialEq<Provider> for Provider {
-    fn eq(&self, other: &Self) -> bool {
-        self.priority == other.priority
-    }
+    fn eq(&self, other: &Self) -> bool { self.priority == other.priority }
 }
 
 impl Eq for Provider {}
 
 impl PartialOrd<Provider> for Provider {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
 }
 
 impl Ord for Provider {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.priority.cmp(&other.priority)
-    }
+    fn cmp(&self, other: &Self) -> Ordering { self.priority.cmp(&other.priority) }
 }
 
 pub struct ChestConfig {
@@ -125,9 +119,7 @@ impl Storage for ChestStorage {
         })
     }
 
-    fn cleanup(&mut self) {
-        self.stacks.clear()
-    }
+    fn cleanup(&mut self) { self.stacks.clear() }
 
     fn deposit_priority(&mut self, item: &Rc<Item>) -> Option<i32> {
         let mut empty_slot = None;
@@ -428,13 +420,9 @@ impl Storage for MEStorage {
         })
     }
 
-    fn cleanup(&mut self) {
-        self.access_for_item.clear()
-    }
+    fn cleanup(&mut self) { self.access_for_item.clear() }
 
-    fn deposit_priority(&mut self, _item: &Rc<Item>) -> Option<i32> {
-        Some(i32::MIN)
-    }
+    fn deposit_priority(&mut self, _item: &Rc<Item>) -> Option<i32> { Some(i32::MIN) }
 
     fn deposit(&mut self, stack: &ItemStack, bus_slot: usize) -> DepositResult {
         let weak = self.weak.clone();

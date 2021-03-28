@@ -75,9 +75,7 @@ impl Drop for Client {
 }
 
 impl Client {
-    fn log(&self, x: &(impl Display + ?Sized)) {
-        println!("{}: {}", self.name, x)
-    }
+    fn log(&self, x: &(impl Display + ?Sized)) { println!("{}: {}", self.name, x) }
 
     fn disconnect_by_server(&mut self, server: &mut Server) {
         if let Some(login) = &self.login {
@@ -137,9 +135,7 @@ impl Client {
         }
     }
 
-    fn estimate_load(&self) -> usize {
-        self.request_queue_size + self.response_queue.len()
-    }
+    fn estimate_load(&self) -> usize { self.request_queue_size + self.response_queue.len() }
 }
 
 async fn timeout_main(client: Weak<RefCell<Client>>) {

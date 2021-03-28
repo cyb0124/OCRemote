@@ -23,15 +23,11 @@ pub enum Key {
 }
 
 impl From<usize> for Key {
-    fn from(number: usize) -> Key {
-        Key::F(NotNan::from_usize(number).unwrap())
-    }
+    fn from(number: usize) -> Key { Key::F(NotNan::from_usize(number).unwrap()) }
 }
 
 impl From<&str> for Key {
-    fn from(string: &str) -> Key {
-        Key::S(string.to_owned())
-    }
+    fn from(string: &str) -> Key { Key::S(string.to_owned()) }
 }
 
 pub type Table = BTreeMap<Key, Value>;
@@ -46,63 +42,43 @@ pub enum Value {
 }
 
 impl From<u8> for Value {
-    fn from(number: u8) -> Value {
-        Value::F(NotNan::from_u8(number).unwrap())
-    }
+    fn from(number: u8) -> Value { Value::F(NotNan::from_u8(number).unwrap()) }
 }
 
 impl From<i16> for Value {
-    fn from(number: i16) -> Value {
-        Value::F(NotNan::from_i16(number).unwrap())
-    }
+    fn from(number: i16) -> Value { Value::F(NotNan::from_i16(number).unwrap()) }
 }
 
 impl From<i32> for Value {
-    fn from(number: i32) -> Value {
-        Value::F(NotNan::from_i32(number).unwrap())
-    }
+    fn from(number: i32) -> Value { Value::F(NotNan::from_i32(number).unwrap()) }
 }
 
 impl From<u32> for Value {
-    fn from(number: u32) -> Value {
-        Value::F(NotNan::from_u32(number).unwrap())
-    }
+    fn from(number: u32) -> Value { Value::F(NotNan::from_u32(number).unwrap()) }
 }
 
 impl From<usize> for Value {
-    fn from(number: usize) -> Value {
-        Value::F(NotNan::from_usize(number).unwrap())
-    }
+    fn from(number: usize) -> Value { Value::F(NotNan::from_usize(number).unwrap()) }
 }
 
 impl From<f64> for Value {
-    fn from(number: f64) -> Value {
-        Value::F(NotNan::new(number).unwrap())
-    }
+    fn from(number: f64) -> Value { Value::F(NotNan::new(number).unwrap()) }
 }
 
 impl From<&str> for Value {
-    fn from(string: &str) -> Value {
-        Value::S(string.to_owned())
-    }
+    fn from(string: &str) -> Value { Value::S(string.to_owned()) }
 }
 
 impl From<String> for Value {
-    fn from(string: String) -> Value {
-        Value::S(string)
-    }
+    fn from(string: String) -> Value { Value::S(string) }
 }
 
 impl From<bool> for Value {
-    fn from(boolean: bool) -> Value {
-        Value::B(boolean)
-    }
+    fn from(boolean: bool) -> Value { Value::B(boolean) }
 }
 
 impl From<Table> for Value {
-    fn from(table: Table) -> Value {
-        Value::T(table)
-    }
+    fn from(table: Table) -> Value { Value::T(table) }
 }
 
 impl TryFrom<Value> for NotNan<f64> {
@@ -204,9 +180,7 @@ fn serialize_string(x: &str, out: &mut Vec<u8>) {
     out.extend_from_slice(b"@!")
 }
 
-fn serialize_bool(x: bool, out: &mut Vec<u8>) {
-    out.push(if x { b'+' } else { b'-' })
-}
+fn serialize_bool(x: bool, out: &mut Vec<u8>) { out.push(if x { b'+' } else { b'-' }) }
 
 fn serialize_num(x: NotNan<f64>, out: &mut Vec<u8>) {
     out.push(b'#');
