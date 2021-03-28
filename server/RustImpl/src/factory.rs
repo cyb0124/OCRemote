@@ -316,8 +316,7 @@ async fn factory_main(factory: Weak<RefCell<Factory>>) -> Result<(), String> {
     loop {
         let cycle_start_time = Instant::now();
         {
-            let this = alive(&factory)?;
-            let mut this = this.borrow_mut();
+            alive_mut!(&factory, this);
             let mut text = format!("Cycle {}", n_cycles);
             if let Some(last) = cycle_start_last {
                 text += &format!(
@@ -340,8 +339,7 @@ async fn factory_main(factory: Weak<RefCell<Factory>>) -> Result<(), String> {
         .await;
         let mut bus_task;
         {
-            let this = alive(&factory)?;
-            let mut this = this.borrow_mut();
+            alive_mut!(&factory, this);
             bus_task = this.bus_task.take();
             if let Err(e) = result {
                 this.log(Print {
@@ -360,8 +358,7 @@ async fn factory_main(factory: Weak<RefCell<Factory>>) -> Result<(), String> {
             task.into_future().await?
         }
         let min_cycle_time = {
-            let this = alive(&factory)?;
-            let mut this = this.borrow_mut();
+            alive_mut!(&factory, this);
             this.end_of_cycle();
             this.config.min_cycle_time
         };
@@ -378,8 +375,7 @@ async fn update_storages(factory: &Weak<RefCell<Factory>>) -> Result<(), String>
         .map(|storage| storage.borrow().update())
         .collect();
     join_all(tasks).await?;
-    let this = alive(factory)?;
-    let this = this.borrow();
+    alive!(factory, this);
     let mut n_total = 0;
     for (_, item) in &this.items {
         n_total += item.borrow().n_stored
@@ -410,8 +406,7 @@ async fn run_processes(factory: &Weak<RefCell<Factory>>) -> Result<(), String> {
 async fn bus_main(factory: Weak<RefCell<Factory>>) -> Result<(), String> {
     loop {
         let result = bus_update(&factory).await;
-        let this = alive(&factory)?;
-        let mut this = this.borrow_mut();
+        alive_mut!(&factory, this);
         match result {
             Err(e) => {
                 let e = format!("bus update failed: {}", e);
@@ -435,8 +430,7 @@ async fn bus_main(factory: Weak<RefCell<Factory>>) -> Result<(), String> {
 async fn bus_update(factory: &Weak<RefCell<Factory>>) -> Result<bool, String> {
     let action;
     {
-        let this = alive(factory)?;
-        let mut this = this.borrow_mut();
+        alive_mut!(factory, this);
         this.n_bus_updates += 1;
         let server = this.borrow_server();
         let access = server.load_balance(&this.config.bus_accesses).1;
@@ -449,8 +443,7 @@ async fn bus_update(factory: &Weak<RefCell<Factory>>) -> Result<bool, String> {
     let stacks = action.await?;
     let mut tasks = Vec::new();
     {
-        let this = alive(factory)?;
-        let mut this = this.borrow_mut();
+        alive_mut!(factory, this);
         let mut free_slots = Vec::new();
         for (slot, stack) in stacks.into_iter().enumerate() {
             if !this.bus_allocations.contains(&slot) {
@@ -469,8 +462,7 @@ async fn bus_update(factory: &Weak<RefCell<Factory>>) -> Result<bool, String> {
     }
     let ever_deposited = !tasks.is_empty();
     join_all(tasks).await?;
-    let this = alive(factory)?;
-    let mut this = this.borrow_mut();
+    alive_mut!(factory, this);
     let mut ever_freed = false;
     for slot in take(&mut this.bus_free_queue) {
         this.bus_allocations.remove(&slot);

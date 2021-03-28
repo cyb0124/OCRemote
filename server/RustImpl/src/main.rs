@@ -1,5 +1,7 @@
 #![feature(arc_new_cyclic)]
 
+#[macro_use]
+mod util;
 mod access;
 mod action;
 mod config;
@@ -11,7 +13,6 @@ mod recipe;
 mod server;
 mod side;
 mod storage;
-mod util;
 
 use config::build_factory;
 use tokio::{signal::ctrl_c, task::LocalSet};

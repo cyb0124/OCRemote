@@ -94,8 +94,7 @@ impl Client {
     }
 
     fn disconnect(&mut self) {
-        let server = self.server.upgrade().unwrap();
-        self.disconnect_by_server(&mut server.borrow_mut());
+        self.disconnect_by_server(&mut self.server.upgrade().unwrap().borrow_mut());
     }
 
     fn on_packet(&mut self, value: Value) -> Result<(), String> {
@@ -107,8 +106,7 @@ impl Client {
                 Err(format!("unexpected packet: {:?}", value))
             }
         } else if let Value::S(login) = value {
-            let server = self.server.upgrade().unwrap();
-            let mut server = server.borrow_mut();
+            upgrade_mut!(self.server, server);
             self.name += &format!("[{}]", login);
             self.log("logged in");
             server.login(login.clone(), self.weak.clone());
@@ -279,8 +277,7 @@ impl Server {
 
     fn login(&mut self, name: String, client: Weak<RefCell<Client>>) {
         if let Some(old) = self.logins.insert(name, client) {
-            let old = old.upgrade().unwrap();
-            let mut old = old.borrow_mut();
+            upgrade_mut!(old, old);
             old.log("logged in from another address");
             old.login = None;
             old.disconnect_by_server(self)

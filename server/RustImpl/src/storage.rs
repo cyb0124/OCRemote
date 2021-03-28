@@ -93,10 +93,8 @@ impl Storage for ChestStorage {
         spawn(async move {
             let action;
             {
-                let this = alive(&weak)?;
-                let this = this.borrow();
-                let factory = alive(&this.factory)?;
-                let factory = factory.borrow();
+                alive!(&weak, this);
+                upgrade!(&this.factory, factory);
                 let server = factory.borrow_server();
                 let access = server.load_balance(&this.config.accesses).1;
                 action = ActionFuture::from(List {
@@ -106,11 +104,9 @@ impl Storage for ChestStorage {
                 server.enqueue_request_group(access.client, vec![action.clone().into()]);
             }
             let stacks = action.await?;
-            let this = alive(&weak)?;
-            let mut this = this.borrow_mut();
+            alive_mut!(&weak, this);
             this.stacks = stacks;
-            let factory = alive(&this.factory)?;
-            let mut factory = factory.borrow_mut();
+            upgrade_mut!(&this.factory, factory);
             for (inv_slot, stack) in this.stacks.iter().enumerate() {
                 if let Some(stack) = stack {
                     factory
@@ -174,10 +170,8 @@ impl Storage for ChestStorage {
         let task = spawn(async move {
             let action;
             {
-                let this = alive(&weak)?;
-                let this = this.borrow();
-                let factory = alive(&this.factory)?;
-                let factory = factory.borrow();
+                alive!(&weak, this);
+                upgrade!(&this.factory, factory);
                 let server = factory.borrow_server();
                 let access = server.load_balance(&this.config.accesses).1;
                 action = ActionFuture::from(Call {
@@ -206,10 +200,8 @@ impl Extractor for ChestExtractor {
         spawn(async move {
             let action;
             {
-                let this = alive(&weak)?;
-                let this = this.borrow();
-                let factory = alive(&this.factory)?;
-                let factory = factory.borrow();
+                alive!(&weak, this);
+                upgrade!(&this.factory, factory);
                 let server = factory.borrow_server();
                 let access = server.load_balance(&this.config.accesses).1;
                 action = ActionFuture::from(Call {
@@ -226,8 +218,7 @@ impl Extractor for ChestExtractor {
                 server.enqueue_request_group(access.client, vec![action.clone().into()]);
             }
             action.await?;
-            let this = alive(&weak)?;
-            let mut this = this.borrow_mut();
+            alive_mut!(&weak, this);
             let inv_stack = &mut this.stacks[inv_slot];
             let inv_size = &mut inv_stack.as_mut().unwrap().size;
             *inv_size -= size;
@@ -273,10 +264,8 @@ impl Storage for DrawerStorage {
         spawn(async move {
             let action;
             {
-                let this = alive(&weak)?;
-                let this = this.borrow();
-                let factory = alive(&this.factory)?;
-                let factory = factory.borrow();
+                alive!(&weak, this);
+                upgrade!(&this.factory, factory);
                 let server = factory.borrow_server();
                 let access = server.load_balance(&this.config.accesses).1;
                 action = ActionFuture::from(List {
@@ -286,10 +275,8 @@ impl Storage for DrawerStorage {
                 server.enqueue_request_group(access.client, vec![action.clone().into()]);
             }
             let stacks = action.await?;
-            let this = alive(&weak)?;
-            let this = this.borrow();
-            let factory = alive(&this.factory)?;
-            let mut factory = factory.borrow_mut();
+            alive!(&weak, this);
+            upgrade_mut!(&this.factory, factory);
             for (inv_slot, stack) in stacks.into_iter().enumerate() {
                 if let Some(stack) = stack {
                     factory.register_stored_item(stack.item).provide(Provider {
@@ -323,10 +310,8 @@ impl Storage for DrawerStorage {
         let task = spawn(async move {
             let action;
             {
-                let this = alive(&weak)?;
-                let this = this.borrow();
-                let factory = alive(&this.factory)?;
-                let factory = factory.borrow();
+                alive!(&weak, this);
+                upgrade!(&this.factory, factory);
                 let server = factory.borrow_server();
                 let access = server.load_balance(&this.config.accesses).1;
                 action = ActionFuture::from(Call {
@@ -354,10 +339,8 @@ impl Extractor for DrawerExtractor {
         spawn(async move {
             let action;
             {
-                let this = alive(&weak)?;
-                let this = this.borrow();
-                let factory = alive(&this.factory)?;
-                let factory = factory.borrow();
+                alive!(&weak, this);
+                upgrade!(&this.factory, factory);
                 let server = factory.borrow_server();
                 let access = server.load_balance(&this.config.accesses).1;
                 action = ActionFuture::from(Call {
@@ -413,10 +396,8 @@ impl Storage for MEStorage {
         spawn(async move {
             let action;
             {
-                let this = alive(&weak)?;
-                let this = this.borrow();
-                let factory = alive(&this.factory)?;
-                let factory = factory.borrow();
+                alive!(&weak, this);
+                upgrade!(&this.factory, factory);
                 let server = factory.borrow_server();
                 let access = server.load_balance(&this.config.accesses).1;
                 action = ActionFuture::from(ListME {
@@ -425,10 +406,8 @@ impl Storage for MEStorage {
                 server.enqueue_request_group(access.client, vec![action.clone().into()]);
             }
             let stacks = action.await?;
-            let this = alive(&weak)?;
-            let this = this.borrow();
-            let factory = alive(&this.factory)?;
-            let mut factory = factory.borrow_mut();
+            alive!(&weak, this);
+            upgrade_mut!(&this.factory, factory);
             for mut stack in stacks.into_iter() {
                 Rc::get_mut(&mut stack.item)
                     .unwrap()
@@ -463,10 +442,8 @@ impl Storage for MEStorage {
         let task = spawn(async move {
             let action;
             {
-                let this = alive(&weak)?;
-                let this = this.borrow();
-                let factory = alive(&this.factory)?;
-                let factory = factory.borrow();
+                alive!(&weak, this);
+                upgrade!(&this.factory, factory);
                 let server = factory.borrow_server();
                 let access = server.load_balance(&this.config.accesses).1;
                 action = ActionFuture::from(Call {
@@ -495,11 +472,8 @@ impl Extractor for MEExtractor {
         spawn(async move {
             let action;
             {
-                let this = alive(&weak)?;
-                let mut this = this.borrow_mut();
-                let this = &mut *this;
-                let factory = alive(&this.factory)?;
-                let factory = factory.borrow();
+                alive_mut!(&weak, this);
+                upgrade!(&this.factory, factory);
                 let server = factory.borrow_server();
                 let accesses = &this.config.accesses;
                 let access = *this

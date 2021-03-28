@@ -101,6 +101,35 @@ pub fn make_local_one_shot<T>() -> (LocalSender<T>, LocalReceiver<T>) {
     )
 }
 
+macro_rules! upgrade {
+    ($e:expr, $v:ident) => {
+        let $v = $e.upgrade().unwrap();
+        let $v = $v.borrow();
+    };
+}
+
+macro_rules! upgrade_mut {
+    ($e:expr, $v:ident) => {
+        let $v = $e.upgrade().unwrap();
+        let mut $v = $v.borrow_mut();
+    };
+}
+
 pub fn alive<T>(weak: &Weak<T>) -> Result<Rc<T>, String> {
     weak.upgrade().ok_or("node died".to_owned())
+}
+
+macro_rules! alive {
+    ($e:expr, $v:ident) => {
+        let $v = alive($e)?;
+        let $v = $v.borrow();
+    };
+}
+
+macro_rules! alive_mut {
+    ($e:expr, $v:ident) => {
+        let $v = alive($e)?;
+        let mut $v = $v.borrow_mut();
+        let $v = &mut *$v;
+    };
 }
