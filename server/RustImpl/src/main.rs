@@ -2,6 +2,8 @@
 
 #[macro_use]
 mod util;
+#[macro_use]
+mod recipe;
 mod access;
 mod action;
 mod config;
@@ -9,7 +11,6 @@ mod factory;
 mod item;
 mod lua_value;
 mod process;
-mod recipe;
 mod server;
 mod side;
 mod storage;

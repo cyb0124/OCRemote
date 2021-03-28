@@ -2,17 +2,23 @@ pub trait Access {
     fn get_client(&self) -> &str;
 }
 
+macro_rules! impl_access {
+    ($i:ident) => {
+        impl Access for $i {
+            fn get_client(&self) -> &str {
+                self.client
+            }
+        }
+    };
+}
+
 pub struct BusAccess {
     pub client: &'static str,
     pub addr: &'static str,
     pub side: u8,
 }
 
-impl Access for BusAccess {
-    fn get_client(&self) -> &str {
-        self.client
-    }
-}
+impl_access!(BusAccess);
 
 pub struct InvAccess {
     pub client: &'static str,
@@ -21,11 +27,7 @@ pub struct InvAccess {
     pub inv_side: u8,
 }
 
-impl Access for InvAccess {
-    fn get_client(&self) -> &str {
-        self.client
-    }
-}
+impl_access!(InvAccess);
 
 pub struct MEAccess {
     pub client: &'static str,
@@ -37,8 +39,4 @@ pub struct MEAccess {
     pub me_slot: usize,
 }
 
-impl Access for MEAccess {
-    fn get_client(&self) -> &str {
-        self.client
-    }
-}
+impl_access!(MEAccess);
