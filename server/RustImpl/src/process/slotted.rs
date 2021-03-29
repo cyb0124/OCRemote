@@ -3,7 +3,7 @@ use super::super::action::{ActionFuture, Call, List};
 use super::super::factory::Factory;
 use super::super::item::{Filter, ItemStack};
 use super::super::recipe::{compute_demands, Demand, Input, Output, Recipe};
-use super::super::util::{alive, join_futures, join_task_outputs, join_tasks, spawn, AbortOnDrop};
+use super::super::util::{alive, join_outputs, join_tasks, spawn, AbortOnDrop};
 use super::{extract_output, ExtractFilter, ExtractableProcess, IntoProcess, Process};
 use fnv::{FnvHashMap, FnvHashSet};
 use std::{
@@ -179,8 +179,8 @@ impl SlottedProcess {
             let slots_to_free = slots_to_free.clone();
             let weak = self.weak.clone();
             async move {
-                let bus_slots = join_task_outputs(bus_slots).await?;
-                let mut futures = Vec::new();
+                let bus_slots = join_outputs(bus_slots).await?;
+                let mut tasks = Vec::new();
                 {
                     alive!(weak, this);
                     upgrade!(this.factory, factory);
@@ -203,12 +203,12 @@ impl SlottedProcess {
                                 ],
                             });
                             group.push(action.clone().into());
-                            futures.push(async move { action.await.map(|_| ()) });
+                            tasks.push(spawn(async move { action.await.map(|_| ()) }));
                         }
                     }
                     server.enqueue_request_group(access.client, group)
                 }
-                join_futures(futures).await?;
+                join_tasks(tasks).await?;
                 alive!(weak, this);
                 upgrade_mut!(this.factory, factory);
                 for slot_to_free in take(&mut *slots_to_free.borrow_mut()) {

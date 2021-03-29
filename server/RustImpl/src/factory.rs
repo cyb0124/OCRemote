@@ -279,7 +279,7 @@ impl Factory {
             }
             if let Some((storage, _)) = best {
                 let DepositResult { n_deposited, task } =
-                    storage.borrow_mut().deposit(&stack, bus_slot);
+                    storage.borrow_mut().deposit(self, &stack, bus_slot);
                 stack.size -= n_deposited;
                 tasks.push(task)
             } else {
@@ -366,12 +366,13 @@ async fn factory_main(factory: Weak<RefCell<Factory>>) -> Result<(), String> {
 }
 
 async fn update_storages(factory: &Weak<RefCell<Factory>>) -> Result<(), String> {
-    let tasks = alive(factory)?
-        .borrow()
-        .storages
-        .iter()
-        .map(|storage| storage.borrow().update())
-        .collect();
+    let tasks = {
+        alive!(factory, this);
+        this.storages
+            .iter()
+            .map(|storage| storage.borrow().update(this))
+            .collect()
+    };
     join_tasks(tasks).await?;
     alive!(factory, this);
     let mut n_total = 0;

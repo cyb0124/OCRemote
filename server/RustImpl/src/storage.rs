@@ -16,10 +16,10 @@ pub struct DepositResult {
 }
 
 pub trait Storage {
-    fn update(&self) -> AbortOnDrop<Result<(), String>>;
+    fn update(&self, factory: &Factory) -> AbortOnDrop<Result<(), String>>;
     fn cleanup(&mut self);
     fn deposit_priority(&mut self, item: &Rc<Item>) -> Option<i32>;
-    fn deposit(&mut self, stack: &ItemStack, bus_slot: usize) -> DepositResult;
+    fn deposit(&mut self, factory: &Factory, stack: &ItemStack, bus_slot: usize) -> DepositResult;
 }
 
 pub trait IntoStorage {
@@ -82,21 +82,16 @@ impl IntoStorage for ChestConfig {
 }
 
 impl Storage for ChestStorage {
-    fn update(&self) -> AbortOnDrop<Result<(), String>> {
+    fn update(&self, factory: &Factory) -> AbortOnDrop<Result<(), String>> {
+        let server = factory.borrow_server();
+        let access = server.load_balance(&self.config.accesses).1;
+        let action = ActionFuture::from(List {
+            addr: access.addr,
+            side: access.inv_side,
+        });
+        server.enqueue_request_group(access.client, vec![action.clone().into()]);
         let weak = self.weak.clone();
         spawn(async move {
-            let action;
-            {
-                alive!(weak, this);
-                upgrade!(this.factory, factory);
-                let server = factory.borrow_server();
-                let access = server.load_balance(&this.config.accesses).1;
-                action = ActionFuture::from(List {
-                    addr: access.addr,
-                    side: access.inv_side,
-                });
-                server.enqueue_request_group(access.client, vec![action.clone().into()]);
-            }
             let stacks = action.await?;
             alive_mut!(weak, this);
             this.stacks = stacks;
@@ -147,7 +142,7 @@ impl Storage for ChestStorage {
         })
     }
 
-    fn deposit(&mut self, stack: &ItemStack, bus_slot: usize) -> DepositResult {
+    fn deposit(&mut self, factory: &Factory, stack: &ItemStack, bus_slot: usize) -> DepositResult {
         let inv_slot = self.inv_slot_to_deposit;
         let inv_stack = &mut self.stacks[inv_slot];
         let n_deposited;
@@ -158,29 +153,21 @@ impl Storage for ChestStorage {
             n_deposited = stack.size;
             *inv_stack = Some(stack.clone())
         }
-        let weak = self.weak.clone();
-        let task = spawn(async move {
-            let action;
-            {
-                alive!(weak, this);
-                upgrade!(this.factory, factory);
-                let server = factory.borrow_server();
-                let access = server.load_balance(&this.config.accesses).1;
-                action = ActionFuture::from(Call {
-                    addr: access.addr,
-                    func: "transferItem",
-                    args: vec![
-                        access.bus_side.into(),
-                        access.inv_side.into(),
-                        n_deposited.into(),
-                        (bus_slot + 1).into(),
-                        (inv_slot + 1).into(),
-                    ],
-                });
-                server.enqueue_request_group(access.client, vec![action.clone().into()]);
-            }
-            action.await.map(|_| ())
+        let server = factory.borrow_server();
+        let access = server.load_balance(&self.config.accesses).1;
+        let action = ActionFuture::from(Call {
+            addr: access.addr,
+            func: "transferItem",
+            args: vec![
+                access.bus_side.into(),
+                access.inv_side.into(),
+                n_deposited.into(),
+                (bus_slot + 1).into(),
+                (inv_slot + 1).into(),
+            ],
         });
+        server.enqueue_request_group(access.client, vec![action.clone().into()]);
+        let task = spawn(async move { action.await.map(|_| ()) });
         DepositResult { n_deposited, task }
     }
 }
@@ -251,21 +238,16 @@ impl IntoStorage for DrawerConfig {
 }
 
 impl Storage for DrawerStorage {
-    fn update(&self) -> AbortOnDrop<Result<(), String>> {
+    fn update(&self, factory: &Factory) -> AbortOnDrop<Result<(), String>> {
+        let server = factory.borrow_server();
+        let access = server.load_balance(&self.config.accesses).1;
+        let action = ActionFuture::from(List {
+            addr: access.addr,
+            side: access.inv_side,
+        });
+        server.enqueue_request_group(access.client, vec![action.clone().into()]);
         let weak = self.weak.clone();
         spawn(async move {
-            let action;
-            {
-                alive!(weak, this);
-                upgrade!(this.factory, factory);
-                let server = factory.borrow_server();
-                let access = server.load_balance(&this.config.accesses).1;
-                action = ActionFuture::from(List {
-                    addr: access.addr,
-                    side: access.inv_side,
-                });
-                server.enqueue_request_group(access.client, vec![action.clone().into()]);
-            }
             let stacks = action.await?;
             alive!(weak, this);
             upgrade_mut!(this.factory, factory);
@@ -296,30 +278,22 @@ impl Storage for DrawerStorage {
         None
     }
 
-    fn deposit(&mut self, stack: &ItemStack, bus_slot: usize) -> DepositResult {
-        let weak = self.weak.clone();
+    fn deposit(&mut self, factory: &Factory, stack: &ItemStack, bus_slot: usize) -> DepositResult {
         let n_deposited = stack.size;
-        let task = spawn(async move {
-            let action;
-            {
-                alive!(weak, this);
-                upgrade!(this.factory, factory);
-                let server = factory.borrow_server();
-                let access = server.load_balance(&this.config.accesses).1;
-                action = ActionFuture::from(Call {
-                    addr: access.addr,
-                    func: "transferItem",
-                    args: vec![
-                        access.bus_side.into(),
-                        access.inv_side.into(),
-                        n_deposited.into(),
-                        (bus_slot + 1).into(),
-                    ],
-                });
-                server.enqueue_request_group(access.client, vec![action.clone().into()]);
-            }
-            action.await.map(|_| ())
+        let server = factory.borrow_server();
+        let access = server.load_balance(&self.config.accesses).1;
+        let action = ActionFuture::from(Call {
+            addr: access.addr,
+            func: "transferItem",
+            args: vec![
+                access.bus_side.into(),
+                access.inv_side.into(),
+                n_deposited.into(),
+                (bus_slot + 1).into(),
+            ],
         });
+        server.enqueue_request_group(access.client, vec![action.clone().into()]);
+        let task = spawn(async move { action.await.map(|_| ()) });
         DepositResult { n_deposited, task }
     }
 }
@@ -383,20 +357,15 @@ impl IntoStorage for MEConfig {
 }
 
 impl Storage for MEStorage {
-    fn update(&self) -> AbortOnDrop<Result<(), String>> {
+    fn update(&self, factory: &Factory) -> AbortOnDrop<Result<(), String>> {
+        let server = factory.borrow_server();
+        let access = server.load_balance(&self.config.accesses).1;
+        let action = ActionFuture::from(ListME {
+            addr: access.me_addr,
+        });
+        server.enqueue_request_group(access.client, vec![action.clone().into()]);
         let weak = self.weak.clone();
         spawn(async move {
-            let action;
-            {
-                alive!(weak, this);
-                upgrade!(this.factory, factory);
-                let server = factory.borrow_server();
-                let access = server.load_balance(&this.config.accesses).1;
-                action = ActionFuture::from(ListME {
-                    addr: access.me_addr,
-                });
-                server.enqueue_request_group(access.client, vec![action.clone().into()]);
-            }
             let stacks = action.await?;
             alive!(weak, this);
             upgrade_mut!(this.factory, factory);
@@ -424,31 +393,23 @@ impl Storage for MEStorage {
 
     fn deposit_priority(&mut self, _item: &Rc<Item>) -> Option<i32> { Some(i32::MIN) }
 
-    fn deposit(&mut self, stack: &ItemStack, bus_slot: usize) -> DepositResult {
-        let weak = self.weak.clone();
+    fn deposit(&mut self, factory: &Factory, stack: &ItemStack, bus_slot: usize) -> DepositResult {
         let n_deposited = stack.size;
-        let task = spawn(async move {
-            let action;
-            {
-                alive!(weak, this);
-                upgrade!(this.factory, factory);
-                let server = factory.borrow_server();
-                let access = server.load_balance(&this.config.accesses).1;
-                action = ActionFuture::from(Call {
-                    addr: access.transposer_addr,
-                    func: "transferItem",
-                    args: vec![
-                        access.bus_side.into(),
-                        access.me_side.into(),
-                        n_deposited.into(),
-                        (bus_slot + 1).into(),
-                        9.into(),
-                    ],
-                });
-                server.enqueue_request_group(access.client, vec![action.clone().into()]);
-            }
-            action.await.map(|_| ())
+        let server = factory.borrow_server();
+        let access = server.load_balance(&self.config.accesses).1;
+        let action = ActionFuture::from(Call {
+            addr: access.transposer_addr,
+            func: "transferItem",
+            args: vec![
+                access.bus_side.into(),
+                access.me_side.into(),
+                n_deposited.into(),
+                (bus_slot + 1).into(),
+                9.into(),
+            ],
         });
+        server.enqueue_request_group(access.client, vec![action.clone().into()]);
+        let task = spawn(async move { action.await.map(|_| ()) });
         DepositResult { n_deposited, task }
     }
 }
