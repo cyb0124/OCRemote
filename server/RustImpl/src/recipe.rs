@@ -83,9 +83,7 @@ pub fn resolve_inputs(factory: &Factory, recipe: &impl Recipe) -> Option<Resolve
                     input_info.n_needed += input.get_size();
                     if input_info.allow_backup && !input.get_allow_backup() {
                         input_info.allow_backup = false;
-                        input_info.n_available = item_info
-                            .borrow()
-                            .get_availability(false, input.get_extra_backup())
+                        input_info.n_available = item_info.borrow().get_availability(false, input.get_extra_backup())
                     }
                 }
             }

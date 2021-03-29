@@ -69,11 +69,7 @@ struct InsertResult {
     actions: Vec<(usize, i32)>,
 }
 
-fn insert_into_inventory(
-    inventory: &mut Vec<Option<ItemStack>>,
-    item: &Rc<Item>,
-    to_insert: i32,
-) -> InsertResult {
+fn insert_into_inventory(inventory: &mut Vec<Option<ItemStack>>, item: &Rc<Item>, to_insert: i32) -> InsertResult {
     let mut result = InsertResult {
         n_inserted: 0,
         actions: Vec::new(),
@@ -114,10 +110,7 @@ fn insert_into_inventory(
 pub enum Filter {
     Label(&'static str),
     Name(&'static str),
-    Both {
-        label: &'static str,
-        name: &'static str,
-    },
+    Both { label: &'static str, name: &'static str },
     Fn(Box<dyn Fn(&Item) -> bool>),
 }
 

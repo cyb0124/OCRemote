@@ -98,16 +98,14 @@ impl Storage for ChestStorage {
             upgrade_mut!(this.factory, factory);
             for (inv_slot, stack) in this.stacks.iter().enumerate() {
                 if let Some(stack) = stack {
-                    factory
-                        .register_stored_item(stack.item.clone())
-                        .provide(Provider {
-                            priority: -stack.size,
-                            n_provided: stack.size.into(),
-                            extractor: Rc::new(ChestExtractor {
-                                weak: weak.clone(),
-                                inv_slot,
-                            }),
-                        });
+                    factory.register_stored_item(stack.item.clone()).provide(Provider {
+                        priority: -stack.size,
+                        n_provided: stack.size.into(),
+                        extractor: Rc::new(ChestExtractor {
+                            weak: weak.clone(),
+                            inv_slot,
+                        }),
+                    });
                 }
             }
             Ok(())
@@ -360,9 +358,7 @@ impl Storage for MEStorage {
     fn update(&self, factory: &Factory) -> AbortOnDrop<Result<(), String>> {
         let server = factory.borrow_server();
         let access = server.load_balance(&self.config.accesses).1;
-        let action = ActionFuture::from(ListME {
-            addr: access.me_addr,
-        });
+        let action = ActionFuture::from(ListME { addr: access.me_addr });
         server.enqueue_request_group(access.client, vec![action.clone().into()]);
         let weak = self.weak.clone();
         spawn(async move {
@@ -374,16 +370,14 @@ impl Storage for MEStorage {
                     .unwrap()
                     .others
                     .remove(&"isCraftable".into());
-                factory
-                    .register_stored_item(stack.item.clone())
-                    .provide(Provider {
-                        priority: i32::MAX,
-                        n_provided: stack.size.into(),
-                        extractor: Rc::new(MEExtractor {
-                            weak: weak.clone(),
-                            item: stack.item,
-                        }),
-                    })
+                factory.register_stored_item(stack.item.clone()).provide(Provider {
+                    priority: i32::MAX,
+                    n_provided: stack.size.into(),
+                    extractor: Rc::new(MEExtractor {
+                        weak: weak.clone(),
+                        item: stack.item,
+                    }),
+                })
             }
             Ok(())
         })

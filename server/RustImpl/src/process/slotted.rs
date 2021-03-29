@@ -77,9 +77,7 @@ impl Process for SlottedProcess {
             {
                 alive!(weak, this);
                 upgrade!(this.factory, factory);
-                if this.config.to_extract.is_none()
-                    && compute_demands(factory, &this.config.recipes).is_empty()
-                {
+                if this.config.to_extract.is_none() && compute_demands(factory, &this.config.recipes).is_empty() {
                     return Ok(());
                 }
                 let server = factory.borrow_server();
@@ -128,8 +126,7 @@ impl Process for SlottedProcess {
                             };
                             demand.inputs.n_sets = min(
                                 demand.inputs.n_sets,
-                                (min(recipe.max_per_slot, demand.inputs.items[i_input].max_size)
-                                    - existing_size)
+                                (min(recipe.max_per_slot, demand.inputs.items[i_input].max_size) - existing_size)
                                     / size_per_slot,
                             );
                             if demand.inputs.n_sets <= 0 {
@@ -152,11 +149,7 @@ impl Process for SlottedProcess {
 }
 
 impl SlottedProcess {
-    fn execute_recipe(
-        &self,
-        factory: &mut Factory,
-        demand: Demand,
-    ) -> AbortOnDrop<Result<(), String>> {
+    fn execute_recipe(&self, factory: &mut Factory, demand: Demand) -> AbortOnDrop<Result<(), String>> {
         let mut bus_slots = Vec::new();
         let slots_to_free = Rc::new(RefCell::new(Vec::new()));
         let recipe = &self.config.recipes[demand.i_recipe];

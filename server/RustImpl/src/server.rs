@@ -91,9 +91,7 @@ impl Client {
         }
     }
 
-    fn disconnect(&mut self) {
-        self.disconnect_by_server(&mut self.server.upgrade().unwrap().borrow_mut());
-    }
+    fn disconnect(&mut self) { self.disconnect_by_server(&mut self.server.upgrade().unwrap().borrow_mut()); }
 
     fn on_packet(&mut self, value: Value) -> Result<(), String> {
         if let Some(_) = &self.login {
@@ -216,10 +214,7 @@ fn create_listener(port: u16) -> TcpListener {
     socket.set_reuse_address(true).unwrap();
     socket.set_only_v6(false).unwrap();
     socket
-        .bind(&SockAddr::from(SocketAddr::from((
-            Ipv6Addr::UNSPECIFIED,
-            port,
-        ))))
+        .bind(&SockAddr::from(SocketAddr::from((Ipv6Addr::UNSPECIFIED, port))))
         .unwrap();
     socket.set_nonblocking(true).unwrap();
     socket.listen(128).unwrap();
@@ -282,11 +277,7 @@ impl Server {
 
     pub fn enqueue_request_group(&self, client: &str, group: Vec<Rc<RefCell<dyn ActionRequest>>>) {
         if let Some(client) = self.logins.get(client) {
-            client
-                .upgrade()
-                .unwrap()
-                .borrow_mut()
-                .enqueue_request_group(group)
+            client.upgrade().unwrap().borrow_mut().enqueue_request_group(group)
         } else {
             let reason = format!("{} isn't connected", client);
             for x in group {
@@ -303,10 +294,7 @@ impl Server {
         }
     }
 
-    pub fn load_balance<'a, T: Access>(
-        &self,
-        iter: impl IntoIterator<Item = &'a T>,
-    ) -> (usize, &'a T) {
+    pub fn load_balance<'a, T: Access>(&self, iter: impl IntoIterator<Item = &'a T>) -> (usize, &'a T) {
         let mut iter = iter.into_iter().enumerate();
         let mut best_access = iter.next().unwrap();
         let mut best_load = self.estimate_load(best_access.1.get_client());

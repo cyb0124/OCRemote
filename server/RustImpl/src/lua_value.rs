@@ -96,17 +96,13 @@ impl TryFrom<Value> for NotNan<f64> {
 impl TryFrom<Value> for i32 {
     type Error = String;
 
-    fn try_from(value: Value) -> Result<Self, String> {
-        try_into_integer(NotNan::try_from(value)?.into_inner())
-    }
+    fn try_from(value: Value) -> Result<Self, String> { try_into_integer(NotNan::try_from(value)?.into_inner()) }
 }
 
 impl TryFrom<Value> for i16 {
     type Error = String;
 
-    fn try_from(value: Value) -> Result<Self, String> {
-        try_into_integer(NotNan::try_from(value)?.into_inner())
-    }
+    fn try_from(value: Value) -> Result<Self, String> { try_into_integer(NotNan::try_from(value)?.into_inner()) }
 }
 
 impl TryFrom<Value> for String {
@@ -225,11 +221,7 @@ pub struct Parser {
 }
 
 impl Parser {
-    pub fn new() -> Self {
-        Parser {
-            stack: vec![State::V],
-        }
-    }
+    pub fn new() -> Self { Parser { stack: vec![State::V] } }
 
     fn reduce<T>(&mut self, mut value: Value, handler: &mut T) -> Result<(), String>
     where
@@ -322,10 +314,7 @@ impl Parser {
                     }
                     self.stack.push(State::F(result))
                 }
-                State::S {
-                    mut result,
-                    mut escape,
-                } => {
+                State::S { mut result, mut escape } => {
                     while let Some((x, rem)) = data.split_first() {
                         data = rem;
                         if escape {
@@ -336,9 +325,9 @@ impl Parser {
                                 }
                                 b'~' => {
                                     self.reduce(
-                                        Value::S(String::from_utf8(result).map_err(|e| {
-                                            format!("non utf-8 serialized string: {}", e)
-                                        })?),
+                                        String::from_utf8(result)
+                                            .map_err(|e| format!("non utf-8 serialized string: {}", e))?
+                                            .into(),
                                         handler,
                                     )?;
                                     continue 'outer;

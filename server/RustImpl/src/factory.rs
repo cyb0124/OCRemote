@@ -4,9 +4,7 @@ use super::item::{Filter, Item, ItemStack};
 use super::process::{IntoProcess, Process};
 use super::server::Server;
 use super::storage::{DepositResult, Extractor, IntoStorage, Provider, Storage};
-use super::util::{
-    alive, join_tasks, make_local_one_shot, spawn, AbortOnDrop, LocalReceiver, LocalSender,
-};
+use super::util::{alive, join_tasks, make_local_one_shot, spawn, AbortOnDrop, LocalReceiver, LocalSender};
 use fnv::{FnvHashMap, FnvHashSet};
 use std::{
     cell::{Ref, RefCell},
@@ -132,9 +130,7 @@ impl Factory {
         self.storages.push(storage.into_storage(self.weak.clone()))
     }
 
-    pub fn add_backup(&mut self, filter: Filter, n_backup: i32) {
-        self.backups.push((filter, n_backup))
-    }
+    pub fn add_backup(&mut self, filter: Filter, n_backup: i32) { self.backups.push((filter, n_backup)) }
 
     pub fn add_process(&mut self, process: impl IntoProcess) {
         self.processes.push(process.into_process(self.weak.clone()))
@@ -155,14 +151,8 @@ impl Factory {
             Entry::Occupied(x) => x.into_mut().get_mut(),
             Entry::Vacant(x) => {
                 let item = x.key();
-                self.label_map
-                    .entry(item.label.clone())
-                    .or_default()
-                    .push(item.clone());
-                self.name_map
-                    .entry(item.name.clone())
-                    .or_default()
-                    .push(item.clone());
+                self.label_map.entry(item.label.clone()).or_default().push(item.clone());
+                self.name_map.entry(item.name.clone()).or_default().push(item.clone());
                 x.insert(RefCell::new(ItemInfo {
                     n_stored: 0,
                     n_backup: 0,
@@ -173,10 +163,7 @@ impl Factory {
         }
     }
 
-    pub fn search_item<'a>(
-        &'a self,
-        filter: &Filter,
-    ) -> Option<(&'a Rc<Item>, &'a RefCell<ItemInfo>)> {
+    pub fn search_item<'a>(&'a self, filter: &Filter) -> Option<(&'a Rc<Item>, &'a RefCell<ItemInfo>)> {
         let mut best: Option<(&'a Rc<Item>, &'a RefCell<ItemInfo>)> = None;
         let mut on_candidate = |(new_item, new_info): (&'a Rc<Item>, &'a RefCell<ItemInfo>)| {
             if let Some((_, old_info)) = best {
@@ -253,12 +240,7 @@ impl Factory {
         }
     }
 
-    fn deposit(
-        &self,
-        bus_slot: usize,
-        mut stack: ItemStack,
-        tasks: &mut Vec<AbortOnDrop<Result<(), String>>>,
-    ) {
+    fn deposit(&self, bus_slot: usize, mut stack: ItemStack, tasks: &mut Vec<AbortOnDrop<Result<(), String>>>) {
         self.log(Print {
             text: format!("{}*{}", stack.item.label, stack.size),
             color: 0xFFA500,
@@ -278,8 +260,7 @@ impl Factory {
                 }
             }
             if let Some((storage, _)) = best {
-                let DepositResult { n_deposited, task } =
-                    storage.borrow_mut().deposit(self, &stack, bus_slot);
+                let DepositResult { n_deposited, task } = storage.borrow_mut().deposit(self, &stack, bus_slot);
                 stack.size -= n_deposited;
                 tasks.push(task)
             } else {
