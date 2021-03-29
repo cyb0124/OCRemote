@@ -33,6 +33,8 @@ impl SlottedInput {
     }
 }
 
+impl_input!(SlottedInput);
+
 pub struct SlottedRecipe {
     pub outputs: Vec<Output>,
     pub inputs: Vec<SlottedInput>,
@@ -98,7 +100,7 @@ impl Process for SlottedProcess {
                             *existing_input = Some(stack)
                         } else if let Some(ref to_extract) = this.config.to_extract {
                             if to_extract(slot, &stack) {
-                                tasks.push(extract_output(this, factory, slot, stack.size))
+                                tasks.push(extract_output(this, factory, slot, stack.item.max_size))
                             }
                         }
                     }
@@ -203,7 +205,7 @@ impl SlottedProcess {
                 for slot_to_free in take(&mut *slots_to_free.borrow_mut()) {
                     factory.bus_free(slot_to_free)
                 }
-                Result::<(), String>::Ok(())
+                Ok(())
             }
         };
         let weak = self.weak.clone();

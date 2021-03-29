@@ -25,6 +25,19 @@ impl Item {
     }
 }
 
+pub fn jammer() -> Rc<Item> {
+    thread_local!(static ITEM: Rc<Item> = Rc::new(Item {
+        label: String::new(),
+        name: String::new(),
+        damage: 0,
+        max_damage: 0,
+        max_size: 1,
+        has_tag: false,
+        others: Table::default()
+    }));
+    ITEM.with(|item| item.clone())
+}
+
 #[derive(Clone)]
 pub struct ItemStack {
     pub item: Rc<Item>,

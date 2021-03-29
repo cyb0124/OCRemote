@@ -19,7 +19,7 @@ pub trait IntoProcess {
 
 pub type SlotFilter = Box<dyn Fn(usize) -> bool>;
 pub type ExtractFilter = Box<dyn Fn(usize, &ItemStack) -> bool>;
-pub fn extract_all(_slot: usize, _stack: &ItemStack) -> bool { true }
+pub fn extract_all() -> Option<ExtractFilter> { Some(Box::new(|_, _| true)) }
 
 pub trait ExtractableProcess {
     fn get_accesses(&self) -> &Vec<InvAccess>;
@@ -72,5 +72,7 @@ where
     })
 }
 
+mod buffered;
 mod slotted;
+pub use buffered::*;
 pub use slotted::*;

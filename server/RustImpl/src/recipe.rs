@@ -17,14 +17,8 @@ pub trait Input {
     fn extra_backup(self, size: i32) -> Self;
 }
 
-pub trait Recipe {
-    type In: Input;
-    fn get_outputs(&self) -> &Vec<Output>;
-    fn get_inputs(&self) -> &Vec<Self::In>;
-}
-
-macro_rules! impl_recipe {
-    ($r:ident, $i:ident) => {
+macro_rules! impl_input {
+    ($i:ident) => {
         impl Input for $i {
             fn get_item(&self) -> &Filter { &self.item }
             fn get_size(&self) -> i32 { self.size }
@@ -41,7 +35,17 @@ macro_rules! impl_recipe {
                 self
             }
         }
+    };
+}
 
+pub trait Recipe {
+    type In: Input;
+    fn get_outputs(&self) -> &Vec<Output>;
+    fn get_inputs(&self) -> &Vec<Self::In>;
+}
+
+macro_rules! impl_recipe {
+    ($r:ident, $i:ident) => {
         impl Recipe for $r {
             type In = $i;
             fn get_outputs(&self) -> &Vec<Output> { &self.outputs }
@@ -68,6 +72,7 @@ pub fn resolve_inputs(factory: &Factory, recipe: &impl Recipe) -> Option<Resolve
     let mut infos = FnvHashMap::<&Rc<Item>, InputInfo>::default();
     for input in recipe.get_inputs() {
         if let Some((item, item_info)) = factory.search_item(input.get_item()) {
+            items.push(item.clone());
             match infos.entry(item) {
                 Entry::Vacant(input_info) => {
                     input_info.insert(InputInfo {
@@ -92,7 +97,7 @@ pub fn resolve_inputs(factory: &Factory, recipe: &impl Recipe) -> Option<Resolve
             return None;
         }
     }
-    for (item, input_info) in infos.into_iter() {
+    for (_, input_info) in infos.into_iter() {
         n_sets = min(n_sets, input_info.n_available / input_info.n_needed)
     }
     if n_sets > 0 {
