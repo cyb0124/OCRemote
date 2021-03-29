@@ -582,7 +582,7 @@ SharedPromise<std::monostate> ProcessScatteringWorkingSet::cycle() {
     for (size_t slot{}; slot < items.size(); ++slot) {
       auto &stack(items[slot]);
       if (!isInSlot[slot] && stack && outFilter && outFilter(slot, *stack))
-          promises.emplace_back(processOutput(slot, stack->size));
+          promises.emplace_back(processOutput(slot, stack->item->maxSize));
     }
     auto demands(factory.getDemand(recipes));
     for (auto &demand : demands) {
