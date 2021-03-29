@@ -17,8 +17,14 @@ pub trait Input {
     fn extra_backup(self, size: i32) -> Self;
 }
 
-macro_rules! impl_input {
-    ($i:ident) => {
+pub trait Recipe {
+    type In: Input;
+    fn get_outputs(&self) -> &Vec<Output>;
+    fn get_inputs(&self) -> &Vec<Self::In>;
+}
+
+macro_rules! impl_recipe {
+    ($r:ident, $i:ident) => {
         impl Input for $i {
             fn get_item(&self) -> &Filter { &self.item }
             fn get_size(&self) -> i32 { self.size }
@@ -35,13 +41,13 @@ macro_rules! impl_input {
                 self
             }
         }
-    };
-}
 
-pub trait Recipe {
-    type In: Input;
-    fn get_outputs(&self) -> &Vec<Output>;
-    fn get_inputs(&self) -> &Vec<Self::In>;
+        impl Recipe for $r {
+            type In = $i;
+            fn get_outputs(&self) -> &Vec<Output> { &self.outputs }
+            fn get_inputs(&self) -> &Vec<$i> { &self.inputs }
+        }
+    };
 }
 
 pub struct ResolvedInputs {
@@ -99,9 +105,9 @@ pub fn resolve_inputs(factory: &Factory, recipe: &impl Recipe) -> Option<Resolve
 }
 
 pub struct Demand {
-    i_recipe: usize,
+    pub i_recipe: usize,
+    pub inputs: ResolvedInputs,
     fullness: f32,
-    inputs: ResolvedInputs,
 }
 
 pub fn compute_demands(factory: &Factory, recipes: &Vec<impl Recipe>) -> Vec<Demand> {
@@ -129,8 +135,8 @@ pub fn compute_demands(factory: &Factory, recipes: &Vec<impl Recipe>) -> Vec<Dem
         if let Some(inputs) = resolve_inputs(factory, recipe) {
             result.push(Demand {
                 i_recipe,
-                fullness,
                 inputs,
+                fullness,
             })
         }
     }
