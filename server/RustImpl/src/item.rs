@@ -77,15 +77,15 @@ impl ItemStack {
     }
 }
 
-struct InsertResult {
-    n_inserted: i32,
-    actions: Vec<(usize, i32)>,
+pub struct InsertPlan {
+    pub n_inserted: i32,
+    pub insertions: Vec<(usize, i32)>,
 }
 
-fn insert_into_inventory(inventory: &mut Vec<Option<ItemStack>>, item: &Rc<Item>, to_insert: i32) -> InsertResult {
-    let mut result = InsertResult {
+pub fn insert_into_inventory(inventory: &mut Vec<Option<ItemStack>>, item: &Rc<Item>, to_insert: i32) -> InsertPlan {
+    let mut result = InsertPlan {
         n_inserted: 0,
-        actions: Vec::new(),
+        insertions: Vec::new(),
     };
     let mut remaining = min(to_insert, item.max_size);
     let mut first_empty_slot = None;
@@ -99,7 +99,7 @@ fn insert_into_inventory(inventory: &mut Vec<Option<ItemStack>>, item: &Rc<Item>
                 if to_insert > 0 {
                     stack.size += to_insert;
                     result.n_inserted += to_insert;
-                    result.actions.push((slot, to_insert));
+                    result.insertions.push((slot, to_insert));
                     remaining -= to_insert
                 }
             }
@@ -114,7 +114,7 @@ fn insert_into_inventory(inventory: &mut Vec<Option<ItemStack>>, item: &Rc<Item>
                 size: remaining,
             });
             result.n_inserted += remaining;
-            result.actions.push((slot, remaining))
+            result.insertions.push((slot, remaining))
         }
     }
     result

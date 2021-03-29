@@ -10,6 +10,7 @@ use std::{
     cell::{Ref, RefCell},
     cmp::{max, min},
     collections::{hash_map::Entry, BinaryHeap, VecDeque},
+    future::Future,
     mem::take,
     rc::{Rc, Weak},
     time::Duration,
@@ -64,13 +65,13 @@ pub struct Reservation {
 }
 
 impl Reservation {
-    pub async fn extract(self, factory: &Factory, bus_slot: usize) -> Result<(), String> {
+    pub fn extract(self, factory: &Factory, bus_slot: usize) -> impl Future<Output = Result<(), String>> {
         let tasks = self
             .extractors
             .into_iter()
             .map(|(extractor, size)| extractor.extract(factory, size, bus_slot))
             .collect();
-        join_tasks(tasks).await
+        join_tasks(tasks)
     }
 }
 

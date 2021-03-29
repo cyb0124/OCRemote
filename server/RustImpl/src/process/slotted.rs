@@ -9,7 +9,6 @@ use fnv::{FnvHashMap, FnvHashSet};
 use std::{
     cell::RefCell,
     cmp::min,
-    mem::take,
     rc::{Rc, Weak},
 };
 
@@ -162,15 +161,19 @@ impl SlottedProcess {
             bus_slots.push(spawn(async move {
                 let bus_slot = bus_slot.await?;
                 slots_to_free.borrow_mut().push(bus_slot);
-                reservation.extract(&*alive(&weak)?.borrow(), bus_slot).await?;
-                Ok(bus_slot)
+                let extraction = reservation.extract(&*alive(&weak)?.borrow(), bus_slot);
+                extraction.await.map(|_| bus_slot)
             }))
         }
-        let task = {
-            let slots_to_free = slots_to_free.clone();
-            let weak = self.weak.clone();
-            async move {
-                let bus_slots = join_outputs(bus_slots).await?;
+        let weak = self.weak.clone();
+        spawn(async move {
+            let bus_slots = join_outputs(bus_slots).await;
+            let slots_to_free = Rc::try_unwrap(slots_to_free)
+                .map_err(|_| "slots_to_free should be exclusively owned here")
+                .unwrap()
+                .into_inner();
+            let task = async {
+                let bus_slots = bus_slots?;
                 let mut tasks = Vec::new();
                 {
                     alive!(weak, this);
@@ -202,23 +205,17 @@ impl SlottedProcess {
                 join_tasks(tasks).await?;
                 alive!(weak, this);
                 upgrade_mut!(this.factory, factory);
-                for slot_to_free in take(&mut *slots_to_free.borrow_mut()) {
-                    factory.bus_free(slot_to_free)
+                for slot_to_free in &slots_to_free {
+                    factory.bus_free(*slot_to_free)
                 }
                 Ok(())
-            }
-        };
-        let weak = self.weak.clone();
-        spawn(async move {
+            };
             let result = task.await;
-            alive!(weak, this);
-            upgrade_mut!(this.factory, factory);
-            factory.bus_deposit(
-                Rc::try_unwrap(slots_to_free)
-                    .map_err(|_| "slots_to_free should be exclusively owned here")
-                    .unwrap()
-                    .into_inner(),
-            );
+            if result.is_err() {
+                alive!(weak, this);
+                upgrade_mut!(this.factory, factory);
+                factory.bus_deposit(slots_to_free);
+            }
             result
         })
     }

@@ -1,13 +1,15 @@
 use super::super::access::InvAccess;
-use super::super::action::{ActionFuture, List};
-use super::super::factory::Factory;
-use super::super::item::{jammer, Filter, Item, ItemStack};
-use super::super::recipe::{compute_demands, Input, Output, Recipe};
-use super::super::util::{alive, join_tasks, spawn, AbortOnDrop};
+use super::super::action::{ActionFuture, Call, List};
+use super::super::factory::{Factory, Reservation};
+use super::super::item::{insert_into_inventory, jammer, Filter, InsertPlan, Item, ItemStack};
+use super::super::recipe::{compute_demands, resolve_inputs, Demand, Input, Output, Recipe};
+use super::super::util::{alive, join_outputs, join_tasks, spawn, AbortOnDrop};
 use super::{extract_output, ExtractFilter, ExtractableProcess, IntoProcess, Process, SlotFilter};
 use fnv::FnvHashMap;
 use std::{
     cell::RefCell,
+    cmp::min,
+    iter::once,
     rc::{Rc, Weak},
 };
 
@@ -34,7 +36,7 @@ impl_input!(BufferedInput);
 pub struct BufferedRecipe {
     pub outputs: Vec<Output>,
     pub inputs: Vec<BufferedInput>,
-    pub max_sets: i32,
+    pub max_inputs: i32,
 }
 
 impl_recipe!(BufferedRecipe, BufferedInput);
@@ -95,15 +97,18 @@ impl Process for BufferedProcess {
                 'slot: for (slot, stack) in stacks.iter_mut().enumerate() {
                     if let Some(ref slot_filter) = this.config.slot_filter {
                         if !slot_filter(slot) {
-                            *stack = Some(ItemStack { item: jammer(), size: 1 });
-                            continue 'slot
+                            *stack = Some(ItemStack {
+                                item: jammer(),
+                                size: 1,
+                            });
+                            continue 'slot;
                         }
                     }
                     if let Some(stack) = stack {
                         *existing_size.entry(stack.item.clone()).or_default() += stack.size;
                         for stock in &this.config.stocks {
                             if stock.item.apply(&stack.item) {
-                                continue 'slot
+                                continue 'slot;
                             }
                         }
                         remaining_size -= stack.size;
@@ -111,7 +116,7 @@ impl Process for BufferedProcess {
                             for recipe in &this.config.recipes {
                                 for input in &recipe.inputs {
                                     if input.item.apply(&stack.item) {
-                                        continue 'slot
+                                        continue 'slot;
                                     }
                                 }
                             }
@@ -121,9 +126,209 @@ impl Process for BufferedProcess {
                         }
                     }
                 }
-                todo!()
+                for stock in &this.config.stocks {
+                    if let Some((item, info)) = factory.search_item(&stock.item) {
+                        let existing = existing_size.entry(item.clone()).or_default();
+                        let to_insert = min(
+                            stock.size - *existing,
+                            info.borrow().get_availability(stock.allow_backup, stock.extra_backup),
+                        );
+                        if to_insert <= 0 {
+                            continue;
+                        }
+                        let InsertPlan { n_inserted, insertions } = insert_into_inventory(&mut stacks, item, to_insert);
+                        if n_inserted <= 0 {
+                            continue;
+                        }
+                        *existing += n_inserted;
+                        let reservation = factory.reserve_item(this.config.name, item, n_inserted);
+                        tasks.push(this.insert_stock(factory, reservation, insertions))
+                    }
+                }
+                if remaining_size > 0 {
+                    'recipe: for Demand { i_recipe, .. } in compute_demands(factory, &this.config.recipes) {
+                        let recipe = &this.config.recipes[i_recipe];
+                        if let Some(mut inputs) = resolve_inputs(factory, recipe) {
+                            let size_per_set: i32 = recipe.inputs.iter().map(|x| x.size).sum();
+                            inputs.n_sets = min(inputs.n_sets, remaining_size / size_per_set);
+                            if inputs.n_sets <= 0 {
+                                continue 'recipe;
+                            }
+                            let existing_total: i32 = inputs
+                                .items
+                                .iter()
+                                .map(|item| *existing_size.entry(item.clone()).or_default())
+                                .sum();
+                            inputs.n_sets = min(inputs.n_sets, (recipe.max_inputs - existing_total) / size_per_set);
+                            if inputs.n_sets <= 0 {
+                                continue 'recipe;
+                            }
+                            let backup = stacks.clone();
+                            let mut plans = Vec::new();
+                            plans.reserve(recipe.inputs.len());
+                            'retry: loop {
+                                for (i_input, item) in inputs.items.iter().enumerate() {
+                                    let to_insert = inputs.n_sets * recipe.inputs[i_input].size;
+                                    let plan = insert_into_inventory(&mut stacks, item, to_insert);
+                                    if plan.n_inserted == to_insert {
+                                        plans.push(plan)
+                                    } else {
+                                        inputs.n_sets -= 1;
+                                        if inputs.n_sets <= 0 {
+                                            continue 'recipe;
+                                        }
+                                        plans.clear();
+                                        stacks = backup.clone();
+                                        continue 'retry;
+                                    }
+                                }
+                                break 'retry;
+                            }
+                            for (i_input, item) in inputs.items.iter().enumerate() {
+                                *existing_size.get_mut(item).unwrap() += plans[i_input].n_inserted
+                            }
+                            remaining_size -= inputs.n_sets * size_per_set;
+                            tasks.push(this.insert_recipe(factory, inputs.items, plans));
+                            if remaining_size <= 0 {
+                                break 'recipe;
+                            }
+                        }
+                    }
+                }
             }
             join_tasks(tasks).await
+        })
+    }
+}
+
+impl BufferedProcess {
+    fn insert_stock(
+        &self,
+        factory: &mut Factory,
+        reservation: Reservation,
+        insertions: Vec<(usize, i32)>,
+    ) -> AbortOnDrop<Result<(), String>> {
+        let bus_slot = factory.bus_allocate();
+        let weak = self.weak.clone();
+        spawn(async move {
+            let bus_slot = bus_slot.await?;
+            let task = async {
+                let extraction = {
+                    alive!(weak, this);
+                    upgrade!(this.factory, factory);
+                    reservation.extract(factory, bus_slot)
+                };
+                extraction.await?;
+                let mut tasks = Vec::new();
+                {
+                    alive!(weak, this);
+                    upgrade!(this.factory, factory);
+                    let server = factory.borrow_server();
+                    let access = server.load_balance(&this.config.accesses).1;
+                    let mut group = Vec::new();
+                    for (inv_slot, size) in insertions.into_iter() {
+                        let action = ActionFuture::from(Call {
+                            addr: access.addr,
+                            func: "transferItem",
+                            args: vec![
+                                access.bus_side.into(),
+                                access.inv_side.into(),
+                                size.into(),
+                                (bus_slot + 1).into(),
+                                (inv_slot + 1).into(),
+                            ],
+                        });
+                        group.push(action.clone().into());
+                        tasks.push(spawn(async move { action.await.map(|_| ()) }))
+                    }
+                    server.enqueue_request_group(access.client, group)
+                }
+                join_tasks(tasks).await?;
+                alive!(weak, this);
+                upgrade_mut!(this.factory, factory);
+                factory.bus_free(bus_slot);
+                Ok(())
+            };
+            let result = task.await;
+            if result.is_err() {
+                alive!(weak, this);
+                upgrade_mut!(this.factory, factory);
+                factory.bus_deposit(once(bus_slot))
+            }
+            result
+        })
+    }
+
+    fn insert_recipe(
+        &self,
+        factory: &mut Factory,
+        items: Vec<Rc<Item>>,
+        plans: Vec<InsertPlan>,
+    ) -> AbortOnDrop<Result<(), String>> {
+        let mut bus_slots = Vec::new();
+        let slots_to_free = Rc::new(RefCell::new(Vec::new()));
+        for (i_input, item) in items.into_iter().enumerate() {
+            let reservation = factory.reserve_item(self.config.name, &item, plans[i_input].n_inserted);
+            let bus_slot = factory.bus_allocate();
+            let slots_to_free = slots_to_free.clone();
+            let weak = self.factory.clone();
+            bus_slots.push(spawn(async move {
+                let bus_slot = bus_slot.await?;
+                slots_to_free.borrow_mut().push(bus_slot);
+                let extraction = reservation.extract(&*alive(&weak)?.borrow(), bus_slot);
+                extraction.await.map(|_| bus_slot)
+            }))
+        }
+        let weak = self.weak.clone();
+        spawn(async move {
+            let bus_slots = join_outputs(bus_slots).await;
+            let slots_to_free = Rc::try_unwrap(slots_to_free)
+                .map_err(|_| "slots_to_free should be exclusively owned here")
+                .unwrap()
+                .into_inner();
+            let task = async {
+                let bus_slots = bus_slots?;
+                let mut tasks = Vec::new();
+                {
+                    alive!(weak, this);
+                    upgrade!(this.factory, factory);
+                    let server = factory.borrow_server();
+                    let access = server.load_balance(&this.config.accesses).1;
+                    let mut group = Vec::new();
+                    for (i_input, InsertPlan { insertions, .. }) in plans.into_iter().enumerate() {
+                        for (inv_slot, size) in insertions {
+                            let action = ActionFuture::from(Call {
+                                addr: access.addr,
+                                func: "transferItem",
+                                args: vec![
+                                    access.bus_side.into(),
+                                    access.inv_side.into(),
+                                    size.into(),
+                                    (bus_slots[i_input] + 1).into(),
+                                    (inv_slot + 1).into(),
+                                ],
+                            });
+                            group.push(action.clone().into());
+                            tasks.push(spawn(async move { action.await.map(|_| ()) }))
+                        }
+                    }
+                    server.enqueue_request_group(access.client, group)
+                }
+                join_tasks(tasks).await?;
+                alive!(weak, this);
+                upgrade_mut!(this.factory, factory);
+                for slot_to_free in &slots_to_free {
+                    factory.bus_free(*slot_to_free)
+                }
+                Ok(())
+            };
+            let result = task.await;
+            if result.is_err() {
+                alive!(weak, this);
+                upgrade_mut!(this.factory, factory);
+                factory.bus_deposit(slots_to_free);
+            }
+            result
         })
     }
 }
