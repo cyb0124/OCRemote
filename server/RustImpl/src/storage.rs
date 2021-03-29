@@ -27,7 +27,7 @@ pub trait IntoStorage {
 }
 
 pub trait Extractor {
-    fn extract(&self, size: i32, bus_slot: usize) -> AbortOnDrop<Result<(), String>>;
+    fn extract(&self, factory: &Factory, size: i32, bus_slot: usize) -> AbortOnDrop<Result<(), String>>;
 }
 
 pub struct Provider {
@@ -171,29 +171,25 @@ impl Storage for ChestStorage {
 }
 
 impl Extractor for ChestExtractor {
-    fn extract(&self, size: i32, bus_slot: usize) -> AbortOnDrop<Result<(), String>> {
-        let weak = self.weak.clone();
+    fn extract(&self, factory: &Factory, size: i32, bus_slot: usize) -> AbortOnDrop<Result<(), String>> {
         let inv_slot = self.inv_slot;
+        let server = factory.borrow_server();
+        upgrade!(self.weak, this);
+        let access = server.load_balance(&this.config.accesses).1;
+        let action = ActionFuture::from(Call {
+            addr: access.addr,
+            func: "transferItem",
+            args: vec![
+                access.inv_side.into(),
+                access.bus_side.into(),
+                size.into(),
+                (inv_slot + 1).into(),
+                (bus_slot + 1).into(),
+            ],
+        });
+        server.enqueue_request_group(access.client, vec![action.clone().into()]);
+        let weak = self.weak.clone();
         spawn(async move {
-            let action;
-            {
-                alive!(weak, this);
-                upgrade!(this.factory, factory);
-                let server = factory.borrow_server();
-                let access = server.load_balance(&this.config.accesses).1;
-                action = ActionFuture::from(Call {
-                    addr: access.addr,
-                    func: "transferItem",
-                    args: vec![
-                        access.inv_side.into(),
-                        access.bus_side.into(),
-                        size.into(),
-                        (inv_slot + 1).into(),
-                        (bus_slot + 1).into(),
-                    ],
-                });
-                server.enqueue_request_group(access.client, vec![action.clone().into()]);
-            }
             action.await?;
             alive_mut!(weak, this);
             let inv_stack = &mut this.stacks[inv_slot];
@@ -297,31 +293,23 @@ impl Storage for DrawerStorage {
 }
 
 impl Extractor for DrawerExtractor {
-    fn extract(&self, size: i32, bus_slot: usize) -> AbortOnDrop<Result<(), String>> {
-        let weak = self.weak.clone();
-        let inv_slot = self.inv_slot;
-        spawn(async move {
-            let action;
-            {
-                alive!(weak, this);
-                upgrade!(this.factory, factory);
-                let server = factory.borrow_server();
-                let access = server.load_balance(&this.config.accesses).1;
-                action = ActionFuture::from(Call {
-                    addr: access.addr,
-                    func: "transferItem",
-                    args: vec![
-                        access.inv_side.into(),
-                        access.bus_side.into(),
-                        size.into(),
-                        (inv_slot + 1).into(),
-                        (bus_slot + 1).into(),
-                    ],
-                });
-                server.enqueue_request_group(access.client, vec![action.clone().into()]);
-            }
-            action.await.map(|_| ())
-        })
+    fn extract(&self, factory: &Factory, size: i32, bus_slot: usize) -> AbortOnDrop<Result<(), String>> {
+        upgrade!(self.weak, this);
+        let server = factory.borrow_server();
+        let access = server.load_balance(&this.config.accesses).1;
+        let action = ActionFuture::from(Call {
+            addr: access.addr,
+            func: "transferItem",
+            args: vec![
+                access.inv_side.into(),
+                access.bus_side.into(),
+                size.into(),
+                (self.inv_slot + 1).into(),
+                (bus_slot + 1).into(),
+            ],
+        });
+        server.enqueue_request_group(access.client, vec![action.clone().into()]);
+        spawn(async move { action.await.map(|_| ()) })
     }
 }
 
@@ -409,38 +397,30 @@ impl Storage for MEStorage {
 }
 
 impl Extractor for MEExtractor {
-    fn extract(&self, size: i32, bus_slot: usize) -> AbortOnDrop<Result<(), String>> {
-        let weak = self.weak.clone();
-        let item = self.item.clone();
-        spawn(async move {
-            let action;
-            {
-                alive_mut!(weak, this);
-                upgrade!(this.factory, factory);
-                let server = factory.borrow_server();
-                let accesses = &this.config.accesses;
-                let access = *this
-                    .access_for_item
-                    .entry(item.clone())
-                    .or_insert_with(|| server.load_balance(accesses).0);
-                let access = &this.config.accesses[access];
-                action = ActionFuture::from(XferME {
-                    me_addr: access.me_addr,
-                    me_slot: access.me_slot,
-                    filter: item.serialize(),
-                    size,
-                    transposer_addr: access.transposer_addr,
-                    transposer_args: vec![
-                        access.me_side.into(),
-                        access.bus_side.into(),
-                        size.into(),
-                        (access.me_slot + 1).into(),
-                        (bus_slot + 1).into(),
-                    ],
-                });
-                server.enqueue_request_group(access.client, vec![action.clone().into()]);
-            }
-            action.await.map(|_| ())
-        })
+    fn extract(&self, factory: &Factory, size: i32, bus_slot: usize) -> AbortOnDrop<Result<(), String>> {
+        upgrade_mut!(self.weak, this);
+        let server = factory.borrow_server();
+        let accesses = &this.config.accesses;
+        let access = *this
+            .access_for_item
+            .entry(self.item.clone())
+            .or_insert_with(|| server.load_balance(accesses).0);
+        let access = &this.config.accesses[access];
+        let action = ActionFuture::from(XferME {
+            me_addr: access.me_addr,
+            me_slot: access.me_slot,
+            filter: self.item.serialize(),
+            size,
+            transposer_addr: access.transposer_addr,
+            transposer_args: vec![
+                access.me_side.into(),
+                access.bus_side.into(),
+                size.into(),
+                (access.me_slot + 1).into(),
+                (bus_slot + 1).into(),
+            ],
+        });
+        server.enqueue_request_group(access.client, vec![action.clone().into()]);
+        spawn(async move { action.await.map(|_| ()) })
     }
 }

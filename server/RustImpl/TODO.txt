@@ -7,9 +7,6 @@ RFToolsControlWorkbenchAccess
 ComponentAccess
 RedstoneAccess
 
-SlottedConfig
-SlottedProcess
-
 BufferedConfig
 BufferedProcess
 

@@ -37,19 +37,13 @@ macro_rules! impl_extractable_process {
     };
 }
 
-fn extract_output<T>(this: &T, slot: usize, size: i32) -> AbortOnDrop<Result<(), String>>
+fn extract_output<T>(this: &T, factory: &mut Factory, slot: usize, size: i32) -> AbortOnDrop<Result<(), String>>
 where
     T: ExtractableProcess + 'static,
 {
+    let bus_slot = factory.bus_allocate();
     let weak = this.get_weak().clone();
     spawn(async move {
-        let bus_slot = alive(&weak)?
-            .borrow()
-            .get_factory()
-            .upgrade()
-            .unwrap()
-            .borrow_mut()
-            .bus_allocate();
         let bus_slot = bus_slot.await?;
         let action;
         {
@@ -71,13 +65,9 @@ where
             server.enqueue_request_group(access.client, vec![action.clone().into()])
         }
         let result = action.await.map(|_| ());
-        alive(&weak)?
-            .borrow()
-            .get_factory()
-            .upgrade()
-            .unwrap()
-            .borrow_mut()
-            .bus_deposit(once(bus_slot));
+        alive!(weak, this);
+        upgrade_mut!(this.get_factory(), factory);
+        factory.bus_deposit(once(bus_slot));
         result
     })
 }

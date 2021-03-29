@@ -64,11 +64,11 @@ pub struct Reservation {
 }
 
 impl Reservation {
-    pub async fn extract(self, bus_slot: usize) -> Result<(), String> {
+    pub async fn extract(self, factory: &Factory, bus_slot: usize) -> Result<(), String> {
         let tasks = self
             .extractors
             .into_iter()
-            .map(|(extractor, size)| extractor.extract(size, bus_slot))
+            .map(|(extractor, size)| extractor.extract(factory, size, bus_slot))
             .collect();
         join_tasks(tasks).await
     }

@@ -87,6 +87,7 @@ impl Process for SlottedProcess {
             let mut tasks = Vec::new();
             {
                 alive!(weak, this);
+                upgrade_mut!(this.factory, factory);
                 let mut existing_inputs = FnvHashMap::<usize, Option<ItemStack>>::default();
                 for slot in &this.config.input_slots {
                     existing_inputs.insert(*slot, None);
@@ -97,12 +98,11 @@ impl Process for SlottedProcess {
                             *existing_input = Some(stack)
                         } else if let Some(ref to_extract) = this.config.to_extract {
                             if to_extract(slot, &stack) {
-                                tasks.push(extract_output(this, slot, stack.size))
+                                tasks.push(extract_output(this, factory, slot, stack.size))
                             }
                         }
                     }
                 }
-                upgrade_mut!(this.factory, factory);
                 let demands = compute_demands(factory, &this.config.recipes);
                 'recipe: for mut demand in demands.into_iter() {
                     let recipe = &this.config.recipes[demand.i_recipe];
@@ -156,10 +156,11 @@ impl SlottedProcess {
             );
             let bus_slot = factory.bus_allocate();
             let slots_to_free = slots_to_free.clone();
+            let weak = self.factory.clone();
             bus_slots.push(spawn(async move {
                 let bus_slot = bus_slot.await?;
                 slots_to_free.borrow_mut().push(bus_slot);
-                reservation.extract(bus_slot).await?;
+                reservation.extract(&*alive(&weak)?.borrow(), bus_slot).await?;
                 Ok(bus_slot)
             }))
         }
@@ -208,18 +209,14 @@ impl SlottedProcess {
         let weak = self.weak.clone();
         spawn(async move {
             let result = task.await;
-            alive(&weak)?
-                .borrow()
-                .factory
-                .upgrade()
-                .unwrap()
-                .borrow_mut()
-                .bus_deposit(
-                    Rc::try_unwrap(slots_to_free)
-                        .map_err(|_| "slots_to_free should be exclusively owned here")
-                        .unwrap()
-                        .into_inner(),
-                );
+            alive!(weak, this);
+            upgrade_mut!(this.factory, factory);
+            factory.bus_deposit(
+                Rc::try_unwrap(slots_to_free)
+                    .map_err(|_| "slots_to_free should be exclusively owned here")
+                    .unwrap()
+                    .into_inner(),
+            );
             result
         })
     }
