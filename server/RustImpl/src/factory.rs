@@ -374,12 +374,13 @@ async fn update_storages(factory: &Weak<RefCell<Factory>>) -> Result<(), String>
 }
 
 async fn run_processes(factory: &Weak<RefCell<Factory>>) -> Result<(), String> {
-    let tasks = alive(factory)?
-        .borrow()
-        .processes
-        .iter()
-        .map(|process| process.borrow().run())
-        .collect();
+    let tasks = {
+        alive!(factory, this);
+        this.processes
+            .iter()
+            .map(|process| process.borrow().run(this))
+            .collect()
+    };
     join_tasks(tasks).await
 }
 

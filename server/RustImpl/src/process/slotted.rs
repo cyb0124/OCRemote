@@ -70,24 +70,19 @@ impl IntoProcess for SlottedConfig {
 }
 
 impl Process for SlottedProcess {
-    fn run(&self) -> AbortOnDrop<Result<(), String>> {
+    fn run(&self, factory: &Factory) -> AbortOnDrop<Result<(), String>> {
+        if self.config.to_extract.is_none() && compute_demands(factory, &self.config.recipes).is_empty() {
+            return spawn(async { Ok(()) });
+        }
+        let server = factory.borrow_server();
+        let access = server.load_balance(&self.config.accesses).1;
+        let action = ActionFuture::from(List {
+            addr: access.addr,
+            side: access.inv_side,
+        });
+        server.enqueue_request_group(access.client, vec![action.clone().into()]);
         let weak = self.weak.clone();
         spawn(async move {
-            let action;
-            {
-                alive!(weak, this);
-                upgrade!(this.factory, factory);
-                if this.config.to_extract.is_none() && compute_demands(factory, &this.config.recipes).is_empty() {
-                    return Ok(());
-                }
-                let server = factory.borrow_server();
-                let access = server.load_balance(&this.config.accesses).1;
-                action = ActionFuture::from(List {
-                    addr: access.addr,
-                    side: access.inv_side,
-                });
-                server.enqueue_request_group(access.client, vec![action.clone().into()])
-            }
             let stacks = action.await?;
             let mut tasks = Vec::new();
             {
