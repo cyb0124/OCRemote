@@ -90,7 +90,7 @@ pub struct Factory {
     backups: Vec<(Filter, i32)>,
     processes: Vec<Rc<RefCell<dyn Process>>>,
 
-    items: FnvHashMap<Rc<Item>, RefCell<ItemInfo>>,
+    pub items: FnvHashMap<Rc<Item>, RefCell<ItemInfo>>,
     label_map: FnvHashMap<String, Vec<Rc<Item>>>,
     name_map: FnvHashMap<String, Vec<Rc<Item>>>,
 

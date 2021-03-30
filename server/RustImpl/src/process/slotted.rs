@@ -1,10 +1,10 @@
 use super::super::access::InvAccess;
-use super::super::action::{ActionFuture, Call, List};
+use super::super::action::{ActionFuture, Call};
 use super::super::factory::Factory;
 use super::super::item::{Filter, ItemStack};
 use super::super::recipe::{compute_demands, Demand, Input, Output, Recipe};
 use super::super::util::{alive, join_outputs, join_tasks, spawn, AbortOnDrop};
-use super::{extract_output, ExtractFilter, IntoProcess, InvProcess, Process};
+use super::{extract_output, list_inv, ExtractFilter, IntoProcess, InvProcess, Process};
 use fnv::{FnvHashMap, FnvHashSet};
 use std::{
     cell::RefCell,
@@ -75,16 +75,10 @@ impl Process for SlottedProcess {
         if self.config.to_extract.is_none() && compute_demands(factory, &self.config.recipes).is_empty() {
             return spawn(async { Ok(()) });
         }
-        let server = factory.borrow_server();
-        let access = server.load_balance(&self.config.accesses).1;
-        let action = ActionFuture::from(List {
-            addr: access.addr,
-            side: access.inv_side,
-        });
-        server.enqueue_request_group(access.client, vec![action.clone().into()]);
+        let stacks = list_inv(self, factory);
         let weak = self.weak.clone();
         spawn(async move {
-            let stacks = action.await?;
+            let stacks = stacks.await?;
             let mut tasks = Vec::new();
             {
                 alive!(weak, this);

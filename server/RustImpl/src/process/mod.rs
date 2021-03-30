@@ -1,5 +1,5 @@
 use super::access::InvAccess;
-use super::action::{ActionFuture, Call};
+use super::action::{ActionFuture, Call, List};
 use super::factory::{Factory, Reservation};
 use super::item::ItemStack;
 use super::util::{alive, join_tasks, spawn, AbortOnDrop};
@@ -37,6 +37,20 @@ macro_rules! impl_inv_process {
     };
 }
 
+fn list_inv<T>(this: &T, factory: &Factory) -> ActionFuture<List>
+where
+    T: InvProcess + 'static,
+{
+    let server = factory.borrow_server();
+    let access = server.load_balance(this.get_accesses()).1;
+    let action = ActionFuture::from(List {
+        addr: access.addr,
+        side: access.inv_side,
+    });
+    server.enqueue_request_group(access.client, vec![action.clone().into()]);
+    action
+}
+
 fn extract_output<T>(this: &T, factory: &mut Factory, slot: usize, size: i32) -> AbortOnDrop<Result<(), String>>
 where
     T: InvProcess + 'static,
@@ -72,7 +86,7 @@ where
     })
 }
 
-pub fn scattering_insert<T, U>(
+fn scattering_insert<T, U>(
     this: &T,
     factory: &mut Factory,
     reservation: Reservation,
@@ -132,8 +146,10 @@ where
 }
 
 mod buffered;
+mod inputless;
 mod scattering;
 mod slotted;
 pub use buffered::*;
+pub use inputless::*;
 pub use scattering::*;
 pub use slotted::*;

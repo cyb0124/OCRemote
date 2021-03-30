@@ -1,10 +1,9 @@
 use super::super::access::InvAccess;
-use super::super::action::{ActionFuture, List};
 use super::super::factory::Factory;
 use super::super::item::{Filter, ItemStack};
 use super::super::recipe::{compute_demands, resolve_inputs, Demand, Input, Output, Recipe};
 use super::super::util::{alive, join_tasks, spawn, AbortOnDrop};
-use super::{extract_output, scattering_insert, ExtractFilter, IntoProcess, InvProcess, Process};
+use super::{extract_output, list_inv, scattering_insert, ExtractFilter, IntoProcess, InvProcess, Process};
 use fnv::FnvHashMap;
 use std::{
     cell::RefCell,
@@ -83,16 +82,10 @@ impl Process for ScatteringProcess {
         if self.config.to_extract.is_none() && compute_demands(factory, &self.config.recipes).is_empty() {
             return spawn(async { Ok(()) });
         }
-        let server = factory.borrow_server();
-        let access = server.load_balance(&self.config.accesses).1;
-        let action = ActionFuture::from(List {
-            addr: access.addr,
-            side: access.inv_side,
-        });
-        server.enqueue_request_group(access.client, vec![action.clone().into()]);
+        let stacks = list_inv(self, factory);
         let weak = self.weak.clone();
         spawn(async move {
-            let mut stacks = action.await?;
+            let mut stacks = stacks.await?;
             let mut tasks = Vec::new();
             {
                 alive!(weak, this);

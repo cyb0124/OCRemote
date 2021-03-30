@@ -1,13 +1,9 @@
-Inputless
 NonConsumable
 FluxNetworkOutput
 CraftingRobotAccess
 RFToolsControlWorkbenchAccess
 ComponentAccess
 RedstoneAccess
-
-InputlessConfig
-InputlessProcess
 
 CraftingRobotConfig
 CraftingRobotProcess
