@@ -574,8 +574,7 @@ SharedPromise<std::monostate> ProcessScatteringWorkingSet::cycle() {
     std::vector<bool> isInSlot(items.size());
     for (size_t inSlot : inSlots) {
       if (inSlot >= items.size()) {
-        items.resize(inSlot + 1);
-        isInSlot.resize(inSlot + 1);
+        return scheduleFailingPromise<std::monostate>(factory.s.io, name + ": invalid slot");
       }
       isInSlot[inSlot] = true;
     }
@@ -593,12 +592,12 @@ SharedPromise<std::monostate> ProcessScatteringWorkingSet::cycle() {
       std::unordered_map<size_t, int> transferMap;
       bool full{};
       while (demand.inAvail > 0) {
-        int max{};
+        int min_any{};
         std::optional<std::pair<int, size_t>> min;
         for (size_t slot : inSlots) {
           auto &stack(items[slot]);
           if (stack) {
-            max = std::max(max, items[slot]->size);
+            min_any = std::min(min_any, stack->size);
             if (*stack->item == *demand.in.front())
               if (!min || stack->size < min->first)
                 min.emplace(stack->size, slot);
@@ -606,11 +605,11 @@ SharedPromise<std::monostate> ProcessScatteringWorkingSet::cycle() {
           }
           min.emplace(0, slot);
         }
-        if (max >= eachSlotMaxInProc) {
+        if (min_any >= eachSlotMaxInProc) {
           full = true;
           break;
         }
-        if (!min.has_value() || min->first > max)
+        if (!min.has_value())
           break;
         --demand.inAvail;
         ++transferTotal;
