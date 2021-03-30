@@ -6,9 +6,6 @@ RFToolsControlWorkbenchAccess
 ComponentAccess
 RedstoneAccess
 
-ScatteringConfig
-ScatteringProcess
-
 InputlessConfig
 InputlessProcess
 

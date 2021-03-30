@@ -1,15 +1,14 @@
 use super::super::access::InvAccess;
 use super::super::action::{ActionFuture, Call, List};
-use super::super::factory::{Factory, Reservation};
+use super::super::factory::Factory;
 use super::super::item::{insert_into_inventory, jammer, Filter, InsertPlan, Item, ItemStack};
 use super::super::recipe::{compute_demands, resolve_inputs, Demand, Input, Output, Recipe};
 use super::super::util::{alive, join_outputs, join_tasks, spawn, AbortOnDrop};
-use super::{extract_output, ExtractFilter, ExtractableProcess, IntoProcess, Process, SlotFilter};
+use super::{extract_output, scattering_insert, ExtractFilter, IntoProcess, InvProcess, Process, SlotFilter};
 use fnv::FnvHashMap;
 use std::{
     cell::RefCell,
     cmp::min,
-    iter::once,
     rc::{Rc, Weak},
 };
 
@@ -57,7 +56,7 @@ struct BufferedProcess {
     factory: Weak<RefCell<Factory>>,
 }
 
-impl_extractable_process!(BufferedProcess);
+impl_inv_process!(BufferedProcess);
 
 impl IntoProcess for BufferedConfig {
     fn into_process(self, factory: Weak<RefCell<Factory>>) -> Rc<RefCell<dyn Process>> {
@@ -142,7 +141,7 @@ impl Process for BufferedProcess {
                         }
                         *existing += n_inserted;
                         let reservation = factory.reserve_item(this.config.name, item, n_inserted);
-                        tasks.push(this.execute_stock(factory, reservation, insertions))
+                        tasks.push(scattering_insert(this, factory, reservation, insertions))
                     }
                 }
                 if remaining_size > 0 {
@@ -202,61 +201,6 @@ impl Process for BufferedProcess {
 }
 
 impl BufferedProcess {
-    fn execute_stock(
-        &self,
-        factory: &mut Factory,
-        reservation: Reservation,
-        insertions: Vec<(usize, i32)>,
-    ) -> AbortOnDrop<Result<(), String>> {
-        let bus_slot = factory.bus_allocate();
-        let weak = self.weak.clone();
-        spawn(async move {
-            let bus_slot = bus_slot.await?;
-            let task = async {
-                let extraction = {
-                    alive!(weak, this);
-                    upgrade!(this.factory, factory);
-                    reservation.extract(factory, bus_slot)
-                };
-                extraction.await?;
-                let mut tasks = Vec::new();
-                {
-                    alive!(weak, this);
-                    upgrade!(this.factory, factory);
-                    let server = factory.borrow_server();
-                    for (inv_slot, size) in insertions.into_iter() {
-                        let access = server.load_balance(&this.config.accesses).1;
-                        let action = ActionFuture::from(Call {
-                            addr: access.addr,
-                            func: "transferItem",
-                            args: vec![
-                                access.bus_side.into(),
-                                access.inv_side.into(),
-                                size.into(),
-                                (bus_slot + 1).into(),
-                                (inv_slot + 1).into(),
-                            ],
-                        });
-                        server.enqueue_request_group(access.client, vec![action.clone().into()]);
-                        tasks.push(spawn(async move { action.await.map(|_| ()) }))
-                    }
-                }
-                join_tasks(tasks).await?;
-                alive!(weak, this);
-                upgrade_mut!(this.factory, factory);
-                factory.bus_free(bus_slot);
-                Ok(())
-            };
-            let result = task.await;
-            if result.is_err() {
-                alive!(weak, this);
-                upgrade_mut!(this.factory, factory);
-                factory.bus_deposit(once(bus_slot))
-            }
-            result
-        })
-    }
-
     fn execute_recipe(
         &self,
         factory: &mut Factory,

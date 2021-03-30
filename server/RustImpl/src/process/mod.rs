@@ -1,8 +1,8 @@
 use super::access::InvAccess;
 use super::action::{ActionFuture, Call};
-use super::factory::Factory;
+use super::factory::{Factory, Reservation};
 use super::item::ItemStack;
-use super::util::{alive, spawn, AbortOnDrop};
+use super::util::{alive, join_tasks, spawn, AbortOnDrop};
 use std::{
     cell::RefCell,
     iter::once,
@@ -21,15 +21,15 @@ pub type SlotFilter = Box<dyn Fn(usize) -> bool>;
 pub type ExtractFilter = Box<dyn Fn(usize, &ItemStack) -> bool>;
 pub fn extract_all() -> Option<ExtractFilter> { Some(Box::new(|_, _| true)) }
 
-pub trait ExtractableProcess {
+pub trait InvProcess {
     fn get_accesses(&self) -> &Vec<InvAccess>;
     fn get_weak(&self) -> &Weak<RefCell<Self>>;
     fn get_factory(&self) -> &Weak<RefCell<Factory>>;
 }
 
-macro_rules! impl_extractable_process {
+macro_rules! impl_inv_process {
     ($i:ident) => {
-        impl ExtractableProcess for $i {
+        impl InvProcess for $i {
             fn get_accesses(&self) -> &Vec<InvAccess> { &self.config.accesses }
             fn get_weak(&self) -> &Weak<RefCell<Self>> { &self.weak }
             fn get_factory(&self) -> &Weak<RefCell<Factory>> { &self.factory }
@@ -39,7 +39,7 @@ macro_rules! impl_extractable_process {
 
 fn extract_output<T>(this: &T, factory: &mut Factory, slot: usize, size: i32) -> AbortOnDrop<Result<(), String>>
 where
-    T: ExtractableProcess + 'static,
+    T: InvProcess + 'static,
 {
     let bus_slot = factory.bus_allocate();
     let weak = this.get_weak().clone();
@@ -68,6 +68,65 @@ where
         alive!(weak, this);
         upgrade_mut!(this.get_factory(), factory);
         factory.bus_deposit(once(bus_slot));
+        result
+    })
+}
+
+pub fn scattering_insert<T, U>(
+    this: &T,
+    factory: &mut Factory,
+    reservation: Reservation,
+    insertions: U,
+) -> AbortOnDrop<Result<(), String>>
+where
+    T: InvProcess + 'static,
+    U: IntoIterator<Item = (usize, i32)> + 'static,
+{
+    let bus_slot = factory.bus_allocate();
+    let weak = this.get_weak().clone();
+    spawn(async move {
+        let bus_slot = bus_slot.await?;
+        let task = async {
+            let extraction = {
+                alive!(weak, this);
+                upgrade!(this.get_factory(), factory);
+                reservation.extract(factory, bus_slot)
+            };
+            extraction.await?;
+            let mut tasks = Vec::new();
+            {
+                alive!(weak, this);
+                upgrade!(this.get_factory(), factory);
+                let server = factory.borrow_server();
+                for (inv_slot, size) in insertions.into_iter() {
+                    let access = server.load_balance(this.get_accesses()).1;
+                    let action = ActionFuture::from(Call {
+                        addr: access.addr,
+                        func: "transferItem",
+                        args: vec![
+                            access.bus_side.into(),
+                            access.inv_side.into(),
+                            size.into(),
+                            (bus_slot + 1).into(),
+                            (inv_slot + 1).into(),
+                        ],
+                    });
+                    server.enqueue_request_group(access.client, vec![action.clone().into()]);
+                    tasks.push(spawn(async move { action.await.map(|_| ()) }))
+                }
+            }
+            join_tasks(tasks).await?;
+            alive!(weak, this);
+            upgrade_mut!(this.get_factory(), factory);
+            factory.bus_free(bus_slot);
+            Ok(())
+        };
+        let result = task.await;
+        if result.is_err() {
+            alive!(weak, this);
+            upgrade_mut!(this.get_factory(), factory);
+            factory.bus_deposit(once(bus_slot))
+        }
         result
     })
 }

@@ -4,7 +4,7 @@ use super::super::factory::Factory;
 use super::super::item::{Filter, ItemStack};
 use super::super::recipe::{compute_demands, Demand, Input, Output, Recipe};
 use super::super::util::{alive, join_outputs, join_tasks, spawn, AbortOnDrop};
-use super::{extract_output, ExtractFilter, ExtractableProcess, IntoProcess, Process};
+use super::{extract_output, ExtractFilter, IntoProcess, InvProcess, Process};
 use fnv::{FnvHashMap, FnvHashSet};
 use std::{
     cell::RefCell,
@@ -56,7 +56,7 @@ struct SlottedProcess {
     factory: Weak<RefCell<Factory>>,
 }
 
-impl_extractable_process!(SlottedProcess);
+impl_inv_process!(SlottedProcess);
 
 impl IntoProcess for SlottedConfig {
     fn into_process(self, factory: Weak<RefCell<Factory>>) -> Rc<RefCell<dyn Process>> {
