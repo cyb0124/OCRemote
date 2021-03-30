@@ -73,6 +73,8 @@ where
 }
 
 mod buffered;
+mod scattering;
 mod slotted;
 pub use buffered::*;
+pub use scattering::*;
 pub use slotted::*;

@@ -142,7 +142,7 @@ impl Process for BufferedProcess {
                         }
                         *existing += n_inserted;
                         let reservation = factory.reserve_item(this.config.name, item, n_inserted);
-                        tasks.push(this.insert_stock(factory, reservation, insertions))
+                        tasks.push(this.execute_stock(factory, reservation, insertions))
                     }
                 }
                 if remaining_size > 0 {
@@ -188,7 +188,7 @@ impl Process for BufferedProcess {
                                 *existing_size.get_mut(item).unwrap() += plans[i_input].n_inserted
                             }
                             remaining_size -= inputs.n_sets * size_per_set;
-                            tasks.push(this.insert_recipe(factory, inputs.items, plans));
+                            tasks.push(this.execute_recipe(factory, inputs.items, plans));
                             if remaining_size <= 0 {
                                 break 'recipe;
                             }
@@ -202,7 +202,7 @@ impl Process for BufferedProcess {
 }
 
 impl BufferedProcess {
-    fn insert_stock(
+    fn execute_stock(
         &self,
         factory: &mut Factory,
         reservation: Reservation,
@@ -224,9 +224,8 @@ impl BufferedProcess {
                     alive!(weak, this);
                     upgrade!(this.factory, factory);
                     let server = factory.borrow_server();
-                    let access = server.load_balance(&this.config.accesses).1;
-                    let mut group = Vec::new();
                     for (inv_slot, size) in insertions.into_iter() {
+                        let access = server.load_balance(&this.config.accesses).1;
                         let action = ActionFuture::from(Call {
                             addr: access.addr,
                             func: "transferItem",
@@ -238,10 +237,9 @@ impl BufferedProcess {
                                 (inv_slot + 1).into(),
                             ],
                         });
-                        group.push(action.clone().into());
+                        server.enqueue_request_group(access.client, vec![action.clone().into()]);
                         tasks.push(spawn(async move { action.await.map(|_| ()) }))
                     }
-                    server.enqueue_request_group(access.client, group)
                 }
                 join_tasks(tasks).await?;
                 alive!(weak, this);
@@ -259,7 +257,7 @@ impl BufferedProcess {
         })
     }
 
-    fn insert_recipe(
+    fn execute_recipe(
         &self,
         factory: &mut Factory,
         items: Vec<Rc<Item>>,
