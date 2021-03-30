@@ -435,10 +435,9 @@ SharedPromise<std::monostate> ProcessBuffered::cycle() {
       ](size_t busSlot) {
         auto slotToFree(std::make_shared<std::optional<size_t>>(busSlot));
         return reservation.extract(busSlot)->then(factory.alive, [this, busSlot, plan(std::move(plan))](auto&&) {
-          auto &access(factory.s.getBestAccess(accesses));
           std::vector<SharedPromise<std::monostate>> promises;
-          std::vector<SharedAction> actions;
           for (auto &to : plan) {
+            auto &access(factory.s.getBestAccess(accesses));
             auto action(std::make_shared<Actions::Call>());
             action->inv = access.addr;
             action->fn = "transferItem";
@@ -450,9 +449,8 @@ SharedPromise<std::monostate> ProcessBuffered::cycle() {
               static_cast<double>(to.first + 1)
             };
             promises.emplace_back(action->mapTo(std::monostate{}));
-            actions.emplace_back(std::move(action));
+            factory.s.enqueueAction(access.client, std::move(action));
           }
-          factory.s.enqueueActionGroup(access.client, std::move(actions));
           return Promise<std::monostate>::all(promises);
         })->map(factory.alive, [this, slotToFree](auto&&) {
           factory.busFree(**slotToFree, false);
