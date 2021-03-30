@@ -611,6 +611,8 @@ SharedPromise<std::monostate> ProcessScatteringWorkingSet::cycle() {
         }
         if (!min.has_value())
           break;
+        if (min->first >= demand.in.front()->maxSize)
+          break;
         --demand.inAvail;
         ++transferTotal;
         ++transferMap[min->second];
