@@ -128,7 +128,8 @@ pub fn compute_demands(factory: &Factory, recipes: &Vec<impl Recipe>) -> Vec<Dem
                     full = false;
                     fullness = fullness.min(n_stored as f32 / output.n_wanted as f32)
                 } else {
-                    continue;
+                    fullness = 0.0;
+                    break;
                 }
             }
             if full {
