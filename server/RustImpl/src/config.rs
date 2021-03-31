@@ -10,11 +10,7 @@ pub fn build_factory() -> Rc<RefCell<Factory>> {
         server: Server::new(1847),
         min_cycle_time: Duration::from_secs(1),
         log_clients: vec!["1a"],
-        bus_accesses: vec![BusAccess {
-            client: "1a",
-            addr: "e50",
-            side: UP,
-        }],
+        bus_accesses: vec![BusAccess { client: "1a", addr: "e50", side: UP }],
     }
     .into_factory();
     {

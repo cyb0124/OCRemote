@@ -66,11 +66,8 @@ pub struct Reservation {
 
 impl Reservation {
     pub fn extract(self, factory: &Factory, bus_slot: usize) -> impl Future<Output = Result<(), String>> {
-        let tasks = self
-            .extractors
-            .into_iter()
-            .map(|(extractor, size)| extractor.extract(factory, size, bus_slot))
-            .collect();
+        let tasks =
+            self.extractors.into_iter().map(|(extractor, size)| extractor.extract(factory, size, bus_slot)).collect();
         join_tasks(tasks)
     }
 }
@@ -154,12 +151,7 @@ impl Factory {
                 let item = x.key();
                 self.label_map.entry(item.label.clone()).or_default().push(item.clone());
                 self.name_map.entry(item.name.clone()).or_default().push(item.clone());
-                x.insert(RefCell::new(ItemInfo {
-                    n_stored: 0,
-                    n_backup: 0,
-                    providers: BinaryHeap::new(),
-                }))
-                .get_mut()
+                x.insert(RefCell::new(ItemInfo { n_stored: 0, n_backup: 0, providers: BinaryHeap::new() })).get_mut()
             }
         }
     }
@@ -242,11 +234,7 @@ impl Factory {
     }
 
     fn deposit(&self, bus_slot: usize, mut stack: ItemStack, tasks: &mut Vec<AbortOnDrop<Result<(), String>>>) {
-        self.log(Print {
-            text: format!("{}*{}", stack.item.label, stack.size),
-            color: 0xFFA500,
-            beep: None,
-        });
+        self.log(Print { text: format!("{}*{}", stack.item.label, stack.size), color: 0xFFA500, beep: None });
         while stack.size > 0 {
             let mut best: Option<(&Rc<RefCell<dyn Storage>>, i32)> = None;
             for storage in &self.storages {
@@ -272,11 +260,7 @@ impl Factory {
     }
 
     pub fn reserve_item(&self, reason: &str, item: &Rc<Item>, size: i32) -> Reservation {
-        self.log(Print {
-            text: format!("{}: {}*{}", reason, item.label, size),
-            color: 0x55ABEC,
-            beep: None,
-        });
+        self.log(Print { text: format!("{}: {}*{}", reason, item.label, size), color: 0x55ABEC, beep: None });
         self.items.get(item).unwrap().borrow_mut().reserve(size)
     }
 
@@ -305,11 +289,7 @@ async fn factory_main(factory: Weak<RefCell<Factory>>) -> Result<(), String> {
                     (cycle_start_time - last).as_secs_f64()
                 )
             }
-            this.log(Print {
-                text,
-                color: 0xFFFFFF,
-                beep: None,
-            });
+            this.log(Print { text, color: 0xFFFFFF, beep: None });
             this.n_bus_updates = 0;
         }
         let result = async {
@@ -322,11 +302,7 @@ async fn factory_main(factory: Weak<RefCell<Factory>>) -> Result<(), String> {
             alive_mut!(factory, this);
             bus_task = this.bus_task.take();
             if let Err(e) = result {
-                this.log(Print {
-                    text: format!("cycle failed: {}", e),
-                    color: 0xFF0000,
-                    beep: Some(880.0),
-                })
+                this.log(Print { text: format!("cycle failed: {}", e), color: 0xFF0000, beep: Some(880.0) })
             } else {
                 n_cycles += 1;
                 if bus_task.is_none() && this.n_bus_updates == 0 {
@@ -350,10 +326,7 @@ async fn factory_main(factory: Weak<RefCell<Factory>>) -> Result<(), String> {
 async fn update_storages(factory: &Weak<RefCell<Factory>>) -> Result<(), String> {
     let tasks = {
         alive!(factory, this);
-        this.storages
-            .iter()
-            .map(|storage| storage.borrow().update(this))
-            .collect()
+        this.storages.iter().map(|storage| storage.borrow().update(this)).collect()
     };
     join_tasks(tasks).await?;
     alive!(factory, this);
@@ -377,10 +350,7 @@ async fn update_storages(factory: &Weak<RefCell<Factory>>) -> Result<(), String>
 async fn run_processes(factory: &Weak<RefCell<Factory>>) -> Result<(), String> {
     let tasks = {
         alive!(factory, this);
-        this.processes
-            .iter()
-            .map(|process| process.borrow().run(this))
-            .collect()
+        this.processes.iter().map(|process| process.borrow().run(this)).collect()
     };
     join_tasks(tasks).await
 }
@@ -392,11 +362,7 @@ async fn bus_main(factory: Weak<RefCell<Factory>>) -> Result<(), String> {
         match result {
             Err(e) => {
                 let e = format!("bus update failed: {}", e);
-                this.log(Print {
-                    text: e.clone(),
-                    color: 0xFF0000,
-                    beep: Some(880.0),
-                });
+                this.log(Print { text: e.clone(), color: 0xFF0000, beep: Some(880.0) });
                 for sender in take(&mut this.bus_wait_queue) {
                     sender.send(Err(e.clone()))
                 }
@@ -416,10 +382,7 @@ async fn bus_update(factory: &Weak<RefCell<Factory>>) -> Result<bool, String> {
         this.n_bus_updates += 1;
         let server = this.borrow_server();
         let access = server.load_balance(&this.config.bus_accesses).1;
-        action = ActionFuture::from(List {
-            addr: access.addr,
-            side: access.side,
-        });
+        action = ActionFuture::from(List { addr: access.addr, side: access.side });
         server.enqueue_request_group(access.client, vec![action.clone().into()]);
     }
     let stacks = action.await?;

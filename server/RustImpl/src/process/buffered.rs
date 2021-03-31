@@ -20,14 +20,7 @@ pub struct BufferedInput {
 }
 
 impl BufferedInput {
-    pub fn new(item: Filter, size: i32) -> Self {
-        BufferedInput {
-            item,
-            size,
-            allow_backup: false,
-            extra_backup: 0,
-        }
-    }
+    pub fn new(item: Filter, size: i32) -> Self { BufferedInput { item, size, allow_backup: false, extra_backup: 0 } }
 }
 
 impl_input!(BufferedInput);
@@ -60,13 +53,7 @@ impl_inv_process!(BufferedProcess);
 
 impl IntoProcess for BufferedConfig {
     fn into_process(self, factory: Weak<RefCell<Factory>>) -> Rc<RefCell<dyn Process>> {
-        Rc::new_cyclic(|weak| {
-            RefCell::new(BufferedProcess {
-                weak: weak.clone(),
-                config: self,
-                factory,
-            })
-        })
+        Rc::new_cyclic(|weak| RefCell::new(BufferedProcess { weak: weak.clone(), config: self, factory }))
     }
 }
 
@@ -90,10 +77,7 @@ impl Process for BufferedProcess {
                 'slot: for (slot, stack) in stacks.iter_mut().enumerate() {
                     if let Some(ref slot_filter) = this.config.slot_filter {
                         if !slot_filter(slot) {
-                            *stack = Some(ItemStack {
-                                item: jammer(),
-                                size: 1,
-                            });
+                            *stack = Some(ItemStack { item: jammer(), size: 1 });
                             continue 'slot;
                         }
                     }
@@ -147,11 +131,8 @@ impl Process for BufferedProcess {
                             if inputs.n_sets <= 0 {
                                 continue 'recipe;
                             }
-                            let existing_total: i32 = inputs
-                                .items
-                                .iter()
-                                .map(|item| *existing_size.entry(item.clone()).or_default())
-                                .sum();
+                            let existing_total: i32 =
+                                inputs.items.iter().map(|item| *existing_size.entry(item.clone()).or_default()).sum();
                             inputs.n_sets = min(inputs.n_sets, (recipe.max_inputs - existing_total) / size_per_set);
                             if inputs.n_sets <= 0 {
                                 continue 'recipe;

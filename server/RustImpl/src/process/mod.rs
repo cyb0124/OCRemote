@@ -43,10 +43,7 @@ where
 {
     let server = factory.borrow_server();
     let access = server.load_balance(this.get_accesses()).1;
-    let action = ActionFuture::from(List {
-        addr: access.addr,
-        side: access.inv_side,
-    });
+    let action = ActionFuture::from(List { addr: access.addr, side: access.inv_side });
     server.enqueue_request_group(access.client, vec![action.clone().into()]);
     action
 }

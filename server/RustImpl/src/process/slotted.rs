@@ -22,13 +22,7 @@ pub struct SlottedInput {
 
 impl SlottedInput {
     pub fn new(item: Filter, size: i32, slots: Vec<usize>) -> Self {
-        SlottedInput {
-            item,
-            size,
-            slots,
-            allow_backup: false,
-            extra_backup: 0,
-        }
+        SlottedInput { item, size, slots, allow_backup: false, extra_backup: 0 }
     }
 }
 
@@ -60,13 +54,7 @@ impl_inv_process!(SlottedProcess);
 
 impl IntoProcess for SlottedConfig {
     fn into_process(self, factory: Weak<RefCell<Factory>>) -> Rc<RefCell<dyn Process>> {
-        Rc::new_cyclic(|weak| {
-            RefCell::new(SlottedProcess {
-                weak: weak.clone(),
-                config: self,
-                factory,
-            })
-        })
+        Rc::new_cyclic(|weak| RefCell::new(SlottedProcess { weak: weak.clone(), config: self, factory }))
     }
 }
 

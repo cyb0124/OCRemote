@@ -170,9 +170,7 @@ pub fn table_to_vec(table: Table) -> Result<Vec<Value>, String> {
 
 pub fn call_result<T: TryFrom<Value, Error = String>>(value: Value) -> Result<T, String> {
     let mut value = Table::try_from(value)?;
-    let value = value
-        .remove(&1.into())
-        .ok_or_else(|| format!("invalid call result: {:?}", value))?;
+    let value = value.remove(&1.into()).ok_or_else(|| format!("invalid call result: {:?}", value))?;
     T::try_from(value)
 }
 
@@ -255,18 +253,9 @@ impl Parser {
                                 value = Value::T(result);
                                 continue;
                             }
-                            Value::F(x) => self.stack.push(State::T {
-                                result,
-                                key: Some(Key::F(x)),
-                            }),
-                            Value::S(x) => self.stack.push(State::T {
-                                result,
-                                key: Some(Key::S(x)),
-                            }),
-                            Value::B(x) => self.stack.push(State::T {
-                                result,
-                                key: Some(Key::B(x)),
-                            }),
+                            Value::F(x) => self.stack.push(State::T { result, key: Some(Key::F(x)) }),
+                            Value::S(x) => self.stack.push(State::T { result, key: Some(Key::S(x)) }),
+                            Value::B(x) => self.stack.push(State::T { result, key: Some(Key::B(x)) }),
                             Value::T(x) => break Err(format!("table key: {:?}", x)),
                         }
                     }
@@ -289,17 +278,11 @@ impl Parser {
                     match x {
                         b'!' => self.reduce(Value::N, handler)?,
                         b'#' => self.stack.push(State::F(Vec::new())),
-                        b'@' => self.stack.push(State::S {
-                            result: Vec::new(),
-                            escape: false,
-                        }),
+                        b'@' => self.stack.push(State::S { result: Vec::new(), escape: false }),
                         b'+' => self.reduce(Value::B(true), handler)?,
                         b'-' => self.reduce(Value::B(false), handler)?,
                         b'=' => {
-                            self.stack.push(State::T {
-                                result: Table::new(),
-                                key: None,
-                            });
+                            self.stack.push(State::T { result: Table::new(), key: None });
                             self.stack.push(State::V)
                         }
                         x => return Err(format!("invalid tag: {}", x)),

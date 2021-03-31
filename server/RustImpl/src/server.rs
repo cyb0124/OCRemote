@@ -213,9 +213,7 @@ fn create_listener(port: u16) -> TcpListener {
     let socket = Socket::new(Domain::IPV6, Type::STREAM, None).unwrap();
     socket.set_reuse_address(true).unwrap();
     socket.set_only_v6(false).unwrap();
-    socket
-        .bind(&SockAddr::from(SocketAddr::from((Ipv6Addr::UNSPECIFIED, port))))
-        .unwrap();
+    socket.bind(&SockAddr::from(SocketAddr::from((Ipv6Addr::UNSPECIFIED, port)))).unwrap();
     socket.set_nonblocking(true).unwrap();
     socket.listen(128).unwrap();
     TcpListener::from_std(socket.into()).unwrap()

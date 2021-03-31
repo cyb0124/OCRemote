@@ -39,11 +39,7 @@ impl<T: Action> ActionRequest for ActionState<T> {
 
     fn on_response(&mut self, result: Value) -> Result<(), String> {
         let result = T::parse_response(result);
-        let ret = if let Err(ref e) = result {
-            Err(e.clone())
-        } else {
-            Ok(())
-        };
+        let ret = if let Err(ref e) = result { Err(e.clone()) } else { Ok(()) };
         self.result = Some(result);
         if let Some(waker) = self.waker.take() {
             waker.wake()
@@ -75,11 +71,7 @@ impl<T: Action> Future for ActionFuture<T> {
 
 impl<T: Action> From<T> for ActionFuture<T> {
     fn from(action: T) -> Self {
-        ActionFuture(Rc::new(RefCell::new(ActionState {
-            result: None,
-            waker: None,
-            action: Some(action),
-        })))
+        ActionFuture(Rc::new(RefCell::new(ActionState { result: None, waker: None, action: Some(action) })))
     }
 }
 
@@ -153,10 +145,7 @@ impl Action for ListME {
     }
 
     fn parse_response(response: Value) -> Result<Vec<ItemStack>, String> {
-        table_to_vec(response.try_into()?)?
-            .into_iter()
-            .map(|x| ItemStack::parse(x))
-            .collect()
+        table_to_vec(response.try_into()?)?.into_iter().map(|x| ItemStack::parse(x)).collect()
     }
 }
 

@@ -29,13 +29,7 @@ impl_inv_process!(InputlessProcess);
 
 impl IntoProcess for InputlessConfig {
     fn into_process(self, factory: Weak<RefCell<Factory>>) -> Rc<RefCell<dyn Process>> {
-        Rc::new_cyclic(|weak| {
-            RefCell::new(InputlessProcess {
-                weak: weak.clone(),
-                config: self,
-                factory,
-            })
-        })
+        Rc::new_cyclic(|weak| RefCell::new(InputlessProcess { weak: weak.clone(), config: self, factory }))
     }
 }
 

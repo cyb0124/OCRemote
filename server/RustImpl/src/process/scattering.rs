@@ -19,14 +19,7 @@ pub struct ScatteringInput {
 }
 
 impl ScatteringInput {
-    pub fn new(item: Filter) -> Self {
-        ScatteringInput {
-            item,
-            size: 1,
-            allow_backup: false,
-            extra_backup: 0,
-        }
-    }
+    pub fn new(item: Filter) -> Self { ScatteringInput { item, size: 1, allow_backup: false, extra_backup: 0 } }
 }
 
 impl_input!(ScatteringInput);
@@ -38,10 +31,7 @@ pub struct ScatteringRecipe {
 
 impl ScatteringRecipe {
     pub fn new(outputs: Vec<Output>, input: ScatteringInput) -> Self {
-        ScatteringRecipe {
-            outputs,
-            inputs: vec![input],
-        }
+        ScatteringRecipe { outputs, inputs: vec![input] }
     }
 }
 
@@ -67,13 +57,7 @@ impl_inv_process!(ScatteringProcess);
 
 impl IntoProcess for ScatteringConfig {
     fn into_process(self, factory: Weak<RefCell<Factory>>) -> Rc<RefCell<dyn Process>> {
-        Rc::new_cyclic(|weak| {
-            RefCell::new(ScatteringProcess {
-                weak: weak.clone(),
-                config: self,
-                factory,
-            })
-        })
+        Rc::new_cyclic(|weak| RefCell::new(ScatteringProcess { weak: weak.clone(), config: self, factory }))
     }
 }
 
@@ -144,10 +128,7 @@ impl Process for ScatteringProcess {
                                 if let Some(ref mut stack) = stack {
                                     stack.size += 1
                                 } else {
-                                    *stack = Some(ItemStack {
-                                        item: inputs.items[0].clone(),
-                                        size: 1,
-                                    })
+                                    *stack = Some(ItemStack { item: inputs.items[0].clone(), size: 1 })
                                 }
                             } else {
                                 break;

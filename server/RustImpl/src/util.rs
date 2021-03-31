@@ -109,10 +109,7 @@ impl<T> LocalSender<T> {
 }
 
 pub fn make_local_one_shot<T>() -> (LocalSender<T>, LocalReceiver<T>) {
-    let state = Rc::new(RefCell::new(LocalOneShotState {
-        result: None,
-        waker: None,
-    }));
+    let state = Rc::new(RefCell::new(LocalOneShotState { result: None, waker: None }));
     (LocalSender(Some(Rc::downgrade(&state))), LocalReceiver(state))
 }
 

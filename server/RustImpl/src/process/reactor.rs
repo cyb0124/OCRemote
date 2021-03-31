@@ -47,11 +47,7 @@ where
             .iter()
             .map(|func| {
                 let access = server.load_balance(this.get_accesses()).1;
-                let action = ActionFuture::from(Call {
-                    addr: access.addr,
-                    func,
-                    args: Vec::new(),
-                });
+                let action = ActionFuture::from(Call { addr: access.addr, func, args: Vec::new() });
                 server.enqueue_request_group(access.client, vec![action.clone().into()]);
                 spawn(async move { call_result::<f64>(action.await?) })
             })
@@ -59,11 +55,7 @@ where
         spawn(async move { run(join_outputs(states).await.map(|states| states[0] / states[1])?).await })
     } else {
         let access = server.load_balance(this.get_accesses()).1;
-        let action = ActionFuture::from(Call {
-            addr: access.addr,
-            func: "getEnergyStored",
-            args: Vec::new(),
-        });
+        let action = ActionFuture::from(Call { addr: access.addr, func: "getEnergyStored", args: Vec::new() });
         server.enqueue_request_group(access.client, vec![action.clone().into()]);
         spawn(async move { run(action.await.and_then(call_result).map(|x: f64| x / 1E7)?).await })
     }
@@ -90,12 +82,7 @@ impl_reactor_process!(HysteresisReactorProcess);
 impl IntoProcess for HysteresisReactorConfig {
     fn into_process(self, factory: Weak<RefCell<Factory>>) -> Rc<RefCell<dyn Process>> {
         Rc::new_cyclic(|weak| {
-            RefCell::new(HysteresisReactorProcess {
-                weak: weak.clone(),
-                config: self,
-                factory,
-                prev_on: None,
-            })
+            RefCell::new(HysteresisReactorProcess { weak: weak.clone(), config: self, factory, prev_on: None })
         })
     }
 }
@@ -126,11 +113,7 @@ impl Process for HysteresisReactorProcess {
                 });
                 let server = factory.borrow_server();
                 let access = server.load_balance(&this.config.accesses).1;
-                action = ActionFuture::from(Call {
-                    addr: access.addr,
-                    func: "setActive",
-                    args: vec![on.into()],
-                });
+                action = ActionFuture::from(Call { addr: access.addr, func: "setActive", args: vec![on.into()] });
                 server.enqueue_request_group(access.client, vec![action.clone().into()]);
             };
             action.await?;
@@ -159,12 +142,7 @@ impl_reactor_process!(ProportionalReactorProcess);
 impl IntoProcess for ProportionalReactorConfig {
     fn into_process(self, factory: Weak<RefCell<Factory>>) -> Rc<RefCell<dyn Process>> {
         Rc::new_cyclic(|weak| {
-            RefCell::new(ProportionalReactorProcess {
-                weak: weak.clone(),
-                config: self,
-                factory,
-                prev_rod: None,
-            })
+            RefCell::new(ProportionalReactorProcess { weak: weak.clone(), config: self, factory, prev_rod: None })
         })
     }
 }
@@ -180,11 +158,7 @@ impl Process for ProportionalReactorProcess {
             {
                 alive!(weak, this);
                 upgrade!(this.factory, factory);
-                factory.log(Print {
-                    text: format!("{}: {}%", this.config.name, rod),
-                    color: 0xFF4FFF,
-                    beep: None,
-                });
+                factory.log(Print { text: format!("{}: {}%", this.config.name, rod), color: 0xFF4FFF, beep: None });
                 if this.prev_rod == Some(rod) {
                     return Ok(());
                 }
@@ -233,13 +207,7 @@ impl_reactor_process!(PIDReactorProcess);
 impl IntoProcess for PIDReactorConfig {
     fn into_process(self, factory: Weak<RefCell<Factory>>) -> Rc<RefCell<dyn Process>> {
         Rc::new_cyclic(|weak| {
-            RefCell::new(PIDReactorProcess {
-                weak: weak.clone(),
-                config: self,
-                factory,
-                state: None,
-                prev_rod: None,
-            })
+            RefCell::new(PIDReactorProcess { weak: weak.clone(), config: self, factory, state: None, prev_rod: None })
         })
     }
 }
@@ -261,11 +229,7 @@ impl Process for PIDReactorProcess {
                     accum = (state.accum + dt * e * this.config.k_i).clamp(-1.0, 1.0);
                     diff = (e - state.prev_e) / dt
                 }
-                this.state = Some(PIDReactorState {
-                    prev_t: t,
-                    prev_e: e,
-                    accum,
-                });
+                this.state = Some(PIDReactorState { prev_t: t, prev_e: e, accum });
                 let op = e * this.config.k_p + accum + diff * this.config.k_d;
                 rod = to_percent((0.5 - op).clamp(0.0, 1.0));
                 upgrade!(this.factory, factory);

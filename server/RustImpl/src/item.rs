@@ -47,11 +47,8 @@ pub struct ItemStack {
 impl ItemStack {
     pub fn parse(value: Value) -> Result<Self, String> {
         if let Value::T(mut table) = value {
-            let mut get = |key: &'static str| {
-                table
-                    .remove(&key.into())
-                    .ok_or_else(|| format!("key not found: {}", key))
-            };
+            let mut get =
+                |key: &'static str| table.remove(&key.into()).ok_or_else(|| format!("key not found: {}", key));
             let size = get("size")?.try_into()?;
             let label = get("label")?.try_into()?;
             let name = get("name")?.try_into()?;
@@ -60,15 +57,7 @@ impl ItemStack {
             let max_size = get("maxSize")?.try_into()?;
             let has_tag = get("hasTag")?.try_into()?;
             Ok(ItemStack {
-                item: Rc::new(Item {
-                    label,
-                    name,
-                    damage,
-                    max_damage,
-                    max_size,
-                    has_tag,
-                    others: table,
-                }),
+                item: Rc::new(Item { label, name, damage, max_damage, max_size, has_tag, others: table }),
                 size,
             })
         } else {
@@ -83,10 +72,7 @@ pub struct InsertPlan {
 }
 
 pub fn insert_into_inventory(inventory: &mut Vec<Option<ItemStack>>, item: &Rc<Item>, to_insert: i32) -> InsertPlan {
-    let mut result = InsertPlan {
-        n_inserted: 0,
-        insertions: Vec::new(),
-    };
+    let mut result = InsertPlan { n_inserted: 0, insertions: Vec::new() };
     let mut remaining = min(to_insert, item.max_size);
     let mut first_empty_slot = None;
     for (slot, stack) in inventory.iter_mut().enumerate() {
@@ -109,10 +95,7 @@ pub fn insert_into_inventory(inventory: &mut Vec<Option<ItemStack>>, item: &Rc<I
     }
     if remaining > 0 {
         if let Some(slot) = first_empty_slot {
-            inventory[slot] = Some(ItemStack {
-                item: item.clone(),
-                size: remaining,
-            });
+            inventory[slot] = Some(ItemStack { item: item.clone(), size: remaining });
             result.n_inserted += remaining;
             result.insertions.push((slot, remaining))
         }

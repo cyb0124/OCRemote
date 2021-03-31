@@ -140,11 +140,7 @@ pub fn compute_demands(factory: &Factory, recipes: &Vec<impl Recipe>) -> Vec<Dem
             }
         }
         if let Some(inputs) = resolve_inputs(factory, recipe) {
-            result.push(Demand {
-                i_recipe,
-                inputs,
-                fullness,
-            })
+            result.push(Demand { i_recipe, inputs, fullness })
         }
     }
     result.sort_unstable_by(|x: &Demand, y: &Demand| x.fullness.partial_cmp(&y.fullness).unwrap());
