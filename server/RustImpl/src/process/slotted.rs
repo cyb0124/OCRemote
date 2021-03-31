@@ -1,8 +1,8 @@
 use super::super::access::InvAccess;
 use super::super::action::{ActionFuture, Call};
 use super::super::factory::Factory;
-use super::super::item::{Filter, ItemStack};
-use super::super::recipe::{compute_demands, Demand, Input, Output, Recipe};
+use super::super::item::ItemStack;
+use super::super::recipe::{compute_demands, Demand, Output, Recipe, SlottedInput};
 use super::super::util::{alive, join_outputs, join_tasks, spawn, AbortOnDrop};
 use super::{extract_output, list_inv, ExtractFilter, IntoProcess, InvProcess, Process};
 use fnv::{FnvHashMap, FnvHashSet};
@@ -11,22 +11,6 @@ use std::{
     cmp::min,
     rc::{Rc, Weak},
 };
-
-pub struct SlottedInput {
-    item: Filter,
-    size: i32,
-    slots: Vec<usize>,
-    allow_backup: bool,
-    extra_backup: i32,
-}
-
-impl SlottedInput {
-    pub fn new(item: Filter, size: i32, slots: Vec<usize>) -> Self {
-        SlottedInput { item, size, slots, allow_backup: false, extra_backup: 0 }
-    }
-}
-
-impl_input!(SlottedInput);
 
 pub struct SlottedRecipe {
     pub outputs: Vec<Output>,
@@ -59,7 +43,7 @@ impl IntoProcess for SlottedConfig {
 }
 
 impl Process for SlottedProcess {
-    fn run(&self, factory: &Factory) -> AbortOnDrop<Result<(), String>> {
+    fn run(&self, factory: &mut Factory) -> AbortOnDrop<Result<(), String>> {
         if self.config.to_extract.is_none() && compute_demands(factory, &self.config.recipes).is_empty() {
             return spawn(async { Ok(()) });
         }

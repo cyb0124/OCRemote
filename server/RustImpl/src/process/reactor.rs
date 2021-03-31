@@ -88,7 +88,7 @@ impl IntoProcess for HysteresisReactorConfig {
 }
 
 impl Process for HysteresisReactorProcess {
-    fn run(&self, factory: &Factory) -> AbortOnDrop<Result<(), String>> {
+    fn run(&self, factory: &mut Factory) -> AbortOnDrop<Result<(), String>> {
         let weak = self.weak.clone();
         run_reactor(self, factory, |pv| async move {
             let action;
@@ -150,7 +150,7 @@ impl IntoProcess for ProportionalReactorConfig {
 fn to_percent(x: f64) -> i16 { (x * 100.0).round() as _ }
 
 impl Process for ProportionalReactorProcess {
-    fn run(&self, factory: &Factory) -> AbortOnDrop<Result<(), String>> {
+    fn run(&self, factory: &mut Factory) -> AbortOnDrop<Result<(), String>> {
         let weak = self.weak.clone();
         run_reactor(self, factory, |pv| async move {
             let rod = to_percent(pv);
@@ -213,7 +213,7 @@ impl IntoProcess for PIDReactorConfig {
 }
 
 impl Process for PIDReactorProcess {
-    fn run(&self, factory: &Factory) -> AbortOnDrop<Result<(), String>> {
+    fn run(&self, factory: &mut Factory) -> AbortOnDrop<Result<(), String>> {
         let weak = self.weak.clone();
         run_reactor(self, factory, |pv| async move {
             let rod;

@@ -62,7 +62,7 @@ impl IntoProcess for ScatteringConfig {
 }
 
 impl Process for ScatteringProcess {
-    fn run(&self, factory: &Factory) -> AbortOnDrop<Result<(), String>> {
+    fn run(&self, factory: &mut Factory) -> AbortOnDrop<Result<(), String>> {
         if self.config.to_extract.is_none() && compute_demands(factory, &self.config.recipes).is_empty() {
             return spawn(async { Ok(()) });
         }

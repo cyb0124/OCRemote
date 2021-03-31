@@ -2,7 +2,7 @@ use super::access::BusAccess;
 use super::factory::{Factory, FactoryConfig};
 use super::item::Filter;
 use super::server::Server;
-use super::{process::*, side::*, storage::*};
+use super::{process::*, recipe::*, side::*, storage::*};
 use std::{cell::RefCell, rc::Rc, time::Duration};
 
 pub fn build_factory() -> Rc<RefCell<Factory>> {

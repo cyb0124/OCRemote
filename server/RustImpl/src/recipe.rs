@@ -146,3 +146,41 @@ pub fn compute_demands(factory: &Factory, recipes: &Vec<impl Recipe>) -> Vec<Dem
     result.sort_unstable_by(|x: &Demand, y: &Demand| x.fullness.partial_cmp(&y.fullness).unwrap());
     result
 }
+
+pub struct SlottedInput {
+    item: Filter,
+    pub size: i32,
+    pub slots: Vec<usize>,
+    allow_backup: bool,
+    extra_backup: i32,
+}
+
+impl SlottedInput {
+    pub fn new(item: Filter, size: i32, slots: Vec<usize>) -> Self {
+        SlottedInput { item, size, slots, allow_backup: false, extra_backup: 0 }
+    }
+}
+
+impl_input!(SlottedInput);
+
+pub struct NonConsumable {
+    // for crafting robot:
+    //   3, 7, 11, 12, 13, 14
+    //   with extra inventory: 16, 17, ..
+    pub storage_slot: usize,
+    pub crafting_grid_slot: usize,
+}
+
+pub struct CraftingGridRecipe {
+    pub outputs: Vec<Output>,
+    // slots:
+    //   0, 1, 2
+    //   3, 4, 5
+    //   6, 7, 8
+    pub inputs: Vec<SlottedInput>,
+    // can't craft more than one stack at a time.
+    pub max_sets: i32,
+    pub non_consumables: Vec<NonConsumable>,
+}
+
+impl_recipe!(CraftingGridRecipe, SlottedInput);

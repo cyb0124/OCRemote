@@ -39,7 +39,7 @@ struct InputlessInfo {
 }
 
 impl Process for InputlessProcess {
-    fn run(&self, factory: &Factory) -> AbortOnDrop<Result<(), String>> {
+    fn run(&self, factory: &mut Factory) -> AbortOnDrop<Result<(), String>> {
         let mut enough = true;
         for output in &self.config.outputs {
             if output.n_wanted <= 0 {

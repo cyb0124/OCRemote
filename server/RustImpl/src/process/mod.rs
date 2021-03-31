@@ -10,7 +10,7 @@ use std::{
 };
 
 pub trait Process {
-    fn run(&self, factory: &Factory) -> AbortOnDrop<Result<(), String>>;
+    fn run(&self, factory: &mut Factory) -> AbortOnDrop<Result<(), String>>;
 }
 
 pub trait IntoProcess {
@@ -143,11 +143,13 @@ where
 }
 
 mod buffered;
+mod crafting_robot;
 mod inputless;
 mod reactor;
 mod scattering;
 mod slotted;
 pub use buffered::*;
+pub use crafting_robot::*;
 pub use inputless::*;
 pub use reactor::*;
 pub use scattering::*;

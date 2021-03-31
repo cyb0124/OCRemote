@@ -165,7 +165,7 @@ impl Action for XferME {
         let mut result = Table::new();
         result.insert("op".into(), "xferME".into());
         result.insert("me".into(), self.me_addr.into());
-        result.insert("entry".into(), self.me_slot.into());
+        result.insert("entry".into(), (self.me_slot + 1).into());
         result.insert("filter".into(), self.filter);
         result.insert("size".into(), self.size.into());
         result.insert("inv".into(), self.transposer_addr.into());

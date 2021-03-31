@@ -45,3 +45,10 @@ pub struct ComponentAccess {
 }
 
 impl_access!(ComponentAccess);
+
+pub struct CraftingRobotAccess {
+    pub client: &'static str,
+    pub bus_side: u8,
+}
+
+impl_access!(CraftingRobotAccess);
