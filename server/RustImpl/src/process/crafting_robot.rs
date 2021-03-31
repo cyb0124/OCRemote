@@ -39,7 +39,7 @@ fn map_crafting_grid(slot: usize) -> usize {
 }
 
 impl Process for CraftingRobotProcess {
-    fn run(&self, factory: &mut Factory) -> AbortOnDrop<Result<(), String>> {
+    fn run(&self, factory: &Factory) -> AbortOnDrop<Result<(), String>> {
         let mut tasks = Vec::new();
         for Demand { i_recipe, .. } in compute_demands(factory, &self.config.recipes) {
             let recipe = &self.config.recipes[i_recipe];
@@ -53,10 +53,10 @@ impl Process for CraftingRobotProcess {
                 for (i_input, item) in items.into_iter().enumerate() {
                     let reservation =
                         factory.reserve_item(self.config.name, &item, n_sets * recipe.inputs[i_input].size);
-                    let bus_slot = factory.bus_allocate();
                     let slots_to_free = slots_to_free.clone();
                     let weak = self.factory.clone();
                     bus_slots.push(spawn(async move {
+                        let bus_slot = alive(&weak)?.borrow_mut().bus_allocate();
                         let bus_slot = bus_slot.await?;
                         slots_to_free.borrow_mut().push(bus_slot);
                         let extraction = reservation.extract(&*alive(&weak)?.borrow(), bus_slot);
@@ -64,9 +64,10 @@ impl Process for CraftingRobotProcess {
                     }))
                 }
                 if bus_slots.is_empty() {
-                    let bus_slot = factory.bus_allocate();
                     let slots_to_free = slots_to_free.clone();
+                    let weak = self.factory.clone();
                     bus_slots.push(spawn(async move {
+                        let bus_slot = alive(&weak)?.borrow_mut().bus_allocate();
                         let bus_slot = bus_slot.await?;
                         slots_to_free.borrow_mut().push(bus_slot);
                         Ok(bus_slot)

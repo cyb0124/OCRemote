@@ -10,7 +10,7 @@ use std::{
 };
 
 pub trait Process {
-    fn run(&self, factory: &mut Factory) -> AbortOnDrop<Result<(), String>>;
+    fn run(&self, factory: &Factory) -> AbortOnDrop<Result<(), String>>;
 }
 
 pub trait IntoProcess {

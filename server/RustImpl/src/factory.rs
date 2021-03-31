@@ -77,6 +77,7 @@ pub struct FactoryConfig {
     pub min_cycle_time: Duration,
     pub log_clients: Vec<&'static str>,
     pub bus_accesses: Vec<BusAccess>,
+    pub backups: Vec<(Filter, i32)>,
 }
 
 pub struct Factory {
@@ -84,7 +85,6 @@ pub struct Factory {
     _task: AbortOnDrop<Result<(), String>>,
     config: FactoryConfig,
     storages: Vec<Rc<RefCell<dyn Storage>>>,
-    backups: Vec<(Filter, i32)>,
     processes: Vec<Rc<RefCell<dyn Process>>>,
 
     pub items: FnvHashMap<Rc<Item>, RefCell<ItemInfo>>,
@@ -99,14 +99,13 @@ pub struct Factory {
 }
 
 impl FactoryConfig {
-    pub fn into_factory(self) -> Rc<RefCell<Factory>> {
+    pub fn build(self, builder: impl FnOnce(&mut Factory)) -> Rc<RefCell<Factory>> {
         Rc::new_cyclic(|weak| {
-            RefCell::new(Factory {
+            let mut factory = Factory {
                 weak: weak.clone(),
                 _task: spawn(factory_main(weak.clone())),
                 config: self,
                 storages: Vec::new(),
-                backups: Vec::new(),
                 processes: Vec::new(),
 
                 items: FnvHashMap::default(),
@@ -118,7 +117,9 @@ impl FactoryConfig {
                 bus_wait_queue: VecDeque::new(),
                 bus_free_queue: Vec::new(),
                 n_bus_updates: 0,
-            })
+            };
+            builder(&mut factory);
+            RefCell::new(factory)
         })
     }
 }
@@ -127,8 +128,6 @@ impl Factory {
     pub fn add_storage(&mut self, storage: impl IntoStorage) {
         self.storages.push(storage.into_storage(self.weak.clone()))
     }
-
-    pub fn add_backup(&mut self, filter: Filter, n_backup: i32) { self.backups.push((filter, n_backup)) }
 
     pub fn add_process(&mut self, process: impl IntoProcess) {
         self.processes.push(process.into_process(self.weak.clone()))
@@ -339,7 +338,7 @@ async fn update_storages(factory: &Weak<RefCell<Factory>>) -> Result<(), String>
         color: 0x00FF00,
         beep: None,
     });
-    for (filter, n_backup) in &this.backups {
+    for (filter, n_backup) in &this.config.backups {
         if let Some((_, info)) = this.search_item(filter) {
             info.borrow_mut().n_backup += n_backup
         }
@@ -348,13 +347,10 @@ async fn update_storages(factory: &Weak<RefCell<Factory>>) -> Result<(), String>
 }
 
 async fn run_processes(factory: &Weak<RefCell<Factory>>) -> Result<(), String> {
-    let tasks;
-    {
-        alive_mut!(factory, this);
-        let processes = take(&mut this.processes);
-        tasks = processes.iter().map(|process| process.borrow().run(this)).collect();
-        this.processes = processes;
-    }
+    let tasks = {
+        alive!(factory, this);
+        this.processes.iter().map(|process| process.borrow().run(this)).collect()
+    };
     join_tasks(tasks).await
 }
 
