@@ -2,7 +2,6 @@ NonConsumable
 FluxNetworkOutput
 CraftingRobotAccess
 RFToolsControlWorkbenchAccess
-ComponentAccess
 RedstoneAccess
 
 CraftingRobotConfig
@@ -10,15 +9,6 @@ CraftingRobotProcess
 
 RFToolsControlWorkbenchConfig
 RFToolsControlWorkbenchProcess
-
-ReactorHysteresisConfig
-ReactorHysteresisProcess
-
-ReactorProportionalConfig
-ReactorProportionalProcess
-
-ReactorPIDConfig
-ReactorPIDProcess
 
 PlasticMixerConfig
 PlasticMixerProcess

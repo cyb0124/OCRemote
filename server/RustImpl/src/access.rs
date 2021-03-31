@@ -38,3 +38,10 @@ pub struct MEAccess {
 }
 
 impl_access!(MEAccess);
+
+pub struct ComponentAccess {
+    pub client: &'static str,
+    pub addr: &'static str,
+}
+
+impl_access!(ComponentAccess);

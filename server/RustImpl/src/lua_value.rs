@@ -95,14 +95,17 @@ impl TryFrom<Value> for NotNan<f64> {
 
 impl TryFrom<Value> for i32 {
     type Error = String;
-
     fn try_from(value: Value) -> Result<Self, String> { try_into_integer(NotNan::try_from(value)?.into_inner()) }
 }
 
 impl TryFrom<Value> for i16 {
     type Error = String;
-
     fn try_from(value: Value) -> Result<Self, String> { try_into_integer(NotNan::try_from(value)?.into_inner()) }
+}
+
+impl TryFrom<Value> for f64 {
+    type Error = String;
+    fn try_from(value: Value) -> Result<Self, String> { NotNan::try_from(value).map(|x| x.into_inner()) }
 }
 
 impl TryFrom<Value> for String {
@@ -163,6 +166,14 @@ pub fn table_to_vec(table: Table) -> Result<Vec<Value>, String> {
         }
     }
     Ok(result)
+}
+
+pub fn call_result<T: TryFrom<Value, Error = String>>(value: Value) -> Result<T, String> {
+    let mut value = Table::try_from(value)?;
+    let value = value
+        .remove(&1.into())
+        .ok_or_else(|| format!("invalid call result: {:?}", value))?;
+    T::try_from(value)
 }
 
 fn serialize_string(x: &str, out: &mut Vec<u8>) {
