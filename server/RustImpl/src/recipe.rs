@@ -110,23 +110,26 @@ pub fn resolve_inputs(factory: &Factory, recipe: &impl Recipe) -> Option<Resolve
 pub struct Demand {
     pub i_recipe: usize,
     pub inputs: ResolvedInputs,
-    fullness: f32,
+    fullness: f64,
 }
 
 pub fn compute_demands(factory: &Factory, recipes: &Vec<impl Recipe>) -> Vec<Demand> {
     let mut result = Vec::new();
     for (i_recipe, recipe) in recipes.iter().enumerate() {
-        let mut fullness: f32 = 2.0;
+        let mut fullness: f64 = 2.0;
         if !recipe.get_outputs().is_empty() {
             let mut full = true;
             for output in recipe.get_outputs() {
+                if output.n_wanted <= 0 {
+                    continue;
+                }
                 if let Some((_, info)) = factory.search_item(&output.item) {
                     let n_stored = info.borrow().n_stored;
                     if n_stored >= output.n_wanted {
                         continue;
                     }
                     full = false;
-                    fullness = fullness.min(n_stored as f32 / output.n_wanted as f32)
+                    fullness = fullness.min(n_stored as f64 / output.n_wanted as f64)
                 } else {
                     fullness = 0.0;
                     break;

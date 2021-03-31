@@ -132,7 +132,7 @@ macro_rules! upgrade_mut {
     };
 }
 
-pub fn alive<T>(weak: &Weak<T>) -> Result<Rc<T>, String> { weak.upgrade().ok_or("node died".to_owned()) }
+pub fn alive<T>(weak: &Weak<T>) -> Result<Rc<T>, String> { weak.upgrade().ok_or_else(|| "shutdown".to_owned()) }
 
 macro_rules! alive {
     ($e:expr, $v:ident) => {

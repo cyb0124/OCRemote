@@ -139,7 +139,7 @@ impl Factory {
 
     pub fn borrow_server(&self) -> Ref<Server> { self.config.server.borrow() }
 
-    fn log(&self, action: Print) {
+    pub fn log(&self, action: Print) {
         println!("{}", action.text);
         let server = self.borrow_server();
         for client in &self.config.log_clients {
@@ -302,7 +302,7 @@ async fn factory_main(factory: Weak<RefCell<Factory>>) -> Result<(), String> {
                 text += &format!(
                     ", nBusUpdates={}, cycleTime={:.03}",
                     this.n_bus_updates,
-                    (cycle_start_time - last).as_secs_f32()
+                    (cycle_start_time - last).as_secs_f64()
                 )
             }
             this.log(Print {
