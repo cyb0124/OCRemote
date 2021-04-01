@@ -143,16 +143,14 @@ where
 }
 
 mod buffered;
-mod crafting_robot;
+mod crafting_grid;
 mod inputless;
 mod reactor;
 mod scattering;
 mod slotted;
-mod workbench;
 pub use buffered::*;
-pub use crafting_robot::*;
+pub use crafting_grid::*;
 pub use inputless::*;
 pub use reactor::*;
 pub use scattering::*;
 pub use slotted::*;
-pub use workbench::*;
