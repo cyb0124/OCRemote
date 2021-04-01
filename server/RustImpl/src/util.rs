@@ -81,7 +81,6 @@ pub struct LocalReceiver<T>(Rc<RefCell<LocalOneShotState<T>>>);
 
 impl<T> Future for LocalReceiver<T> {
     type Output = Result<T, String>;
-
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let this = self.get_mut();
         let mut this = this.0.borrow_mut();

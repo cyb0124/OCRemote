@@ -14,7 +14,8 @@ pub trait Process {
 }
 
 pub trait IntoProcess {
-    fn into_process(self, factory: Weak<RefCell<Factory>>) -> Rc<RefCell<dyn Process>>;
+    type Output: Process + 'static;
+    fn into_process(self, factory: &Weak<RefCell<Factory>>) -> Rc<RefCell<Self::Output>>;
 }
 
 pub type SlotFilter = Box<dyn Fn(usize) -> bool>;

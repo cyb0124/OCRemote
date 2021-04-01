@@ -125,14 +125,8 @@ impl FactoryConfig {
 }
 
 impl Factory {
-    pub fn add_storage(&mut self, storage: impl IntoStorage) {
-        self.storages.push(storage.into_storage(self.weak.clone()))
-    }
-
-    pub fn add_process(&mut self, process: impl IntoProcess) {
-        self.processes.push(process.into_process(self.weak.clone()))
-    }
-
+    pub fn add_storage(&mut self, storage: impl IntoStorage) { self.storages.push(storage.into_storage(&self.weak)) }
+    pub fn add_process(&mut self, process: impl IntoProcess) { self.processes.push(process.into_process(&self.weak)) }
     pub fn borrow_server(&self) -> Ref<Server> { self.config.server.borrow() }
 
     pub fn log(&self, action: Print) {

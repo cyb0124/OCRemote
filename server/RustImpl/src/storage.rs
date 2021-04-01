@@ -23,7 +23,8 @@ pub trait Storage {
 }
 
 pub trait IntoStorage {
-    fn into_storage(self, factory: Weak<RefCell<Factory>>) -> Rc<RefCell<dyn Storage>>;
+    type Output: Storage + 'static;
+    fn into_storage(self, factory: &Weak<RefCell<Factory>>) -> Rc<RefCell<Self::Output>>;
 }
 
 pub trait Extractor {
@@ -54,7 +55,7 @@ pub struct ChestConfig {
     pub accesses: Vec<InvAccess>,
 }
 
-struct ChestStorage {
+pub struct ChestStorage {
     weak: Weak<RefCell<ChestStorage>>,
     config: ChestConfig,
     factory: Weak<RefCell<Factory>>,
@@ -68,12 +69,13 @@ struct ChestExtractor {
 }
 
 impl IntoStorage for ChestConfig {
-    fn into_storage(self, factory: Weak<RefCell<Factory>>) -> Rc<RefCell<dyn Storage>> {
+    type Output = ChestStorage;
+    fn into_storage(self, factory: &Weak<RefCell<Factory>>) -> Rc<RefCell<Self::Output>> {
         Rc::new_cyclic(|weak| {
-            RefCell::new(ChestStorage {
+            RefCell::new(Self::Output {
                 weak: weak.clone(),
                 config: self,
-                factory,
+                factory: factory.clone(),
                 stacks: Vec::new(),
                 inv_slot_to_deposit: 0,
             })
@@ -202,7 +204,7 @@ pub struct DrawerConfig {
     pub filters: Vec<Filter>,
 }
 
-struct DrawerStorage {
+pub struct DrawerStorage {
     weak: Weak<RefCell<DrawerStorage>>,
     config: DrawerConfig,
     factory: Weak<RefCell<Factory>>,
@@ -214,8 +216,9 @@ struct DrawerExtractor {
 }
 
 impl IntoStorage for DrawerConfig {
-    fn into_storage(self, factory: Weak<RefCell<Factory>>) -> Rc<RefCell<dyn Storage>> {
-        Rc::new_cyclic(|weak| RefCell::new(DrawerStorage { weak: weak.clone(), config: self, factory }))
+    type Output = DrawerStorage;
+    fn into_storage(self, factory: &Weak<RefCell<Factory>>) -> Rc<RefCell<Self::Output>> {
+        Rc::new_cyclic(|weak| RefCell::new(Self::Output { weak: weak.clone(), config: self, factory: factory.clone() }))
     }
 }
 
@@ -294,7 +297,7 @@ pub struct MEConfig {
     accesses: Vec<MEAccess>,
 }
 
-struct MEStorage {
+pub struct MEStorage {
     weak: Weak<RefCell<MEStorage>>,
     config: MEConfig,
     factory: Weak<RefCell<Factory>>,
@@ -307,12 +310,13 @@ struct MEExtractor {
 }
 
 impl IntoStorage for MEConfig {
-    fn into_storage(self, factory: Weak<RefCell<Factory>>) -> Rc<RefCell<dyn Storage>> {
+    type Output = MEStorage;
+    fn into_storage(self, factory: &Weak<RefCell<Factory>>) -> Rc<RefCell<Self::Output>> {
         Rc::new_cyclic(|weak| {
-            RefCell::new(MEStorage {
+            RefCell::new(Self::Output {
                 weak: weak.clone(),
                 config: self,
-                factory,
+                factory: factory.clone(),
                 access_for_item: FnvHashMap::default(),
             })
         })

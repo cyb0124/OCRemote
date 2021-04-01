@@ -18,7 +18,7 @@ pub struct InputlessConfig {
     pub outputs: Vec<Output>,
 }
 
-struct InputlessProcess {
+pub struct InputlessProcess {
     weak: Weak<RefCell<InputlessProcess>>,
     config: InputlessConfig,
     factory: Weak<RefCell<Factory>>,
@@ -27,8 +27,9 @@ struct InputlessProcess {
 impl_inv_process!(InputlessProcess);
 
 impl IntoProcess for InputlessConfig {
-    fn into_process(self, factory: Weak<RefCell<Factory>>) -> Rc<RefCell<dyn Process>> {
-        Rc::new_cyclic(|weak| RefCell::new(InputlessProcess { weak: weak.clone(), config: self, factory }))
+    type Output = InputlessProcess;
+    fn into_process(self, factory: &Weak<RefCell<Factory>>) -> Rc<RefCell<Self::Output>> {
+        Rc::new_cyclic(|weak| RefCell::new(Self::Output { weak: weak.clone(), config: self, factory: factory.clone() }))
     }
 }
 

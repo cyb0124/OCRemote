@@ -3,8 +3,8 @@ FluxNetworkOutput
 PlasticMixerConfig
 PlasticMixerProcess
 
-RedstoneConditionalConfig
-RedstoneConditionalProcess
+ConditionalConfig
+ConditionalProcess
 
 FluxNetworkConfig
 FluxNetworkProcess

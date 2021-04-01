@@ -28,7 +28,7 @@ pub struct SlottedConfig {
     pub recipes: Vec<SlottedRecipe>,
 }
 
-struct SlottedProcess {
+pub struct SlottedProcess {
     weak: Weak<RefCell<SlottedProcess>>,
     config: SlottedConfig,
     factory: Weak<RefCell<Factory>>,
@@ -37,8 +37,9 @@ struct SlottedProcess {
 impl_inv_process!(SlottedProcess);
 
 impl IntoProcess for SlottedConfig {
-    fn into_process(self, factory: Weak<RefCell<Factory>>) -> Rc<RefCell<dyn Process>> {
-        Rc::new_cyclic(|weak| RefCell::new(SlottedProcess { weak: weak.clone(), config: self, factory }))
+    type Output = SlottedProcess;
+    fn into_process(self, factory: &Weak<RefCell<Factory>>) -> Rc<RefCell<Self::Output>> {
+        Rc::new_cyclic(|weak| RefCell::new(Self::Output { weak: weak.clone(), config: self, factory: factory.clone() }))
     }
 }
 

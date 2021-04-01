@@ -56,7 +56,6 @@ impl<T: Action> Clone for ActionFuture<T> {
 
 impl<T: Action> Future for ActionFuture<T> {
     type Output = Result<T::Output, String>;
-
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let this = self.get_mut();
         let mut this = this.0.borrow_mut();

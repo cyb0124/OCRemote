@@ -43,7 +43,7 @@ pub struct BufferedConfig {
     pub stocks: Vec<BufferedInput>,
 }
 
-struct BufferedProcess {
+pub struct BufferedProcess {
     weak: Weak<RefCell<BufferedProcess>>,
     config: BufferedConfig,
     factory: Weak<RefCell<Factory>>,
@@ -52,8 +52,9 @@ struct BufferedProcess {
 impl_inv_process!(BufferedProcess);
 
 impl IntoProcess for BufferedConfig {
-    fn into_process(self, factory: Weak<RefCell<Factory>>) -> Rc<RefCell<dyn Process>> {
-        Rc::new_cyclic(|weak| RefCell::new(BufferedProcess { weak: weak.clone(), config: self, factory }))
+    type Output = BufferedProcess;
+    fn into_process(self, factory: &Weak<RefCell<Factory>>) -> Rc<RefCell<Self::Output>> {
+        Rc::new_cyclic(|weak| RefCell::new(Self::Output { weak: weak.clone(), config: self, factory: factory.clone() }))
     }
 }
 

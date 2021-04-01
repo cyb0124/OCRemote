@@ -133,15 +133,16 @@ pub struct CraftingRobotConfig {
     pub recipes: Vec<CraftingGridRecipe>,
 }
 
-struct CraftingRobotProcess {
+pub struct CraftingRobotProcess {
     weak: Weak<RefCell<CraftingRobotProcess>>,
     config: CraftingRobotConfig,
     factory: Weak<RefCell<Factory>>,
 }
 
 impl IntoProcess for CraftingRobotConfig {
-    fn into_process(self, factory: Weak<RefCell<Factory>>) -> Rc<RefCell<dyn Process>> {
-        Rc::new_cyclic(|weak| RefCell::new(CraftingRobotProcess { weak: weak.clone(), config: self, factory }))
+    type Output = CraftingRobotProcess;
+    fn into_process(self, factory: &Weak<RefCell<Factory>>) -> Rc<RefCell<Self::Output>> {
+        Rc::new_cyclic(|weak| RefCell::new(Self::Output { weak: weak.clone(), config: self, factory: factory.clone() }))
     }
 }
 
@@ -207,15 +208,16 @@ pub struct WorkbenchConfig {
     pub recipes: Vec<CraftingGridRecipe>,
 }
 
-struct WorkbenchProcess {
+pub struct WorkbenchProcess {
     weak: Weak<RefCell<WorkbenchProcess>>,
     config: WorkbenchConfig,
     factory: Weak<RefCell<Factory>>,
 }
 
 impl IntoProcess for WorkbenchConfig {
-    fn into_process(self, factory: Weak<RefCell<Factory>>) -> Rc<RefCell<dyn Process>> {
-        Rc::new_cyclic(|weak| RefCell::new(WorkbenchProcess { weak: weak.clone(), config: self, factory }))
+    type Output = WorkbenchProcess;
+    fn into_process(self, factory: &Weak<RefCell<Factory>>) -> Rc<RefCell<Self::Output>> {
+        Rc::new_cyclic(|weak| RefCell::new(Self::Output { weak: weak.clone(), config: self, factory: factory.clone() }))
     }
 }
 

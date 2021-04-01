@@ -70,7 +70,7 @@ pub struct HysteresisReactorConfig {
     pub upper_bound: f64, // typical: 0.7
 }
 
-struct HysteresisReactorProcess {
+pub struct HysteresisReactorProcess {
     weak: Weak<RefCell<HysteresisReactorProcess>>,
     config: HysteresisReactorConfig,
     factory: Weak<RefCell<Factory>>,
@@ -80,9 +80,10 @@ struct HysteresisReactorProcess {
 impl_reactor_process!(HysteresisReactorProcess);
 
 impl IntoProcess for HysteresisReactorConfig {
-    fn into_process(self, factory: Weak<RefCell<Factory>>) -> Rc<RefCell<dyn Process>> {
+    type Output = HysteresisReactorProcess;
+    fn into_process(self, factory: &Weak<RefCell<Factory>>) -> Rc<RefCell<Self::Output>> {
         Rc::new_cyclic(|weak| {
-            RefCell::new(HysteresisReactorProcess { weak: weak.clone(), config: self, factory, prev_on: None })
+            RefCell::new(Self::Output { weak: weak.clone(), config: self, factory: factory.clone(), prev_on: None })
         })
     }
 }
@@ -130,7 +131,7 @@ pub struct ProportionalReactorConfig {
     pub has_turbine: bool,
 }
 
-struct ProportionalReactorProcess {
+pub struct ProportionalReactorProcess {
     weak: Weak<RefCell<ProportionalReactorProcess>>,
     config: ProportionalReactorConfig,
     factory: Weak<RefCell<Factory>>,
@@ -140,9 +141,10 @@ struct ProportionalReactorProcess {
 impl_reactor_process!(ProportionalReactorProcess);
 
 impl IntoProcess for ProportionalReactorConfig {
-    fn into_process(self, factory: Weak<RefCell<Factory>>) -> Rc<RefCell<dyn Process>> {
+    type Output = ProportionalReactorProcess;
+    fn into_process(self, factory: &Weak<RefCell<Factory>>) -> Rc<RefCell<Self::Output>> {
         Rc::new_cyclic(|weak| {
-            RefCell::new(ProportionalReactorProcess { weak: weak.clone(), config: self, factory, prev_rod: None })
+            RefCell::new(Self::Output { weak: weak.clone(), config: self, factory: factory.clone(), prev_rod: None })
         })
     }
 }
@@ -194,7 +196,7 @@ struct PIDReactorState {
     accum: f64,
 }
 
-struct PIDReactorProcess {
+pub struct PIDReactorProcess {
     weak: Weak<RefCell<PIDReactorProcess>>,
     config: PIDReactorConfig,
     factory: Weak<RefCell<Factory>>,
@@ -205,9 +207,16 @@ struct PIDReactorProcess {
 impl_reactor_process!(PIDReactorProcess);
 
 impl IntoProcess for PIDReactorConfig {
-    fn into_process(self, factory: Weak<RefCell<Factory>>) -> Rc<RefCell<dyn Process>> {
+    type Output = PIDReactorProcess;
+    fn into_process(self, factory: &Weak<RefCell<Factory>>) -> Rc<RefCell<Self::Output>> {
         Rc::new_cyclic(|weak| {
-            RefCell::new(PIDReactorProcess { weak: weak.clone(), config: self, factory, state: None, prev_rod: None })
+            RefCell::new(Self::Output {
+                weak: weak.clone(),
+                config: self,
+                factory: factory.clone(),
+                state: None,
+                prev_rod: None,
+            })
         })
     }
 }
