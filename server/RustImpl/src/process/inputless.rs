@@ -13,7 +13,6 @@ use std::{
 };
 
 pub struct InputlessConfig {
-    pub name: &'static str,
     pub accesses: Vec<InvAccess>,
     pub slot_filter: Option<SlotFilter>,
     pub outputs: Vec<Output>,

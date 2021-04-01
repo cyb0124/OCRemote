@@ -1,4 +1,4 @@
-use super::access::BusAccess;
+use super::access::SidedAccess;
 use super::action::{ActionFuture, List, Print};
 use super::item::{Filter, Item, ItemStack};
 use super::process::{IntoProcess, Process};
@@ -76,7 +76,7 @@ pub struct FactoryConfig {
     pub server: Rc<RefCell<Server>>,
     pub min_cycle_time: Duration,
     pub log_clients: Vec<&'static str>,
-    pub bus_accesses: Vec<BusAccess>,
+    pub bus_accesses: Vec<SidedAccess>,
     pub backups: Vec<(Filter, i32)>,
 }
 

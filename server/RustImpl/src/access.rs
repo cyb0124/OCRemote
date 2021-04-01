@@ -10,13 +10,13 @@ macro_rules! impl_access {
     };
 }
 
-pub struct BusAccess {
+pub struct SidedAccess {
     pub client: &'static str,
     pub addr: &'static str,
     pub side: u8,
 }
 
-impl_access!(BusAccess);
+impl_access!(SidedAccess);
 
 pub struct InvAccess {
     pub client: &'static str,
