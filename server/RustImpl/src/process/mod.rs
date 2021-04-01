@@ -146,6 +146,7 @@ where
 mod buffered;
 mod crafting_grid;
 mod inputless;
+mod misc;
 mod reactor;
 mod redstone;
 mod scattering;
@@ -153,6 +154,7 @@ mod slotted;
 pub use buffered::*;
 pub use crafting_grid::*;
 pub use inputless::*;
+pub use misc::*;
 pub use reactor::*;
 pub use redstone::*;
 pub use scattering::*;

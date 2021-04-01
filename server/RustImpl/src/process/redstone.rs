@@ -10,9 +10,38 @@ use std::{
     rc::{Rc, Weak},
 };
 
+pub trait RedstoneOutput {
+    fn get_value(&self, factory: &Factory) -> i32;
+}
+
+impl<T: Fn(&Factory) -> i32> RedstoneOutput for T {
+    fn get_value(&self, factory: &Factory) -> i32 { self(factory) }
+}
+
+pub struct EmitWhenWantItem {
+    pub name: &'static str,
+    pub item: Filter,
+    pub n_wanted: i32,
+}
+
+impl RedstoneOutput for EmitWhenWantItem {
+    fn get_value(&self, factory: &Factory) -> i32 {
+        if self.n_wanted <= 0 {
+            return 0;
+        }
+        if let Some((_, info)) = factory.search_item(&self.item) {
+            if info.borrow().n_stored >= self.n_wanted {
+                return 0;
+            }
+        }
+        factory.log(Print { text: format!("{}: on", self.name), color: 0xFF4FFF, beep: None });
+        15
+    }
+}
+
 pub struct RedstoneEmitterConfig<T> {
     pub accesses: Vec<SidedAccess>,
-    pub value: T,
+    pub output: T,
 }
 
 pub struct RedstoneEmitterProcess<T> {
@@ -21,16 +50,16 @@ pub struct RedstoneEmitterProcess<T> {
     prev_value: Option<i32>,
 }
 
-impl<T: Fn(&Factory) -> i32 + 'static> IntoProcess for RedstoneEmitterConfig<T> {
+impl<T: RedstoneOutput + 'static> IntoProcess for RedstoneEmitterConfig<T> {
     type Output = RedstoneEmitterProcess<T>;
     fn into_process(self, _factory: &Weak<RefCell<Factory>>) -> Rc<RefCell<Self::Output>> {
         Rc::new_cyclic(|weak| RefCell::new(Self::Output { weak: weak.clone(), config: self, prev_value: None }))
     }
 }
 
-impl<T: Fn(&Factory) -> i32 + 'static> Process for RedstoneEmitterProcess<T> {
+impl<T: RedstoneOutput + 'static> Process for RedstoneEmitterProcess<T> {
     fn run(&self, factory: &Factory) -> AbortOnDrop<Result<(), String>> {
-        let value = (self.config.value)(factory);
+        let value = self.config.output.get_value(factory);
         if Some(value) == self.prev_value {
             spawn(async { Ok(()) })
         } else {
@@ -53,19 +82,12 @@ impl<T: Fn(&Factory) -> i32 + 'static> Process for RedstoneEmitterProcess<T> {
     }
 }
 
-pub fn emit_when_need_item(name: &'static str, item: Filter, n_needed: i32) -> impl Fn(&Factory) -> i32 + 'static {
-    move |factory| {
-        if n_needed <= 0 {
-            return 0;
-        }
-        if let Some((_, info)) = factory.search_item(&item) {
-            if info.borrow().n_stored >= n_needed {
-                return 0;
-            }
-        }
-        factory.log(Print { text: format!("{}: on", name), color: 0xFF4FFF, beep: None });
-        15
-    }
+pub trait RedstoneCondition {
+    fn should_run(&self, factory: &Factory, value: i32) -> bool;
+}
+
+impl<T: Fn(&Factory, i32) -> bool> RedstoneCondition for T {
+    fn should_run(&self, factory: &Factory, value: i32) -> bool { self(factory, value) }
 }
 
 pub struct RedstoneConditionalConfig<T, U> {
@@ -84,11 +106,7 @@ pub struct RedstoneConditionalProcess<T, U> {
     child: Rc<RefCell<U>>,
 }
 
-impl<T, U> IntoProcess for RedstoneConditionalConfig<T, U>
-where
-    T: Fn(&Factory, i32) -> bool + 'static,
-    U: IntoProcess,
-{
+impl<T: RedstoneCondition + 'static, U: IntoProcess> IntoProcess for RedstoneConditionalConfig<T, U> {
     type Output = RedstoneConditionalProcess<T, U::Output>;
     fn into_process(self, factory: &Weak<RefCell<Factory>>) -> Rc<RefCell<Self::Output>> {
         Rc::new_cyclic(|weak| {
@@ -104,11 +122,7 @@ where
     }
 }
 
-impl<T, U> Process for RedstoneConditionalProcess<T, U>
-where
-    T: Fn(&Factory, i32) -> bool + 'static,
-    U: Process + 'static,
-{
+impl<T: RedstoneCondition + 'static, U: Process + 'static> Process for RedstoneConditionalProcess<T, U> {
     fn run(&self, factory: &Factory) -> AbortOnDrop<Result<(), String>> {
         let server = factory.borrow_server();
         let access = server.load_balance(&self.accesses).1;
@@ -119,7 +133,7 @@ where
             let value = call_result(action.await?)?;
             alive!(weak, this);
             upgrade!(this.factory, factory);
-            if (this.condition)(factory, value) {
+            if this.condition.should_run(factory, value) {
                 this.child.borrow().run(factory).into_future().await?
             } else if let Some(name) = this.name {
                 factory.log(Print { text: format!("{}: skipped", name), color: 0xFF0000, beep: None })

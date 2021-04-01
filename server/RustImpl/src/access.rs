@@ -42,6 +42,8 @@ impl_access!(MEAccess);
 pub struct ComponentAccess {
     pub client: &'static str,
     // typical address for reactor: br_reactor
+    // typical address for plastic mixer: plastic_mixer
+    // typical address for flux controller: flux_controller
     pub addr: &'static str,
 }
 

@@ -180,7 +180,7 @@ impl CraftingGridProcess for CraftingRobotProcess {
 
     fn store_output(group: &mut Vec<Call>, access: &Self::Access, bus_slot: usize) {
         group.push(Call { addr: "robot", func: "select", args: vec![16.into()] });
-        group.push(Call { addr: "crafting", func: "craft", args: vec![] });
+        group.push(Call { addr: "crafting", func: "craft", args: Vec::new() });
         group.push(Call {
             addr: "inventory_controller",
             func: "dropIntoSlot",

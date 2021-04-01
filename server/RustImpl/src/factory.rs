@@ -277,7 +277,7 @@ async fn factory_main(factory: Weak<RefCell<Factory>>) -> Result<(), String> {
             let mut text = format!("Cycle {}", n_cycles);
             if let Some(last) = cycle_start_last {
                 text += &format!(
-                    ", nBusUpdates={}, cycleTime={:.03}",
+                    ", nBusUpdates={}, cycleTime={:.3}",
                     this.n_bus_updates,
                     (cycle_start_time - last).as_secs_f64()
                 )
