@@ -2,12 +2,6 @@ FluxNetworkOutput
 RFToolsControlWorkbenchAccess
 RedstoneAccess
 
-CraftingRobotConfig
-CraftingRobotProcess
-
-RFToolsControlWorkbenchConfig
-RFToolsControlWorkbenchProcess
-
 PlasticMixerConfig
 PlasticMixerProcess
 

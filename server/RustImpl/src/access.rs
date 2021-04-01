@@ -41,6 +41,7 @@ impl_access!(MEAccess);
 
 pub struct ComponentAccess {
     pub client: &'static str,
+    // typical address for reactor: br_reactor
     pub addr: &'static str,
 }
 
@@ -52,3 +53,14 @@ pub struct CraftingRobotAccess {
 }
 
 impl_access!(CraftingRobotAccess);
+
+pub struct WorkbenchAccess {
+    pub client: &'static str,
+    pub input_addr: &'static str,
+    pub output_addr: &'static str,
+    pub input_bus_side: u8,
+    pub output_bus_side: u8,
+    pub non_consumable_side: u8,
+}
+
+impl_access!(WorkbenchAccess);
