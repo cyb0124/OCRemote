@@ -4,41 +4,33 @@ use super::super::factory::Factory;
 use super::super::item::Filter;
 use super::super::lua_value::{call_result, Table};
 use super::super::util::{alive, join_tasks, spawn, AbortOnDrop};
-use super::{IntoProcess, Process, RedstoneEmitterConfig, RedstoneEmitterProcess, RedstoneOutput};
+use super::{IntoProcess, Process, RedstoneEmitterConfig, RedstoneEmitterProcess};
 use std::{
     cell::RefCell,
     convert::TryInto,
     rc::{Rc, Weak},
 };
 
-pub trait Condition {
-    fn should_run(&self, factory: &Factory) -> bool;
+pub struct ConditionalConfig<T: IntoProcess> {
+    pub condition: Box<dyn Fn(&Factory) -> bool>,
+    pub child: T,
 }
 
-impl<T: Fn(&Factory) -> bool> Condition for T {
-    fn should_run(&self, factory: &Factory) -> bool { self(factory) }
+pub struct ConditionalProcess<T: Process> {
+    condition: Box<dyn Fn(&Factory) -> bool>,
+    child: Rc<RefCell<T>>,
 }
 
-pub struct ConditionalConfig<T, U> {
-    pub condition: T,
-    pub child: U,
-}
-
-pub struct ConditionalProcess<T, U> {
-    condition: T,
-    child: Rc<RefCell<U>>,
-}
-
-impl<T: Condition + 'static, U: IntoProcess> IntoProcess for ConditionalConfig<T, U> {
-    type Output = ConditionalProcess<T, U::Output>;
+impl<T: IntoProcess> IntoProcess for ConditionalConfig<T> {
+    type Output = ConditionalProcess<T::Output>;
     fn into_process(self, factory: &Weak<RefCell<Factory>>) -> Rc<RefCell<Self::Output>> {
         Rc::new(RefCell::new(Self::Output { condition: self.condition, child: self.child.into_process(factory) }))
     }
 }
 
-impl<T: Condition, U: Process> Process for ConditionalProcess<T, U> {
+impl<T: Process> Process for ConditionalProcess<T> {
     fn run(&self, factory: &Factory) -> AbortOnDrop<Result<(), String>> {
-        if self.condition.should_run(factory) {
+        if (self.condition)(factory) {
             self.child.borrow().run(factory)
         } else {
             spawn(async { Ok(()) })
@@ -107,7 +99,7 @@ impl Process for PlasticMixerProcess {
 
 pub struct FluxNetworkOutput {
     pub accesses: Vec<SidedAccess>,
-    pub value: Box<dyn Fn(&Factory, f64) -> i32>,
+    pub output: Box<dyn Fn(f64) -> i32>,
 }
 
 pub struct FluxNetworkConfig {
@@ -116,24 +108,12 @@ pub struct FluxNetworkConfig {
     pub outputs: Vec<FluxNetworkOutput>,
 }
 
-struct FluxNetworkRedstoneOutput {
-    weak: Weak<RefCell<FluxNetworkProcess>>,
-    value: Box<dyn Fn(&Factory, f64) -> i32>,
-}
-
-impl RedstoneOutput for FluxNetworkRedstoneOutput {
-    fn get_value(&self, factory: &Factory) -> i32 {
-        upgrade!(self.weak, this);
-        (self.value)(factory, this.energy)
-    }
-}
-
 pub struct FluxNetworkProcess {
     weak: Weak<RefCell<FluxNetworkProcess>>,
     factory: Weak<RefCell<Factory>>,
     name: &'static str,
     accesses: Vec<ComponentAccess>,
-    outputs: Vec<Rc<RefCell<RedstoneEmitterProcess<FluxNetworkRedstoneOutput>>>>,
+    outputs: Vec<Rc<RefCell<RedstoneEmitterProcess>>>,
     energy: f64,
 }
 
@@ -149,10 +129,14 @@ impl IntoProcess for FluxNetworkConfig {
                 outputs: self
                     .outputs
                     .into_iter()
-                    .map(|output| {
+                    .map(|FluxNetworkOutput { output, accesses }| {
+                        let weak = weak.clone();
                         RedstoneEmitterConfig {
-                            accesses: output.accesses,
-                            output: FluxNetworkRedstoneOutput { weak: weak.clone(), value: output.value },
+                            accesses: accesses,
+                            output: Box::new(move |_factory| {
+                                upgrade!(weak, this);
+                                output(this.energy)
+                            }),
                         }
                         .into_process(factory)
                     })
