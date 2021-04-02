@@ -1,19 +1,19 @@
 #![feature(arc_new_cyclic)]
 
 #[macro_use]
-mod util;
+pub mod util;
 #[macro_use]
-mod recipe;
-mod access;
-mod action;
-mod config;
-mod factory;
-mod item;
-mod lua_value;
-mod process;
-mod server;
-mod side;
-mod storage;
+pub mod recipe;
+pub mod access;
+pub mod action;
+pub mod config;
+pub mod factory;
+pub mod item;
+pub mod lua_value;
+pub mod process;
+pub mod server;
+pub mod side;
+pub mod storage;
 
 use config::build_factory;
 use tokio::{signal::ctrl_c, task::LocalSet};
