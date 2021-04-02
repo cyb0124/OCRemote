@@ -87,7 +87,7 @@ pub struct Factory {
     storages: Vec<Rc<RefCell<dyn Storage>>>,
     processes: Vec<Rc<RefCell<dyn Process>>>,
 
-    pub items: FnvHashMap<Rc<Item>, RefCell<ItemInfo>>,
+    items: FnvHashMap<Rc<Item>, RefCell<ItemInfo>>,
     label_map: FnvHashMap<String, Vec<Rc<Item>>>,
     name_map: FnvHashMap<String, Vec<Rc<Item>>>,
 
@@ -127,6 +127,7 @@ impl FactoryConfig {
 impl Factory {
     pub fn add_storage(&mut self, storage: impl IntoStorage) { self.storages.push(storage.into_storage(&self.weak)) }
     pub fn add_process(&mut self, process: impl IntoProcess) { self.processes.push(process.into_process(&self.weak)) }
+    pub fn get_n_stored(&self, item: &Rc<Item>) -> i32 { self.items.get(item).map_or(0, |info| info.borrow().n_stored) }
     pub fn borrow_server(&self) -> Ref<Server> { self.config.server.borrow() }
 
     pub fn log(&self, action: Print) {
@@ -192,6 +193,10 @@ impl Factory {
             }
         }
         best
+    }
+
+    pub fn search_n_stored(&self, filter: &Filter) -> i32 {
+        self.search_item(filter).map_or(0, |(_, info)| info.borrow().n_stored)
     }
 
     pub fn bus_allocate(&mut self) -> LocalReceiver<usize> {

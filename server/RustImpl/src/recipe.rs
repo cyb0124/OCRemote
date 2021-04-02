@@ -120,19 +120,13 @@ pub fn compute_demands(factory: &Factory, recipes: &Vec<impl Recipe>) -> Vec<Dem
         if !recipe.get_outputs().is_empty() {
             let mut full = true;
             for output in recipe.get_outputs() {
-                if output.n_wanted <= 0 {
-                    continue;
-                }
-                if let Some((_, info)) = factory.search_item(&output.item) {
-                    let n_stored = info.borrow().n_stored;
-                    if n_stored >= output.n_wanted {
-                        continue;
-                    }
+                let n_stored = factory.search_n_stored(&output.item);
+                if n_stored < output.n_wanted {
                     full = false;
-                    fullness = fullness.min(n_stored as f64 / output.n_wanted as f64)
-                } else {
-                    fullness = 0.0;
-                    break;
+                    fullness = fullness.min(n_stored as f64 / output.n_wanted as f64);
+                    if n_stored <= 0 {
+                        break;
+                    }
                 }
             }
             if full {

@@ -42,16 +42,10 @@ impl Process for InputlessProcess {
     fn run(&self, factory: &Factory) -> AbortOnDrop<Result<(), String>> {
         let mut enough = true;
         for output in &self.config.outputs {
-            if output.n_wanted <= 0 {
-                continue;
+            if factory.search_n_stored(&output.item) < output.n_wanted {
+                enough = false;
+                break;
             }
-            if let Some((_, info)) = factory.search_item(&output.item) {
-                if info.borrow().n_stored >= output.n_wanted {
-                    continue;
-                }
-            }
-            enough = false;
-            break;
         }
         if enough {
             return spawn(async { Ok(()) });
@@ -75,10 +69,8 @@ impl Process for InputlessProcess {
                         let info = match infos.entry(&stack.item) {
                             Entry::Occupied(entry) => entry.into_mut(),
                             Entry::Vacant(entry) => {
-                                let mut info = InputlessInfo {
-                                    n_wanted: 0,
-                                    n_stored: factory.items.get(&stack.item).map_or(0, |info| info.borrow().n_stored),
-                                };
+                                let mut info =
+                                    InputlessInfo { n_wanted: 0, n_stored: factory.get_n_stored(&stack.item) };
                                 for output in &this.config.outputs {
                                     if output.item.apply(&stack.item) {
                                         info.n_wanted = max(info.n_wanted, output.n_wanted)

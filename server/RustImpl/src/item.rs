@@ -33,7 +33,7 @@ pub fn jammer() -> Rc<Item> {
         max_damage: 0,
         max_size: 1,
         has_tag: false,
-        others: Table::default()
+        others: Table::new()
     }));
     ITEM.with(|item| item.clone())
 }

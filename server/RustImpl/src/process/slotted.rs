@@ -104,6 +104,7 @@ impl Process for SlottedProcess {
                         }
                     }
                     tasks.push(this.execute_recipe(factory, demand));
+                    break;
                 }
             }
             join_tasks(tasks).await

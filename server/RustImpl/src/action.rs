@@ -123,6 +123,7 @@ impl Action for List {
             .into_iter()
             .map(|x| match x {
                 Value::N => Ok(None),
+                Value::S(_) => Ok(None),
                 x => ItemStack::parse(x).map(|x| Some(x)),
             })
             .collect()

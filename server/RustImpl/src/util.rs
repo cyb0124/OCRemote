@@ -67,7 +67,7 @@ struct LocalOneShotState<T> {
     waker: Option<Waker>,
 }
 
-fn send<T>(state: &Weak<RefCell<LocalOneShotState<T>>>, result: Result<T, String>) {
+fn send<T>(state: Weak<RefCell<LocalOneShotState<T>>>, result: Result<T, String>) {
     if let Some(state) = state.upgrade() {
         let mut state = state.borrow_mut();
         state.result = Some(result);
@@ -97,14 +97,14 @@ pub struct LocalSender<T>(Option<Weak<RefCell<LocalOneShotState<T>>>>);
 
 impl<T> Drop for LocalSender<T> {
     fn drop(&mut self) {
-        if let Some(ref state) = self.0 {
+        if let Some(state) = self.0.take() {
             send(state, Err("sender died".to_owned()))
         }
     }
 }
 
 impl<T> LocalSender<T> {
-    pub fn send(self, result: Result<T, String>) { send(self.0.as_ref().unwrap(), result) }
+    pub fn send(mut self, result: Result<T, String>) { send(self.0.take().unwrap(), result) }
 }
 
 pub fn make_local_one_shot<T>() -> (LocalSender<T>, LocalReceiver<T>) {

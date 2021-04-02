@@ -34,10 +34,7 @@ where
     U: Future<Output = Result<(), String>>,
     F: FnOnce(f64) -> U + 'static,
 {
-    if this.n_cyanite_wanted() > 0
-        && factory
-            .search_item(&Filter::Label("Cyanite Ingot"))
-            .map_or(true, |(_, info)| info.borrow().n_stored < this.n_cyanite_wanted())
+    if this.n_cyanite_wanted() > 0 && factory.search_n_stored(&Filter::Label("Cyanite Ingot")) < this.n_cyanite_wanted()
     {
         return spawn(async move { run(0.0).await });
     }

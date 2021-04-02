@@ -76,9 +76,7 @@ impl Process for PlasticMixerProcess {
         let (i, color, n_stored) = COLORS
             .iter()
             .enumerate()
-            .map(|(i, color)| {
-                (i, *color, factory.search_item(&Filter::Label(*color)).map_or(0, |(_, info)| info.borrow().n_stored))
-            })
+            .map(|(i, color)| (i, *color, factory.search_n_stored(&Filter::Label(*color))))
             .min_by_key(|(_, _, n_stored)| *n_stored)
             .unwrap();
         let text;

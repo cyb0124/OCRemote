@@ -26,16 +26,12 @@ pub struct EmitWhenWantItem {
 
 impl RedstoneOutput for EmitWhenWantItem {
     fn get_value(&self, factory: &Factory) -> i32 {
-        if self.n_wanted <= 0 {
-            return 0;
+        if factory.search_n_stored(&self.item) < self.n_wanted {
+            factory.log(Print { text: format!("{}: on", self.name), color: 0xFF4FFF, beep: None });
+            15
+        } else {
+            0
         }
-        if let Some((_, info)) = factory.search_item(&self.item) {
-            if info.borrow().n_stored >= self.n_wanted {
-                return 0;
-            }
-        }
-        factory.log(Print { text: format!("{}: on", self.name), color: 0xFF4FFF, beep: None });
-        15
     }
 }
 

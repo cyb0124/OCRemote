@@ -182,7 +182,7 @@ fn serialize_string(x: &str, out: &mut Vec<u8>) {
             out.push(b'.')
         }
     }
-    out.extend_from_slice(b"@!")
+    out.extend_from_slice(b"@~")
 }
 
 fn serialize_bool(x: bool, out: &mut Vec<u8>) { out.push(if x { b'+' } else { b'-' }) }
@@ -245,8 +245,7 @@ impl Parser {
                 Some(State::T { mut result, key }) => {
                     if let Some(key) = key {
                         result.insert(key, value);
-                        self.stack.push(State::T { result, key: None });
-                        self.stack.push(State::V)
+                        self.stack.push(State::T { result, key: None })
                     } else {
                         match value {
                             Value::N => {
@@ -259,6 +258,7 @@ impl Parser {
                             Value::T(x) => break Err(format!("table key: {:?}", x)),
                         }
                     }
+                    self.stack.push(State::V)
                 }
                 _ => unreachable!(),
             }
