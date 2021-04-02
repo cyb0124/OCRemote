@@ -1,11 +1,12 @@
 # OCRemote
-OCRemote is an OpenComputers program by cyb0124 for storage-management and auto-crafting. Main features include:
-  - Full automation for multi-step crafting and keeping items in-stock.
-  - Reuse and parallelization of machines for multiple recipes.
-  - Prioritization of recipes based on the demand. (e.g. deciding which crop to grow, or deciding which ore to process first.)
+OCRemote is an OpenComputers program by cyb0124 for item-storage and auto-crafting. Features include:
+  - Parallelized multi-step processing and keeping items in-stock.
+  - Allow defining unlimited number of recipes per machine.
+  - Prioritization of recipes based on the demand. (e.g. deciding which ore to process first.)
   - Robust handling of multiple-input recipes to prevent clogging (e.g. for alloy furnaces).
-  - Preventing recipes from using up the last seed/sapling/etc.
+  - Preventing recipes from using up the last seed/sapling items.
   - Processing excessive items (e.g. saplings from tree farm).
+  - Use multiple computers to parallelize world-interaction, achieving high item-transfer throughput.
 
 OCRemote is designed for survival/expert-mode gameplay in modpacks such as Enigmatica 2 and Project Ozone 3. When used correctly, it can completely replace ME-system based auto processing both in early game and in late game. It has been tested to function correctly in Sponge-based public servers.
 
@@ -60,7 +61,10 @@ OCRemote doesn't analyze any tree structure for recipe dependencies; instead it 
     This process reads the energy level of a FluxNetwork and emits redstone signal based on the energy level, with rules specified by callback functions.
 
 ## Usage
-The documentation is still WIP and there isn't a GUI for configuration yet. The storage/auto-crafting configuration is currently hardcoded in the [server program's main function](server/CPPImpl/Entry.cpp). It contains a sample configuration which you can adapt for your own use. To use OCRemote, you need to build and run the [server program](server/CPPImpl) on a server that can be reached from OpenComputers' Internet Card. The server requires a C++ compiler (e.g. gcc) with C++17 support, [CMake](https://cmake.org/) and [Boost](https://www.boost.org/) to build. For the [client script](client/client.lua), you need to replace the `...` in the first line with your own configuration (`resX` and `resY` are the screen resolutions). The client script is meant to run without any OS or storage medium. To run it, first compress it using [Lua minifier](https://mothereff.in/lua-minifier) and then flash it into an EEPROM. Alternatively, you can flash the [loader script](client/loader.lua) to load the uncompressed client script from the Internet.
+The storage/auto-crafting configuration is currently hardcoded in the [server program's main function](server/CPPImpl/Entry.cpp). It contains a sample configuration which you can adapt for your own use. To use OCRemote, you need to build and run the [server program](server/CPPImpl) on a server that can be reached from OpenComputers' Internet Card. The server requires a C++ compiler (e.g. gcc) with C++17 support, [CMake](https://cmake.org/) and [Boost](https://www.boost.org/) to build. For the [client script](client/client.lua), you need to replace the `...` in the first line with your own configuration (`resX` and `resY` are the screen resolutions). The client script is meant to run without any OS or storage medium. To run it, first compress it using [Lua minifier](https://mothereff.in/lua-minifier) and then flash it into an EEPROM. Alternatively, you can flash the [loader script](client/loader.lua) to load the uncompressed client script from the Internet.
 
 The following image explains how common recipes are specified.
 ![Explanation for recipe specification](recipe-help.png "Explanation for recipe specification")
+
+### Rust Rewrite
+The server has been rewritten in Rust, which should be easier to build and run. See [example configuration](server/RustImpl/src/config.rs) for details.
