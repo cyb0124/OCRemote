@@ -18,7 +18,7 @@ use std::{
 use tokio::time::{sleep_until, Instant};
 
 pub struct ItemInfo {
-    pub n_stored: i32,
+    n_stored: i32,
     n_backup: i32,
     providers: BinaryHeap<Provider>,
 }
