@@ -46,23 +46,19 @@ pub struct ItemStack {
 
 impl ItemStack {
     pub fn parse(value: Value) -> Result<Self, String> {
-        if let Value::T(mut table) = value {
-            let mut get =
-                |key: &'static str| table.remove(&key.into()).ok_or_else(|| format!("key not found: {}", key));
-            let size = get("size")?.try_into()?;
-            let label = get("label")?.try_into()?;
-            let name = get("name")?.try_into()?;
-            let damage = get("damage")?.try_into()?;
-            let max_damage = get("maxDamage")?.try_into()?;
-            let max_size = get("maxSize")?.try_into()?;
-            let has_tag = get("hasTag")?.try_into()?;
-            Ok(ItemStack {
-                item: Rc::new(Item { label, name, damage, max_damage, max_size, has_tag, others: table }),
-                size,
-            })
-        } else {
-            Err(format!("non-table ItemStack: {:?}", value))
-        }
+        let mut table: Table = value.try_into()?;
+        let mut get = |key: &'static str| table.remove(&key.into()).ok_or_else(|| format!("key not found: {}", key));
+        let size = get("size")?.try_into()?;
+        let label = get("label")?.try_into()?;
+        let name = get("name")?.try_into()?;
+        let damage = get("damage")?.try_into()?;
+        let max_damage = get("maxDamage")?.try_into()?;
+        let max_size = get("maxSize")?.try_into()?;
+        let has_tag = get("hasTag")?.try_into()?;
+        Ok(ItemStack {
+            item: Rc::new(Item { label, name, damage, max_damage, max_size, has_tag, others: table }),
+            size,
+        })
     }
 }
 

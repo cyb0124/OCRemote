@@ -83,7 +83,6 @@ impl From<Table> for Value {
 
 impl TryFrom<Value> for NotNan<f64> {
     type Error = String;
-
     fn try_from(value: Value) -> Result<Self, String> {
         if let Value::F(result) = value {
             Ok(result)
@@ -110,7 +109,6 @@ impl TryFrom<Value> for f64 {
 
 impl TryFrom<Value> for String {
     type Error = String;
-
     fn try_from(value: Value) -> Result<Self, String> {
         if let Value::S(result) = value {
             Ok(result)
@@ -122,7 +120,6 @@ impl TryFrom<Value> for String {
 
 impl TryFrom<Value> for bool {
     type Error = String;
-
     fn try_from(value: Value) -> Result<Self, String> {
         if let Value::B(result) = value {
             Ok(result)
@@ -134,7 +131,6 @@ impl TryFrom<Value> for bool {
 
 impl TryFrom<Value> for Table {
     type Error = String;
-
     fn try_from(value: Value) -> Result<Self, String> {
         if let Value::T(result) = value {
             Ok(result)
