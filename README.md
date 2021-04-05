@@ -68,3 +68,6 @@ The following image explains how common recipes are specified.
 
 ### Rust Rewrite
 The server has been rewritten in Rust, which should be easier to build and run. See [example configuration](server/RustImpl/src/config.rs) for details.
+
+### ComputerCraft Port
+ComputerCraft port is available [here](https://github.com/cyb0124/CCRemote)
