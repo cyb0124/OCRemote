@@ -76,6 +76,7 @@ impl Drop for Client {
 
 impl Client {
     fn log(&self, x: &(impl Display + ?Sized)) { println!("{}: {}", self.name, x) }
+    fn disconnect(&mut self) { self.disconnect_by_server(&mut self.server.upgrade().unwrap().borrow_mut()); }
 
     fn disconnect_by_server(&mut self, server: &mut Server) {
         if let Some(login) = &self.login {
@@ -91,26 +92,9 @@ impl Client {
         }
     }
 
-    fn disconnect(&mut self) { self.disconnect_by_server(&mut self.server.upgrade().unwrap().borrow_mut()); }
-
-    fn on_packet(&mut self, value: Value) -> Result<(), String> {
-        if let Some(_) = &self.login {
-            if let Some(x) = self.response_queue.pop_front() {
-                self.update_timeout(true);
-                x.borrow_mut().on_response(value)
-            } else {
-                Err(format!("unexpected packet: {:?}", value))
-            }
-        } else if let Value::S(login) = value {
-            upgrade_mut!(self.server, server);
-            self.name += &format!("[{}]", login);
-            self.log("logged in");
-            server.login(login.clone(), self.weak.clone());
-            self.login = Some(login);
-            Ok(())
-        } else {
-            Err(format!("invalid login packet: {:?}", value))
-        }
+    fn log_and_disconnect(&mut self, x: &(impl Display + ?Sized)) {
+        self.log(x);
+        self.disconnect()
     }
 
     fn enqueue_request_group(&mut self, group: Vec<Rc<RefCell<dyn ActionRequest>>>) {
@@ -139,9 +123,7 @@ impl Client {
 async fn timeout_main(client: Weak<RefCell<Client>>) {
     sleep(Duration::from_secs(120)).await;
     if let Some(this) = client.upgrade() {
-        let mut this = this.borrow_mut();
-        this.log("request timeout");
-        this.disconnect()
+        this.borrow_mut().log_and_disconnect("request timeout")
     }
 }
 
@@ -167,12 +149,34 @@ async fn writer_main(client: Weak<RefCell<Client>>, mut stream: OwnedWriteHalf) 
         }
         if let Err(e) = stream.write_all(&data).await {
             if let Some(this) = client.upgrade() {
-                let mut this = this.borrow_mut();
-                this.log(&format!("error writing: {}", e));
-                this.disconnect()
+                this.borrow_mut().log_and_disconnect(&format!("error writing: {}", e))
             }
             break;
         }
+    }
+}
+
+fn on_packet(client: &Rc<RefCell<Client>>, value: Value) -> Result<(), String> {
+    let mut client_ref = client.borrow_mut();
+    let this = &mut *client_ref;
+    if let Some(_) = &this.login {
+        if let Some(x) = this.response_queue.pop_front() {
+            this.update_timeout(true);
+            x.borrow_mut().on_response(value)
+        } else {
+            Err(format!("unexpected packet: {:?}", value))
+        }
+    } else if let Value::S(login) = value {
+        upgrade_mut!(this.server, server);
+        this.name += &format!("[{}]", login);
+        this.log("logged in");
+        this.login = Some(login.clone());
+        drop(this);
+        drop(client_ref);
+        server.login(login, Rc::downgrade(client));
+        Ok(())
+    } else {
+        Err(format!("invalid login packet: {:?}", value))
     }
 }
 
@@ -182,23 +186,19 @@ async fn reader_main(client: Weak<RefCell<Client>>, mut stream: OwnedReadHalf) {
     loop {
         let n_read = stream.read(&mut data).await;
         if let Some(this) = client.upgrade() {
-            let mut this = this.borrow_mut();
             match n_read {
                 Err(e) => {
-                    this.log(&format!("error reading: {}", e));
-                    this.disconnect();
+                    this.borrow_mut().log_and_disconnect(&format!("error reading: {}", e));
                     break;
                 }
                 Ok(n_read) => {
                     if n_read > 0 {
-                        if let Err(e) = parser.shift(&data[..n_read], &mut |x| this.on_packet(x)) {
-                            this.log(&format!("error decoding packet: {}", e));
-                            this.disconnect();
+                        if let Err(e) = parser.shift(&data[..n_read], &mut |x| on_packet(&this, x)) {
+                            this.borrow_mut().log_and_disconnect(&format!("error decoding packet: {}", e));
                             break;
                         }
                     } else {
-                        this.log("client disconnected");
-                        this.disconnect();
+                        this.borrow_mut().log_and_disconnect("client disconnected");
                         break;
                     }
                 }
