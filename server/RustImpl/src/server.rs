@@ -139,7 +139,9 @@ async fn writer_main(client: Weak<RefCell<Client>>, mut stream: OwnedWriteHalf) 
                     value.push(x.borrow_mut().build_request());
                     this.response_queue.push_back(x)
                 }
-                serialize(&vec_to_table(value).into(), &mut data)
+                serialize(&vec_to_table(value).into(), &mut data);
+                #[cfg(feature = "dump_traffic")]
+                this.log(&format!("out: {}", data.iter().map(|x| char::from(*x)).collect::<String>()));
             } else {
                 this.writer = WriterState::NotWriting(stream);
                 break;
@@ -193,7 +195,10 @@ async fn reader_main(client: Weak<RefCell<Client>>, mut stream: OwnedReadHalf) {
                 }
                 Ok(n_read) => {
                     if n_read > 0 {
-                        if let Err(e) = parser.shift(&data[..n_read], &mut |x| on_packet(&this, x)) {
+                        let data = &data[..n_read];
+                        #[cfg(feature = "dump_traffic")]
+                        this.borrow().log(&format!("in: {}", data.iter().map(|x| char::from(*x)).collect::<String>()));
+                        if let Err(e) = parser.shift(data, &mut |x| on_packet(&this, x)) {
                             this.borrow_mut().log_and_disconnect(&format!("error decoding packet: {}", e));
                             break;
                         }

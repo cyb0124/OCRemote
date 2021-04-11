@@ -4,6 +4,9 @@ version = "0.1.0"
 authors = ["Yibo Cao <cyb@ieee.org>"]
 edition = "2018"
 
+[features]
+dump_traffic = []
+
 [dependencies]
 tokio = { version = "1", features = ["rt", "net", "time", "signal", "macros", "io-util"] }
 ordered-float = "2"
