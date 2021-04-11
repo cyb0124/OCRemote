@@ -97,7 +97,7 @@ impl Process for ScatteringProcess {
                         let mut n_inserted = 0;
                         let mut is_full = false;
                         while inputs.n_sets > 0 {
-                            let mut min_any = 0;
+                            let mut min_any = i32::MAX;
                             let mut min_recipe = None;
                             for slot in &this.config.input_slots {
                                 if let Some(ref stack) = stacks[*slot] {
@@ -111,7 +111,9 @@ impl Process for ScatteringProcess {
                                         min_recipe = Some((*slot, stack.size))
                                     }
                                 } else {
-                                    min_recipe = Some((*slot, 0))
+                                    min_any = 0;
+                                    min_recipe = Some((*slot, 0));
+                                    break;
                                 }
                             }
                             if min_any >= this.config.max_per_slot {
