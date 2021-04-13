@@ -72,7 +72,7 @@ pub struct RedstoneConditionalConfig<T: IntoProcess> {
     pub child: T,
 }
 
-pub struct RedstoneConditionalProcess<T: Process + 'static> {
+pub struct RedstoneConditionalProcess<T: Process> {
     weak: Weak<RefCell<RedstoneConditionalProcess<T>>>,
     factory: Weak<RefCell<Factory>>,
     name: Option<&'static str>,
@@ -97,7 +97,7 @@ impl<T: IntoProcess> IntoProcess for RedstoneConditionalConfig<T> {
     }
 }
 
-impl<T: Process + 'static> Process for RedstoneConditionalProcess<T> {
+impl<T: Process> Process for RedstoneConditionalProcess<T> {
     fn run(&self, factory: &Factory) -> AbortOnDrop<Result<(), String>> {
         let server = factory.borrow_server();
         let access = server.load_balance(&self.accesses).1;

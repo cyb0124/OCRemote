@@ -9,12 +9,12 @@ use std::{
     rc::{Rc, Weak},
 };
 
-pub trait Process {
+pub trait Process: 'static {
     fn run(&self, factory: &Factory) -> AbortOnDrop<Result<(), String>>;
 }
 
 pub trait IntoProcess {
-    type Output: Process + 'static;
+    type Output: Process;
     fn into_process(self, factory: &Weak<RefCell<Factory>>) -> Rc<RefCell<Self::Output>>;
 }
 
@@ -22,7 +22,7 @@ pub type SlotFilter = Box<dyn Fn(usize) -> bool>;
 pub type ExtractFilter = Box<dyn Fn(usize, &ItemStack) -> bool>;
 pub fn extract_all() -> Option<ExtractFilter> { Some(Box::new(|_, _| true)) }
 
-pub trait InvProcess {
+pub trait InvProcess: 'static {
     fn get_accesses(&self) -> &Vec<InvAccess>;
     fn get_weak(&self) -> &Weak<RefCell<Self>>;
     fn get_factory(&self) -> &Weak<RefCell<Factory>>;
@@ -40,7 +40,7 @@ macro_rules! impl_inv_process {
 
 fn list_inv<T>(this: &T, factory: &Factory) -> ActionFuture<List>
 where
-    T: InvProcess + 'static,
+    T: InvProcess,
 {
     let server = factory.borrow_server();
     let access = server.load_balance(this.get_accesses()).1;
@@ -51,7 +51,7 @@ where
 
 fn extract_output<T>(this: &T, factory: &mut Factory, slot: usize, size: i32) -> AbortOnDrop<Result<(), String>>
 where
-    T: InvProcess + 'static,
+    T: InvProcess,
 {
     let bus_slot = factory.bus_allocate();
     let weak = this.get_weak().clone();
@@ -91,7 +91,7 @@ fn scattering_insert<T, U>(
     insertions: U,
 ) -> AbortOnDrop<Result<(), String>>
 where
-    T: InvProcess + 'static,
+    T: InvProcess,
     U: IntoIterator<Item = (usize, i32)> + 'static,
 {
     let bus_slot = factory.bus_allocate();

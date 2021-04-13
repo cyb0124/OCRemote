@@ -15,7 +15,7 @@ pub struct DepositResult {
     pub task: AbortOnDrop<Result<(), String>>,
 }
 
-pub trait Storage {
+pub trait Storage: 'static {
     fn update(&self, factory: &Factory) -> AbortOnDrop<Result<(), String>>;
     fn cleanup(&mut self);
     fn deposit_priority(&mut self, item: &Rc<Item>) -> Option<i32>;
@@ -23,7 +23,7 @@ pub trait Storage {
 }
 
 pub trait IntoStorage {
-    type Output: Storage + 'static;
+    type Output: Storage;
     fn into_storage(self, factory: &Weak<RefCell<Factory>>) -> Rc<RefCell<Self::Output>>;
 }
 

@@ -9,7 +9,7 @@ use std::{
     task::{Context, Poll, Waker},
 };
 
-pub trait Action {
+pub trait Action: 'static {
     type Output;
     fn build_request(self) -> Value;
     fn parse_response(response: Value) -> Result<Self::Output, String>;
@@ -74,7 +74,7 @@ impl<T: Action> From<T> for ActionFuture<T> {
     }
 }
 
-impl<T: Action + 'static> From<ActionFuture<T>> for Rc<RefCell<dyn ActionRequest>> {
+impl<T: Action> From<ActionFuture<T>> for Rc<RefCell<dyn ActionRequest>> {
     fn from(future: ActionFuture<T>) -> Self { future.0 }
 }
 

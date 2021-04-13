@@ -13,7 +13,7 @@ use std::{
     rc::{Rc, Weak},
 };
 
-trait CraftingGridProcess {
+trait CraftingGridProcess: 'static {
     type Access: Access;
     fn get_accesses(&self) -> &Vec<Self::Access>;
     fn get_recipes(&self) -> &Vec<CraftingGridRecipe>;
@@ -38,7 +38,7 @@ macro_rules! impl_crafting_grid_process {
 
 fn run_crafting_grid_process<T>(this: &T, factory: &Factory) -> AbortOnDrop<Result<(), String>>
 where
-    T: CraftingGridProcess + 'static,
+    T: CraftingGridProcess,
 {
     let mut tasks = Vec::new();
     for Demand { i_recipe, .. } in compute_demands(factory, this.get_recipes()) {
