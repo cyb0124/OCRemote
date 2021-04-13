@@ -22,7 +22,7 @@ trait CraftingGridProcess: 'static {
     fn get_name(&self) -> &str;
     fn load_input(group: &mut Vec<Call>, access: &Self::Access, bus_slot: usize, inv_slot: usize, size: i32);
     fn load_non_consumable(group: &mut Vec<Call>, access: &Self::Access, non_consumable: &NonConsumable);
-    fn store_output(group: &mut Vec<Call>, access: &Self::Access, bus_slot: usize);
+    fn store_output(group: &mut Vec<Call>, access: &Self::Access, bus_slot: usize, n_sets: i32);
     fn store_non_consumable(group: &mut Vec<Call>, access: &Self::Access, non_consumable: &NonConsumable);
 }
 
@@ -97,7 +97,7 @@ where
                         for non_consumable in &recipe.non_consumables {
                             T::load_non_consumable(&mut group, access, non_consumable)
                         }
-                        T::store_output(&mut group, access, slots_to_free[0]);
+                        T::store_output(&mut group, access, slots_to_free[0], n_sets);
                         for non_consumable in &recipe.non_consumables {
                             T::store_non_consumable(&mut group, access, non_consumable)
                         }
@@ -178,7 +178,7 @@ impl CraftingGridProcess for CraftingRobotProcess {
         })
     }
 
-    fn store_output(group: &mut Vec<Call>, access: &Self::Access, bus_slot: usize) {
+    fn store_output(group: &mut Vec<Call>, access: &Self::Access, bus_slot: usize, _n_sets: i32) {
         group.push(Call { addr: "robot", func: "select", args: vec![16.into()] });
         group.push(Call { addr: "crafting", func: "craft", args: Vec::new() });
         group.push(Call {
@@ -253,12 +253,14 @@ impl CraftingGridProcess for WorkbenchProcess {
         })
     }
 
-    fn store_output(group: &mut Vec<Call>, access: &Self::Access, bus_slot: usize) {
-        group.push(Call {
-            addr: access.output_addr,
-            func: "transferItem",
-            args: vec![UP.into(), access.output_bus_side.into(), 64.into(), 1.into(), (bus_slot + 1).into()],
-        });
+    fn store_output(group: &mut Vec<Call>, access: &Self::Access, bus_slot: usize, n_sets: i32) {
+        for _ in 0..n_sets {
+            group.push(Call {
+                addr: access.output_addr,
+                func: "transferItem",
+                args: vec![UP.into(), access.output_bus_side.into(), 64.into(), 1.into(), (bus_slot + 1).into()],
+            })
+        }
     }
 
     fn store_non_consumable(group: &mut Vec<Call>, access: &Self::Access, non_consumable: &NonConsumable) {
