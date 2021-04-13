@@ -95,33 +95,25 @@ impl Process for ScatteringProcess {
                     if let Some(mut inputs) = resolve_inputs(factory, &this.config.recipes[i_recipe]) {
                         let mut insertions = FnvHashMap::<usize, i32>::default();
                         let mut n_inserted = 0;
-                        let mut is_full = false;
                         while inputs.n_sets > 0 {
-                            let mut min_any = i32::MAX;
-                            let mut min_recipe = None;
+                            let mut best = None;
                             for slot in &this.config.input_slots {
                                 if let Some(ref stack) = stacks[*slot] {
-                                    min_any = min(min_any, stack.size);
                                     if stack.item == inputs.items[0] {
-                                        if let Some((_, min_recipe)) = min_recipe {
-                                            if stack.size >= min_recipe {
+                                        if let Some((_, best_size)) = best {
+                                            if stack.size >= best_size {
                                                 continue;
                                             }
                                         }
-                                        min_recipe = Some((*slot, stack.size))
+                                        best = Some((*slot, stack.size))
                                     }
                                 } else {
-                                    min_any = 0;
-                                    min_recipe = Some((*slot, 0));
+                                    best = Some((*slot, 0));
                                     break;
                                 }
                             }
-                            if min_any >= this.config.max_per_slot {
-                                is_full = true;
-                                break;
-                            }
-                            if let Some((slot, min_recipe)) = min_recipe {
-                                if min_recipe >= inputs.items[0].max_size {
+                            if let Some((slot, size)) = best {
+                                if size >= min(this.config.max_per_slot, inputs.items[0].max_size) {
                                     break;
                                 }
                                 inputs.n_sets -= 1;
@@ -140,9 +132,6 @@ impl Process for ScatteringProcess {
                         if n_inserted > 0 {
                             let reservation = factory.reserve_item(this.config.name, &inputs.items[0], n_inserted);
                             tasks.push(scattering_insert(this, factory, reservation, insertions))
-                        }
-                        if is_full {
-                            break;
                         }
                     }
                 }
