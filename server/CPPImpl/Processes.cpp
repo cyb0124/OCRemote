@@ -395,11 +395,16 @@ SharedPromise<std::monostate> ProcessBuffered::cycle() {
     std::unordered_map<SharedItem, int, SharedItemHash, SharedItemEqual> inProcMap;
     auto quota(recipeMaxInProc);
     for (size_t slot{}; slot < items.size(); ++slot) {
-      if (slotFilter && !slotFilter(slot)) {
-        items[slot] = std::make_shared<ItemStack>(ItemStack{placeholderItem, 1});
+      auto &stack(items[slot]);
+      if (outFilter && stack && outFilter(slot, *stack)) {
+        promises.emplace_back(processOutput(slot, stack->item->maxSize));
+        stack = std::make_shared<ItemStack>(ItemStack{placeholderItem, 1});
         continue;
       }
-      auto &stack(items[slot]);
+      if (slotFilter && !slotFilter(slot)) {
+        stack = std::make_shared<ItemStack>(ItemStack{placeholderItem, 1});
+        continue;
+      }
       if (!stack)
         continue;
       inProcMap[stack->item] += stack->size;
@@ -407,14 +412,6 @@ SharedPromise<std::monostate> ProcessBuffered::cycle() {
         if (stockList[i].item->filter(*stack->item))
           goto skipSlot;
       quota -= stack->size;
-      if (outFilter) {
-        for (auto &recipe : recipes)
-          for (auto &ingredient : recipe.in)
-            if (ingredient.item->filter(*stack->item))
-              goto skipSlot;
-        if (outFilter(slot, *stack))
-          promises.emplace_back(processOutput(slot, stack->item->maxSize));
-      }
       skipSlot: {}
     }
     for (size_t i{}; i < stockList.size(); ++i) {
