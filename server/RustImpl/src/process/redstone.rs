@@ -106,14 +106,19 @@ impl<T: Process> Process for RedstoneConditionalProcess<T> {
         let weak = self.weak.clone();
         spawn(async move {
             let value = call_result(action.await?)?;
-            alive!(weak, this);
-            upgrade!(this.factory, factory);
-            if (this.condition)(value) {
-                this.child.borrow().run(factory).into_future().await?
-            } else if let Some(name) = this.name {
-                factory.log(Print { text: format!("{}: skipped", name), color: 0xFF0000, beep: None })
-            }
-            Ok(())
+            let task = {
+                alive!(weak, this);
+                upgrade!(this.factory, factory);
+                if (this.condition)(value) {
+                    this.child.borrow().run(factory)
+                } else {
+                    if let Some(name) = this.name {
+                        factory.log(Print { text: format!("{}: skipped", name), color: 0xFF0000, beep: None })
+                    }
+                    return Ok(());
+                }
+            };
+            task.into_future().await
         })
     }
 }
