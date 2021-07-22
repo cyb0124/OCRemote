@@ -121,7 +121,7 @@ impl Client {
 }
 
 async fn timeout_main(client: Weak<RefCell<Client>>) {
-    sleep(Duration::from_secs(120)).await;
+    sleep(Duration::from_secs(30)).await;
     if let Some(this) = client.upgrade() {
         this.borrow_mut().log_and_disconnect("request timeout")
     }
