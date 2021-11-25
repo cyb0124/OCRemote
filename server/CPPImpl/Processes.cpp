@@ -902,7 +902,7 @@ SharedPromise<std::monostate> ProcessRedstoneConditional::cycle() {
       return child->cycle();
     } else {
       if (logSkip)
-        factory.log(name + ": skipped", 0xff0000);
+        factory.log(name + ": skipped", 0xff4fff);
       return scheduleTrivialPromise(factory.s.io);
     }
   });

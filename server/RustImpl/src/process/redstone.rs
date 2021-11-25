@@ -113,7 +113,7 @@ impl<T: Process> Process for RedstoneConditionalProcess<T> {
                     this.child.borrow().run(factory)
                 } else {
                     if let Some(name) = this.name {
-                        factory.log(Print { text: format!("{}: skipped", name), color: 0xFF0000, beep: None })
+                        factory.log(Print { text: format!("{}: skipped", name), color: 0xFF4FFF, beep: None })
                     }
                     return Ok(());
                 }
