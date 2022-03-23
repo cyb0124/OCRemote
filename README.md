@@ -73,3 +73,15 @@ The server has been rewritten in Rust, which should be easier to build and run. 
 
 ### ComputerCraft Port
 ComputerCraft port is available [here](https://github.com/cyb0124/CCRemote)
+
+CCRemote provides some extra processes to make automating with multi-blocks or in-world interactions easier:
+  - **SyncAndRestockProcess**\
+    This process extracts or restocks an inventory upon receiving a request via redstone, and sends out a completion signal upon finishing the request. It is mainly used to dock and restock moving structures from the Create mod.
+  - **ItemCycleProcess**\
+    This process cycles through sending different items to an inventory. This allows automating Gourmaryllis with just one dropper.
+  - **MultiInvSlottedProcess**\
+    This process allows you to send complete sets of inputs to multiple locations and wait for crafting to finish before sending new inputs. Here are some examples:
+    - Automating all crafting-grid recipes using a single mechanical crafter ([video](https://www.youtube.com/watch?v=HKk70owisso))
+    - Automating flux dust ([video](https://www.youtube.com/watch?v=OiZdN3g2Ddc))
+    - Automating runic altar ([video](https://www.youtube.com/watch?v=Tgx_kLvESxo))
+    - Automating lightning crafting ([video](https://www.youtube.com/watch?v=dX8pQmfp4FQ))
