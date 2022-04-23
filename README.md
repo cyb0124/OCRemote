@@ -1,16 +1,17 @@
 # OCRemote
-OCRemote is an OpenComputers program by cyb0124 for item-storage and auto-crafting. Features include:
-  - Parallelized multi-step processing and keeping items in-stock.
-  - Allow defining unlimited number of recipes per machine.
-  - Prioritization of recipes based on the demand. (e.g. deciding which ore to process first.)
-  - Robust handling of multiple-input recipes to prevent clogging (e.g. for alloy furnaces).
+OCRemote is a ComputerCraft/OpenComputers system for item-storage and multi-step parallelized automations. It allows you to build a network of storages and machines similar to an ME system. It is designed to handle heavy automation workloads seen in expert-mode modpacks.
+
+Main features:
+  - User doesn't request crafting from this system. Instead, all craftable items are kept a constant stock of.
+  - All input/output/crafting rules are configured as code. This allows extremely compact setups, such as defining 100+ recipes for a single machine, and specifying input, output and crafting all on the same side of a machine.
+  - Robust handling of many types of automations, from simple ore-processing to complex multi-block/in-world crafting that requires you to send inputs in the exact amount/proportion to different locations like [this](https://www.youtube.com/watch?v=HKk70owisso). Items in machine buffers can also be precisely regulated: no clogging should ever happen.
+  - Prioritization of recipes based on demand. (e.g. deciding which ore to process first).
+  - Compressing items for storage, and unpacking them before processing.
   - Preventing recipes from using up the last seed/sapling items.
-  - Processing excessive items (e.g. saplings from tree farm).
-  - Use multiple computers to parallelize world-interaction, achieving high item-transfer throughput.
+  - Allow defining rules to process/discard excessive items (e.g. saplings from tree farm).
+  - Multiple computers can be used to parallelize item-transfer, achieving more than 1 stack per tick of throughput.
 
-OCRemote is designed for survival/expert-mode gameplay in modpacks such as Enigmatica 2 and Project Ozone 3. When used correctly, it can completely replace ME-system based auto processing both in early game and in late game. It has been tested to function correctly in Sponge-based public servers.
-
-Please watch the [Demo Video](https://www.youtube.com/watch?v=Llr-lM0pIME) for more details.
+Please watch the [Demo Video](https://www.youtube.com/watch?v=Llr-lM0pIME) for an overview.
 
 ## Server, Clients and the Asynchronous Architecture
 OCRemote includes a TCP server program written in C++ running outside the Minecraft world. All decision-makings happen in the server. The computers in minecraft world connect to the server as clients to execute world-interaction tasks scheduled by the server. Multiple clients can connect to the same server to parallelize task execution and balance the load. In OCRemote, crafting processes can be interleaved with each other. For example, when a process starts, it needs to send a task to a computer to query the inventory of the machine, and wait for the response. Then, it needs to allocate some temporary storage space for transporting items to the machine, and if none is available, add itself to a wait-queue so that it can be resumed when space becomes available. During the waiting, other computers tasked by other processes could have moved items in and out of the storages, or transported items between machines. The design of OCRemote's server makes sure race conditions caused by reentrance are correctly handled so that no inconsistency could be caused by the asynchronous process execution.
@@ -18,7 +19,7 @@ OCRemote includes a TCP server program written in C++ running outside the Minecr
 Note: it is safe to terminate the server at any time. However, it is not safe to shutdown the computer in Minecraft while the server is running, as it may cause incomplete set of input items to be sent to machines.
 
 ## Bus
-OCRemote requires a shared inventory to move items around. This inventory is called as the "bus" in the source code. The bus can be implemented using EnderStorage's ender chests, or using ActuallyAdditions' item lasers.\
+OCRemote requires a shared inventory to temporarily hold items for transferring. This inventory is called as the "bus" in the source code.\
 ![Viewing inside the bus inventory](busDemo3.gif "Viewing inside the bus inventory")
 
 ## Storage
@@ -27,7 +28,7 @@ OCRemote currently supports 3 different types of storages:
     OCRemote will use chests the most efficient way, i.e. coalescing item stacks to avoid wasting slots.
   - **StorageDrawers** or equivalent.\
     Note: drawers should always be locked. You should not change drawer layout (e.g. placing down a new drawer, removing a drawer or inserting a new type of item) when OCRemote is running.
-  - **ME system**\
+  - **ME system** (only for OpenComputers)\
     OpenComputers' access to ME system is slow (throttled), so OCRemote is able to use multiple computers to access the same ME system to parallelize accesses.
 
 ## Auto Crafting
@@ -72,7 +73,7 @@ The following image explains how common recipes are specified.
 The server has been rewritten in Rust, which should be easier to build and run. See [example configuration](server/RustImpl/src/config.rs) for details.
 
 ### ComputerCraft Port
-ComputerCraft port is available [here](https://github.com/cyb0124/CCRemote)
+Code in this repository is for OpenComputers. For ComputerCraft, please go to [here](https://github.com/cyb0124/CCRemote).
 
 CCRemote provides some extra processes to make automating with multi-blocks or in-world interactions easier:
   - **SyncAndRestockProcess**\
