@@ -20,6 +20,11 @@ pub trait IntoProcess {
     fn into_process(self, factory: &Weak<RefCell<Factory>>) -> Rc<RefCell<Self::Output>>;
 }
 
+impl<T: Process> IntoProcess for T {
+    type Output = T;
+    fn into_process(self, _: &Weak<RefCell<Factory>>) -> Rc<RefCell<Self::Output>> { Rc::new(RefCell::new(self)) }
+}
+
 pub type SlotFilter = Box<dyn Fn(usize) -> bool>;
 pub type ExtractFilter = Box<dyn Fn(usize, &ItemStack) -> bool>;
 pub fn extract_all() -> Option<ExtractFilter> { Some(Box::new(|_, _| true)) }

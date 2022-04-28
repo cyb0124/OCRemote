@@ -1,7 +1,3 @@
-1. Backport SlottedProcess max_sets from CCRemote
-2. Backport MultiInvSlottedProcess from CCRemote
-3. Backport LowAlert from CCRemote
-4. Backport ItemCycleProcess from CCRemote
 5. Change README to mostly describe the Rust implementation.
     Deprecate the C++ version
     All processes from both OC and CC
