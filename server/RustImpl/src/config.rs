@@ -1,23 +1,23 @@
 use super::factory::{Factory, FactoryConfig};
 use super::server::Server;
-use super::{access::*, item::*, process::*, recipe::*, side::*, storage::*};
+use super::{access::*, config_util::*, process::*, recipe::*, side::*, storage::*};
 use std::{cell::RefCell, rc::Rc, time::Duration};
 
 pub fn build_factory() -> Rc<RefCell<Factory>> {
     FactoryConfig {
         server: Server::new(1847),
         min_cycle_time: Duration::from_secs(1),
-        log_clients: vec!["1a"],
-        bus_accesses: vec![SidedAccess { client: "1a", addr: "538", side: EAST }],
-        backups: vec![(Filter::Label("Potato"), 32)],
+        log_clients: vec![s("1a")],
+        bus_accesses: vec![SidedAccess { client: s("1a"), addr: s("538"), side: EAST }],
+        backups: vec![(label("Potato"), 32)],
     }
     .build(|factory| {
         factory.add_storage(ChestConfig {
-            accesses: vec![InvAccess { client: "1a", addr: "538", bus_side: EAST, inv_side: UP }],
+            accesses: vec![InvAccess { client: s("1a"), addr: s("538"), bus_side: EAST, inv_side: UP }],
         });
         factory.add_process(BufferedConfig {
-            name: "output",
-            accesses: vec![InvAccess { client: "1a", addr: "677", bus_side: EAST, inv_side: UP }],
+            name: s("output"),
+            accesses: vec![InvAccess { client: s("1a"), addr: s("677"), bus_side: EAST, inv_side: UP }],
             slot_filter: None,
             to_extract: extract_all(),
             recipes: vec![],
@@ -25,76 +25,70 @@ pub fn build_factory() -> Rc<RefCell<Factory>> {
             stocks: vec![],
         });
         factory.add_process(BufferedConfig {
-            name: "stock",
-            accesses: vec![InvAccess { client: "1a", addr: "c65", bus_side: WEST, inv_side: UP }],
+            name: s("stock"),
+            accesses: vec![InvAccess { client: s("1a"), addr: s("c65"), bus_side: WEST, inv_side: UP }],
             slot_filter: None,
             to_extract: None,
             recipes: vec![],
             max_recipe_inputs: 0,
-            stocks: vec![
-                BufferedInput::new(Filter::Label("Bio Fuel"), 64),
-                BufferedInput::new(Filter::Label("Fluxed Phyto-Gro"), 64),
-            ],
+            stocks: vec![BufferedInput::new(label("Bio Fuel"), 64), BufferedInput::new(label("Fluxed Phyto-Gro"), 64)],
         });
         factory.add_process(InputlessConfig {
-            accesses: vec![InvAccess { client: "1a", addr: "f59", bus_side: EAST, inv_side: UP }],
+            accesses: vec![InvAccess { client: s("1a"), addr: s("f59"), bus_side: EAST, inv_side: UP }],
             slot_filter: None,
-            outputs: vec![Output { item: Filter::Label("Cobblestone"), n_wanted: 64 }],
+            outputs: vec![Output { item: label("Cobblestone"), n_wanted: 64 }],
         });
         factory.add_process(SlottedConfig {
-            name: "manufactory",
-            accesses: vec![InvAccess { client: "1a", addr: "2e2", bus_side: WEST, inv_side: UP }],
+            name: s("manufactory"),
+            accesses: vec![InvAccess { client: s("1a"), addr: s("2e2"), bus_side: WEST, inv_side: UP }],
             input_slots: vec![0],
             to_extract: None,
             recipes: vec![
                 SlottedRecipe {
-                    outputs: vec![Output { item: Filter::Label("Sand"), n_wanted: 64 }],
-                    inputs: vec![SlottedInput::new(Filter::Label("Cobblestone"), 1, vec![0])],
+                    outputs: vec![Output { item: label("Sand"), n_wanted: 64 }],
+                    inputs: vec![SlottedInput::new(label("Cobblestone"), 1, vec![0])],
                     max_per_slot: 8,
                 },
                 SlottedRecipe {
-                    outputs: vec![Output { item: Filter::Label("Niter"), n_wanted: 64 }],
-                    inputs: vec![SlottedInput::new(Filter::Label("Sandstone"), 1, vec![0])],
+                    outputs: vec![Output { item: label("Niter"), n_wanted: 64 }],
+                    inputs: vec![SlottedInput::new(label("Sandstone"), 1, vec![0])],
                     max_per_slot: 8,
                 },
                 SlottedRecipe {
-                    outputs: vec![Output { item: Filter::Label("Pulverized Charcoal"), n_wanted: 64 }],
-                    inputs: vec![SlottedInput::new(Filter::Label("Charcoal"), 1, vec![0])],
+                    outputs: vec![Output { item: label("Pulverized Charcoal"), n_wanted: 64 }],
+                    inputs: vec![SlottedInput::new(label("Charcoal"), 1, vec![0])],
                     max_per_slot: 8,
                 },
             ],
         });
         factory.add_process(BufferedConfig {
-            name: "crafter",
-            accesses: vec![InvAccess { client: "1a", addr: "0c7", bus_side: EAST, inv_side: UP }],
+            name: s("crafter"),
+            accesses: vec![InvAccess { client: s("1a"), addr: s("0c7"), bus_side: EAST, inv_side: UP }],
             slot_filter: None,
             to_extract: None,
             recipes: vec![
                 BufferedRecipe {
-                    outputs: vec![Output { item: Filter::Label("Sandstone"), n_wanted: 64 }],
-                    inputs: vec![BufferedInput::new(Filter::Label("Sand"), 4)],
+                    outputs: vec![Output { item: label("Sandstone"), n_wanted: 64 }],
+                    inputs: vec![BufferedInput::new(label("Sand"), 4)],
                     max_inputs: i32::MAX,
                 },
                 BufferedRecipe {
-                    outputs: vec![Output { item: Filter::Label("Rich Phyto-Gro"), n_wanted: 64 }],
+                    outputs: vec![Output { item: label("Rich Phyto-Gro"), n_wanted: 64 }],
                     inputs: vec![
-                        BufferedInput::new(Filter::Label("Pulverized Charcoal"), 1),
-                        BufferedInput::new(Filter::Label("Niter"), 1),
-                        BufferedInput::new(Filter::Label("Rich Slag"), 1),
+                        BufferedInput::new(label("Pulverized Charcoal"), 1),
+                        BufferedInput::new(label("Niter"), 1),
+                        BufferedInput::new(label("Rich Slag"), 1),
                     ],
                     max_inputs: i32::MAX,
                 },
                 BufferedRecipe {
-                    outputs: vec![Output { item: Filter::Label("Compass"), n_wanted: 64 }],
-                    inputs: vec![
-                        BufferedInput::new(Filter::Label("Iron Ingot"), 4),
-                        BufferedInput::new(Filter::Label("Redstone"), 1),
-                    ],
+                    outputs: vec![Output { item: label("Compass"), n_wanted: 64 }],
+                    inputs: vec![BufferedInput::new(label("Iron Ingot"), 4), BufferedInput::new(label("Redstone"), 1)],
                     max_inputs: i32::MAX,
                 },
                 BufferedRecipe {
-                    outputs: vec![Output { item: Filter::Label("Redstone"), n_wanted: 64 }],
-                    inputs: vec![BufferedInput::new(Filter::Label("Redstone Essence"), 9)],
+                    outputs: vec![Output { item: label("Redstone"), n_wanted: 64 }],
+                    inputs: vec![BufferedInput::new(label("Redstone Essence"), 9)],
                     max_inputs: i32::MAX,
                 },
             ],
@@ -102,94 +96,94 @@ pub fn build_factory() -> Rc<RefCell<Factory>> {
             stocks: vec![],
         });
         factory.add_process(SlottedConfig {
-            name: "charger",
-            accesses: vec![InvAccess { client: "1a", addr: "007", bus_side: WEST, inv_side: UP }],
+            name: s("charger"),
+            accesses: vec![InvAccess { client: s("1a"), addr: s("007"), bus_side: WEST, inv_side: UP }],
             input_slots: vec![0],
             to_extract: None,
             recipes: vec![SlottedRecipe {
-                outputs: vec![Output { item: Filter::Label("Fluxed Phyto-Gro"), n_wanted: 64 }],
-                inputs: vec![SlottedInput::new(Filter::Label("Rich Phyto-Gro"), 1, vec![0])],
+                outputs: vec![Output { item: label("Fluxed Phyto-Gro"), n_wanted: 64 }],
+                inputs: vec![SlottedInput::new(label("Rich Phyto-Gro"), 1, vec![0])],
                 max_per_slot: i32::MAX,
             }],
         });
         factory.add_process(ScatteringConfig {
-            name: "crusher",
-            accesses: vec![InvAccess { client: "1a", addr: "525", bus_side: EAST, inv_side: UP }],
+            name: s("crusher"),
+            accesses: vec![InvAccess { client: s("1a"), addr: s("525"), bus_side: EAST, inv_side: UP }],
             input_slots: vec![0, 1, 2, 3, 4, 5, 6],
             to_extract: None,
             recipes: vec![ScatteringRecipe::new(
-                vec![Output { item: Filter::Label("Bio Fuel"), n_wanted: 64 }],
-                ScatteringInput::new(Filter::Label("Potato")),
+                vec![Output { item: label("Bio Fuel"), n_wanted: 64 }],
+                ScatteringInput::new(label("Potato")),
             )],
             max_per_slot: 4,
         });
         factory.add_process(ScatteringConfig {
-            name: "furnace",
-            accesses: vec![InvAccess { client: "1a", addr: "346", bus_side: WEST, inv_side: UP }],
+            name: s("furnace"),
+            accesses: vec![InvAccess { client: s("1a"), addr: s("346"), bus_side: WEST, inv_side: UP }],
             input_slots: vec![0, 1, 2, 3, 4, 5, 6],
             to_extract: None,
             recipes: vec![ScatteringRecipe::new(
-                vec![Output { item: Filter::Label("Charcoal"), n_wanted: 64 }],
-                ScatteringInput::new(Filter::Label("Birch Wood")),
+                vec![Output { item: label("Charcoal"), n_wanted: 64 }],
+                ScatteringInput::new(label("Birch Wood")),
             )],
             max_per_slot: 4,
         });
         factory.add_process(SlottedConfig {
-            name: "phyto",
-            accesses: vec![InvAccess { client: "1a", addr: "693", bus_side: WEST, inv_side: UP }],
+            name: s("phyto"),
+            accesses: vec![InvAccess { client: s("1a"), addr: s("693"), bus_side: WEST, inv_side: UP }],
             input_slots: vec![0],
             to_extract: None,
             recipes: vec![
                 SlottedRecipe {
-                    outputs: vec![Output { item: Filter::Label("Potato"), n_wanted: 64 }],
-                    inputs: vec![SlottedInput::new(Filter::Label("Potato"), 1, vec![0]).allow_backup()],
+                    outputs: vec![Output { item: label("Potato"), n_wanted: 64 }],
+                    inputs: vec![SlottedInput::new(label("Potato"), 1, vec![0]).allow_backup()],
                     max_per_slot: 4,
                 },
                 SlottedRecipe {
-                    outputs: vec![Output { item: Filter::Label("Redstone Essence"), n_wanted: 64 }],
-                    inputs: vec![SlottedInput::new(Filter::Label("Redstone Seeds"), 1, vec![0])],
+                    outputs: vec![Output { item: label("Redstone Essence"), n_wanted: 64 }],
+                    inputs: vec![SlottedInput::new(label("Redstone Seeds"), 1, vec![0])],
                     max_per_slot: 4,
                 },
                 SlottedRecipe {
-                    outputs: vec![Output { item: Filter::Label("Birch Wood"), n_wanted: 64 }],
-                    inputs: vec![SlottedInput::new(Filter::Label("Birch Sapling"), 1, vec![0])],
+                    outputs: vec![Output { item: label("Birch Wood"), n_wanted: 64 }],
+                    inputs: vec![SlottedInput::new(label("Birch Sapling"), 1, vec![0])],
                     max_per_slot: 4,
                 },
             ],
         });
         factory.add_process(SlottedConfig {
-            name: "induction",
-            accesses: vec![InvAccess { client: "1a", addr: "0f5", bus_side: EAST, inv_side: UP }],
+            name: s("induction"),
+            accesses: vec![InvAccess { client: s("1a"), addr: s("0f5"), bus_side: EAST, inv_side: UP }],
             input_slots: vec![0, 1],
             to_extract: None,
             recipes: vec![SlottedRecipe {
-                outputs: vec![Output { item: Filter::Label("Rich Slag"), n_wanted: 64 }],
+                outputs: vec![Output { item: label("Rich Slag"), n_wanted: 64 }],
                 inputs: vec![
-                    SlottedInput::new(Filter::Label("Sand"), 1, vec![0]),
-                    SlottedInput::new(Filter::Label("Compass"), 1, vec![1]),
+                    SlottedInput::new(label("Sand"), 1, vec![0]),
+                    SlottedInput::new(label("Compass"), 1, vec![1]),
                 ],
                 max_per_slot: 8,
             }],
         });
         factory.add_process(BufferedConfig {
-            name: "trash",
-            accesses: vec![InvAccess { client: "1a", addr: "c65", bus_side: WEST, inv_side: NORTH }],
+            name: s("trash"),
+            accesses: vec![InvAccess { client: s("1a"), addr: s("c65"), bus_side: WEST, inv_side: NORTH }],
             slot_filter: None,
             to_extract: None,
             recipes: vec![
                 BufferedRecipe {
                     outputs: vec![],
-                    inputs: vec![BufferedInput::new(Filter::Label("Poisonous Potato"), 1).extra_backup(64)],
+                    inputs: vec![BufferedInput::new(label("Poisonous Potato"), 1).extra_backup(64)],
                     max_inputs: i32::MAX,
                 },
                 BufferedRecipe {
                     outputs: vec![],
-                    inputs: vec![BufferedInput::new(Filter::Label("Redstone Seeds"), 1).extra_backup(64)],
+                    inputs: vec![BufferedInput::new(label("Redstone Seeds"), 1).extra_backup(64)],
                     max_inputs: i32::MAX,
                 },
                 BufferedRecipe {
                     outputs: vec![],
-                    inputs: vec![BufferedInput::new(Filter::Label("Birch Sapling"), 1).extra_backup(64)],
+                    inputs: vec![BufferedInput::new(label("Birch Sapling"), 1).extra_backup(64)],
                     max_inputs: i32::MAX,
                 },
             ],

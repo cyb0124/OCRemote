@@ -1,5 +1,6 @@
 use super::item::ItemStack;
 use super::lua_value::{table_to_vec, vec_to_table, Table, Value};
+use flexstr::LocalStr;
 use std::{
     cell::RefCell,
     convert::TryInto,
@@ -12,32 +13,32 @@ use std::{
 pub trait Action: 'static {
     type Output;
     fn build_request(self) -> Value;
-    fn parse_response(response: Value) -> Result<Self::Output, String>;
+    fn parse_response(response: Value) -> Result<Self::Output, LocalStr>;
 }
 
 struct ActionState<T: Action> {
-    result: Option<Result<T::Output, String>>,
+    result: Option<Result<T::Output, LocalStr>>,
     waker: Option<Waker>,
     action: Option<T>,
 }
 
 pub trait ActionRequest {
     fn build_request(&mut self) -> Value;
-    fn on_fail(&mut self, reason: String);
-    fn on_response(&mut self, result: Value) -> Result<(), String>;
+    fn on_fail(&mut self, reason: LocalStr);
+    fn on_response(&mut self, result: Value) -> Result<(), LocalStr>;
 }
 
 impl<T: Action> ActionRequest for ActionState<T> {
     fn build_request(&mut self) -> Value { self.action.take().unwrap().build_request() }
 
-    fn on_fail(&mut self, reason: String) {
+    fn on_fail(&mut self, reason: LocalStr) {
         self.result = Some(Err(reason));
         if let Some(waker) = self.waker.take() {
             waker.wake()
         }
     }
 
-    fn on_response(&mut self, result: Value) -> Result<(), String> {
+    fn on_response(&mut self, result: Value) -> Result<(), LocalStr> {
         let result = T::parse_response(result);
         let ret = if let Err(ref e) = result { Err(e.clone()) } else { Ok(()) };
         self.result = Some(result);
@@ -55,7 +56,7 @@ impl<T: Action> Clone for ActionFuture<T> {
 }
 
 impl<T: Action> Future for ActionFuture<T> {
-    type Output = Result<T::Output, String>;
+    type Output = Result<T::Output, LocalStr>;
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let this = self.get_mut();
         let mut this = this.0.borrow_mut();
@@ -80,7 +81,7 @@ impl<T: Action> From<ActionFuture<T>> for Rc<RefCell<dyn ActionRequest>> {
 
 #[derive(Clone)]
 pub struct Print {
-    pub text: String,
+    pub text: LocalStr,
     pub color: u32,
     pub beep: Option<f64>,
 }
@@ -99,11 +100,11 @@ impl Action for Print {
         result.into()
     }
 
-    fn parse_response(_response: Value) -> Result<(), String> { Ok(()) }
+    fn parse_response(_: Value) -> Result<(), LocalStr> { Ok(()) }
 }
 
 pub struct List {
-    pub addr: &'static str,
+    pub addr: LocalStr,
     pub side: u8,
 }
 
@@ -118,7 +119,7 @@ impl Action for List {
         result.into()
     }
 
-    fn parse_response(response: Value) -> Result<Vec<Option<ItemStack>>, String> {
+    fn parse_response(response: Value) -> Result<Vec<Option<ItemStack>>, LocalStr> {
         table_to_vec(response.try_into()?)?
             .into_iter()
             .map(|x| match x {
@@ -131,7 +132,7 @@ impl Action for List {
 }
 
 pub struct ListME {
-    pub addr: &'static str,
+    pub addr: LocalStr,
 }
 
 impl Action for ListME {
@@ -144,17 +145,17 @@ impl Action for ListME {
         result.into()
     }
 
-    fn parse_response(response: Value) -> Result<Vec<ItemStack>, String> {
+    fn parse_response(response: Value) -> Result<Vec<ItemStack>, LocalStr> {
         table_to_vec(response.try_into()?)?.into_iter().map(|x| ItemStack::parse(x)).collect()
     }
 }
 
 pub struct XferME {
-    pub me_addr: &'static str,
+    pub me_addr: LocalStr,
     pub me_slot: usize,
     pub filter: Value,
     pub size: i32,
-    pub transposer_addr: &'static str,
+    pub transposer_addr: LocalStr,
     pub transposer_args: Vec<Value>,
 }
 
@@ -173,12 +174,12 @@ impl Action for XferME {
         result.into()
     }
 
-    fn parse_response(_response: Value) -> Result<(), String> { Ok(()) }
+    fn parse_response(_: Value) -> Result<(), LocalStr> { Ok(()) }
 }
 
 pub struct Call {
-    pub addr: &'static str,
-    pub func: &'static str,
+    pub addr: LocalStr,
+    pub func: LocalStr,
     pub args: Vec<Value>,
 }
 
@@ -194,5 +195,5 @@ impl Action for Call {
         result.into()
     }
 
-    fn parse_response(response: Value) -> Result<Value, String> { Ok(response) }
+    fn parse_response(response: Value) -> Result<Value, LocalStr> { Ok(response) }
 }

@@ -1,10 +1,11 @@
-use super::lua_value::{Table, Value};
+use super::lua_value::{table_remove, Table, Value};
+use flexstr::LocalStr;
 use std::{cmp::min, convert::TryInto, rc::Rc};
 
 #[derive(PartialEq, Eq, Hash)]
 pub struct Item {
-    pub label: String,
-    pub name: String,
+    pub label: LocalStr,
+    pub name: LocalStr,
     pub damage: i16,
     pub max_damage: i16,
     pub max_size: i32,
@@ -27,8 +28,8 @@ impl Item {
 
 pub fn jammer() -> Rc<Item> {
     thread_local!(static ITEM: Rc<Item> = Rc::new(Item {
-        label: String::new(),
-        name: String::new(),
+        label: <_>::default(),
+        name: <_>::default(),
         damage: 0,
         max_damage: 0,
         max_size: 1,
@@ -45,16 +46,15 @@ pub struct ItemStack {
 }
 
 impl ItemStack {
-    pub fn parse(value: Value) -> Result<Self, String> {
+    pub fn parse(value: Value) -> Result<Self, LocalStr> {
         let mut table: Table = value.try_into()?;
-        let mut get = |key: &'static str| table.remove(&key.into()).ok_or_else(|| format!("key not found: {}", key));
-        let size = get("size")?.try_into()?;
-        let label = get("label")?.try_into()?;
-        let name = get("name")?.try_into()?;
-        let damage = get("damage")?.try_into()?;
-        let max_damage = get("maxDamage")?.try_into()?;
-        let max_size = get("maxSize")?.try_into()?;
-        let has_tag = get("hasTag")?.try_into()?;
+        let size = table_remove(&mut table, "size")?;
+        let label = table_remove(&mut table, "label")?;
+        let name = table_remove(&mut table, "name")?;
+        let damage = table_remove(&mut table, "damage")?;
+        let max_damage = table_remove(&mut table, "maxDamage")?;
+        let max_size = table_remove(&mut table, "maxSize")?;
+        let has_tag = table_remove(&mut table, "hasTag")?;
         Ok(ItemStack {
             item: Rc::new(Item { label, name, damage, max_damage, max_size, has_tag, others: table }),
             size,
@@ -99,11 +99,12 @@ pub fn insert_into_inventory(inventory: &mut Vec<Option<ItemStack>>, item: &Rc<I
     result
 }
 
+#[derive(Clone)]
 pub enum Filter {
-    Label(&'static str),
-    Name(&'static str),
-    Both { label: &'static str, name: &'static str },
-    Fn(Box<dyn Fn(&Item) -> bool>),
+    Label(LocalStr),
+    Name(LocalStr),
+    Both { label: LocalStr, name: LocalStr },
+    Custom { desc: LocalStr, func: Rc<dyn Fn(&Item) -> bool> },
 }
 
 impl Filter {
@@ -112,7 +113,7 @@ impl Filter {
             Filter::Label(label) => item.label == *label,
             Filter::Name(name) => item.name == *name,
             Filter::Both { label, name } => item.label == *label && item.name == *name,
-            Filter::Fn(filter) => filter(item),
+            Filter::Custom { func, .. } => func(item),
         }
     }
 }

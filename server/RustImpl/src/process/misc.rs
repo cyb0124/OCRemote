@@ -2,13 +2,13 @@ use super::super::access::{ComponentAccess, SidedAccess};
 use super::super::action::{ActionFuture, Call, Print};
 use super::super::factory::Factory;
 use super::super::item::Filter;
-use super::super::lua_value::{call_result, Table};
+use super::super::lua_value::{call_result, table_remove};
 use super::super::util::{alive, join_tasks, spawn};
 use super::{IntoProcess, Process, RedstoneEmitterConfig, RedstoneEmitterProcess};
 use abort_on_drop::ChildTask;
+use flexstr::{local_fmt, local_str, LocalStr};
 use std::{
     cell::RefCell,
-    convert::TryInto,
     rc::{Rc, Weak},
 };
 
@@ -30,7 +30,7 @@ impl<T: IntoProcess> IntoProcess for ConditionalConfig<T> {
 }
 
 impl<T: Process> Process for ConditionalProcess<T> {
-    fn run(&self, factory: &Factory) -> ChildTask<Result<(), String>> {
+    fn run(&self, factory: &Factory) -> ChildTask<Result<(), LocalStr>> {
         if (self.condition)(factory) {
             self.child.borrow().run(factory)
         } else {
@@ -40,7 +40,7 @@ impl<T: Process> Process for ConditionalProcess<T> {
 }
 
 pub struct PlasticMixerConfig {
-    pub name: &'static str,
+    pub name: LocalStr,
     pub accesses: Vec<ComponentAccess>,
     pub n_wanted: i32,
 }
@@ -65,20 +65,20 @@ const COLORS: [&'static str; 16] = [
 ];
 
 impl Process for PlasticMixerProcess {
-    fn run(&self, factory: &Factory) -> ChildTask<Result<(), String>> {
+    fn run(&self, factory: &Factory) -> ChildTask<Result<(), LocalStr>> {
         let (i, color, n_stored) = COLORS
             .iter()
             .enumerate()
-            .map(|(i, color)| (i, *color, factory.search_n_stored(&Filter::Label(*color))))
+            .map(|(i, color)| (i, *color, factory.search_n_stored(&Filter::Label(LocalStr::from_static(*color)))))
             .min_by_key(|(_, _, n_stored)| *n_stored)
             .unwrap();
         let text;
         let choice;
         if n_stored < self.config.n_wanted {
-            text = format!("{}: making {} Plastic", self.config.name, color);
+            text = local_fmt!("{}: making {} Plastic", self.config.name, color);
             choice = i as u8 + 1;
         } else {
-            text = format!("{}: off", self.config.name);
+            text = local_fmt!("{}: off", self.config.name);
             choice = 0;
         }
         factory.log(Print { text, color: 0xFF4FFF, beep: None });
@@ -87,8 +87,12 @@ impl Process for PlasticMixerProcess {
         }
         let server = factory.borrow_server();
         let access = server.load_balance(&self.config.accesses).1;
-        let action = ActionFuture::from(Call { addr: access.addr, func: "selectColor", args: vec![choice.into()] });
-        server.enqueue_request_group(access.client, vec![action.clone().into()]);
+        let action = ActionFuture::from(Call {
+            addr: access.addr.clone(),
+            func: local_str!("selectColor"),
+            args: vec![choice.into()],
+        });
+        server.enqueue_request_group(&access.client, vec![action.clone().into()]);
         let weak = self.weak.clone();
         spawn(async move {
             alive_mut!(weak, this);
@@ -104,7 +108,7 @@ pub struct FluxNetworkOutput {
 }
 
 pub struct FluxNetworkConfig {
-    pub name: &'static str,
+    pub name: LocalStr,
     pub accesses: Vec<ComponentAccess>,
     pub outputs: Vec<FluxNetworkOutput>,
 }
@@ -112,7 +116,7 @@ pub struct FluxNetworkConfig {
 pub struct FluxNetworkProcess {
     weak: Weak<RefCell<FluxNetworkProcess>>,
     factory: Weak<RefCell<Factory>>,
-    name: &'static str,
+    name: LocalStr,
     accesses: Vec<ComponentAccess>,
     outputs: Vec<Rc<RefCell<RedstoneEmitterProcess>>>,
     energy: f64,
@@ -149,24 +153,21 @@ impl IntoProcess for FluxNetworkConfig {
 }
 
 impl Process for FluxNetworkProcess {
-    fn run(&self, factory: &Factory) -> ChildTask<Result<(), String>> {
+    fn run(&self, factory: &Factory) -> ChildTask<Result<(), LocalStr>> {
         let server = factory.borrow_server();
         let access = server.load_balance(&self.accesses).1;
-        let action = ActionFuture::from(Call { addr: access.addr, func: "getEnergyInfo", args: Vec::new() });
-        server.enqueue_request_group(access.client, vec![action.clone().into()]);
+        let action =
+            ActionFuture::from(Call { addr: access.addr.clone(), func: local_str!("getEnergyInfo"), args: Vec::new() });
+        server.enqueue_request_group(&access.client, vec![action.clone().into()]);
         let weak = self.weak.clone();
         spawn(async move {
-            let mut energy: Table = call_result::<Table>(action.await?)?;
-            let energy: f64 = energy
-                .remove(&"totalEnergy".into())
-                .ok_or_else(|| format!("invalid energy info: {:?}", energy))?
-                .try_into()?;
+            let energy: f64 = table_remove(&mut call_result(action.await?)?, "totalEnergy")?;
             let tasks = {
                 let this = alive(&weak)?;
                 this.borrow_mut().energy = energy;
                 let this = this.borrow();
                 upgrade!(this.factory, factory);
-                factory.log(Print { text: format!("{}: {:.0}", this.name, energy), color: 0xFF4FFF, beep: None });
+                factory.log(Print { text: local_fmt!("{}: {:.0}", this.name, energy), color: 0xFF4FFF, beep: None });
                 this.outputs.iter().map(|output| output.borrow().run(factory)).collect()
             };
             join_tasks(tasks).await

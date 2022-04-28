@@ -5,6 +5,7 @@ use super::super::recipe::Output;
 use super::super::util::{alive, join_tasks, spawn};
 use super::{extract_output, list_inv, IntoProcess, InvProcess, Process, SlotFilter};
 use abort_on_drop::ChildTask;
+use flexstr::LocalStr;
 use fnv::FnvHashMap;
 use std::{
     cell::RefCell,
@@ -40,7 +41,7 @@ struct InputlessInfo {
 }
 
 impl Process for InputlessProcess {
-    fn run(&self, factory: &Factory) -> ChildTask<Result<(), String>> {
+    fn run(&self, factory: &Factory) -> ChildTask<Result<(), LocalStr>> {
         let mut enough = true;
         for output in &self.config.outputs {
             if factory.search_n_stored(&output.item) < output.n_wanted {

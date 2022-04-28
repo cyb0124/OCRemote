@@ -5,6 +5,7 @@ use super::super::recipe::{compute_demands, resolve_inputs, Demand, Input, Outpu
 use super::super::util::{alive, join_tasks, spawn};
 use super::{extract_output, list_inv, scattering_insert, ExtractFilter, IntoProcess, InvProcess, Process};
 use abort_on_drop::ChildTask;
+use flexstr::{local_fmt, LocalStr};
 use fnv::FnvHashMap;
 use std::{
     cell::RefCell,
@@ -39,7 +40,7 @@ impl ScatteringRecipe {
 impl_recipe!(ScatteringRecipe, ScatteringInput);
 
 pub struct ScatteringConfig {
-    pub name: &'static str,
+    pub name: LocalStr,
     pub accesses: Vec<InvAccess>,
     // plant_sower: 6, 7, .., 14
     pub input_slots: Vec<usize>,
@@ -64,7 +65,7 @@ impl IntoProcess for ScatteringConfig {
 }
 
 impl Process for ScatteringProcess {
-    fn run(&self, factory: &Factory) -> ChildTask<Result<(), String>> {
+    fn run(&self, factory: &Factory) -> ChildTask<Result<(), LocalStr>> {
         if self.config.to_extract.is_none() && compute_demands(factory, &self.config.recipes).is_empty() {
             return spawn(async { Ok(()) });
         }
@@ -79,7 +80,7 @@ impl Process for ScatteringProcess {
                 let mut is_input_slot = vec![false; stacks.len()];
                 for slot in &this.config.input_slots {
                     if *slot >= stacks.len() {
-                        return Err(format!("{}: invalid slot", this.config.name));
+                        return Err(local_fmt!("{}: invalid slot", this.config.name));
                     }
                     is_input_slot[*slot] = true
                 }
@@ -131,7 +132,7 @@ impl Process for ScatteringProcess {
                             }
                         }
                         if n_inserted > 0 {
-                            let reservation = factory.reserve_item(this.config.name, &inputs.items[0], n_inserted);
+                            let reservation = factory.reserve_item(&this.config.name, &inputs.items[0], n_inserted);
                             tasks.push(scattering_insert(this, factory, reservation, insertions))
                         }
                     }

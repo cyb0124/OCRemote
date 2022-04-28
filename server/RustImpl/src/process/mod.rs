@@ -4,6 +4,7 @@ use super::factory::{Factory, Reservation};
 use super::item::ItemStack;
 use super::util::{alive, join_tasks, spawn};
 use abort_on_drop::ChildTask;
+use flexstr::{local_str, LocalStr};
 use std::{
     cell::RefCell,
     iter::once,
@@ -11,7 +12,7 @@ use std::{
 };
 
 pub trait Process: 'static {
-    fn run(&self, factory: &Factory) -> ChildTask<Result<(), String>>;
+    fn run(&self, factory: &Factory) -> ChildTask<Result<(), LocalStr>>;
 }
 
 pub trait IntoProcess {
@@ -45,12 +46,12 @@ where
 {
     let server = factory.borrow_server();
     let access = server.load_balance(this.get_accesses()).1;
-    let action = ActionFuture::from(List { addr: access.addr, side: access.inv_side });
-    server.enqueue_request_group(access.client, vec![action.clone().into()]);
+    let action = ActionFuture::from(List { addr: access.addr.clone(), side: access.inv_side });
+    server.enqueue_request_group(&access.client, vec![action.clone().into()]);
     action
 }
 
-fn extract_output<T>(this: &T, factory: &mut Factory, slot: usize, size: i32) -> ChildTask<Result<(), String>>
+fn extract_output<T>(this: &T, factory: &mut Factory, slot: usize, size: i32) -> ChildTask<Result<(), LocalStr>>
 where
     T: InvProcess,
 {
@@ -65,8 +66,8 @@ where
             let server = factory.borrow_server();
             let access = server.load_balance(this.get_accesses()).1;
             action = ActionFuture::from(Call {
-                addr: access.addr,
-                func: "transferItem",
+                addr: access.addr.clone(),
+                func: local_str!("transferItem"),
                 args: vec![
                     access.inv_side.into(),
                     access.bus_side.into(),
@@ -75,7 +76,7 @@ where
                     (bus_slot + 1).into(),
                 ],
             });
-            server.enqueue_request_group(access.client, vec![action.clone().into()])
+            server.enqueue_request_group(&access.client, vec![action.clone().into()])
         }
         let result = action.await.map(|_| ());
         alive!(weak, this);
@@ -90,7 +91,7 @@ fn scattering_insert<T, U>(
     factory: &mut Factory,
     reservation: Reservation,
     insertions: U,
-) -> ChildTask<Result<(), String>>
+) -> ChildTask<Result<(), LocalStr>>
 where
     T: InvProcess,
     U: IntoIterator<Item = (usize, i32)> + 'static,
@@ -114,8 +115,8 @@ where
                 for (inv_slot, size) in insertions.into_iter() {
                     let access = server.load_balance(this.get_accesses()).1;
                     let action = ActionFuture::from(Call {
-                        addr: access.addr,
-                        func: "transferItem",
+                        addr: access.addr.clone(),
+                        func: local_str!("transferItem"),
                         args: vec![
                             access.bus_side.into(),
                             access.inv_side.into(),
@@ -124,7 +125,7 @@ where
                             (inv_slot + 1).into(),
                         ],
                     });
-                    server.enqueue_request_group(access.client, vec![action.clone().into()]);
+                    server.enqueue_request_group(&access.client, vec![action.clone().into()]);
                     tasks.push(spawn(async move { action.await.map(|_| ()) }))
                 }
             }

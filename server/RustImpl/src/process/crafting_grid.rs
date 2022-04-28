@@ -8,6 +8,7 @@ use super::super::side::{DOWN, UP};
 use super::super::util::{alive, join_outputs, join_tasks, spawn};
 use super::{IntoProcess, Process};
 use abort_on_drop::ChildTask;
+use flexstr::{local_str, LocalStr};
 use std::{
     cell::RefCell,
     cmp::min,
@@ -33,11 +34,11 @@ macro_rules! impl_crafting_grid_process {
         fn get_recipes(&self) -> &Vec<CraftingGridRecipe> { &self.config.recipes }
         fn get_factory(&self) -> &Weak<RefCell<Factory>> { &self.factory }
         fn get_weak(&self) -> &Weak<RefCell<Self>> { &self.weak }
-        fn get_name(&self) -> &str { self.config.name }
+        fn get_name(&self) -> &str { &self.config.name }
     };
 }
 
-fn run_crafting_grid_process<T>(this: &T, factory: &Factory) -> ChildTask<Result<(), String>>
+fn run_crafting_grid_process<T>(this: &T, factory: &Factory) -> ChildTask<Result<(), LocalStr>>
 where
     T: CraftingGridProcess,
 {
@@ -129,7 +130,7 @@ where
 }
 
 pub struct CraftingRobotConfig {
-    pub name: &'static str,
+    pub name: LocalStr,
     pub accesses: Vec<CraftingRobotAccess>,
     pub recipes: Vec<CraftingGridRecipe>,
 }
@@ -162,49 +163,61 @@ impl CraftingGridProcess for CraftingRobotProcess {
     impl_crafting_grid_process!();
 
     fn load_input(group: &mut Vec<Call>, access: &Self::Access, bus_slot: usize, inv_slot: usize, size: i32) {
-        group.push(Call { addr: "robot", func: "select", args: vec![(map_robot_grid(inv_slot) + 1).into()] });
         group.push(Call {
-            addr: "inventory_controller",
-            func: "suckFromSlot",
+            addr: local_str!("robot"),
+            func: local_str!("select"),
+            args: vec![(map_robot_grid(inv_slot) + 1).into()],
+        });
+        group.push(Call {
+            addr: local_str!("inventory_controller"),
+            func: local_str!("suckFromSlot"),
             args: vec![access.bus_side.into(), (bus_slot + 1).into(), size.into()],
         })
     }
 
     fn load_non_consumable(group: &mut Vec<Call>, _access: &Self::Access, non_consumable: &NonConsumable) {
-        group.push(Call { addr: "robot", func: "select", args: vec![(non_consumable.storage_slot + 1).into()] });
         group.push(Call {
-            addr: "robot",
-            func: "transferTo",
+            addr: local_str!("robot"),
+            func: local_str!("select"),
+            args: vec![(non_consumable.storage_slot + 1).into()],
+        });
+        group.push(Call {
+            addr: local_str!("robot"),
+            func: local_str!("transferTo"),
             args: vec![(map_robot_grid(non_consumable.crafting_grid_slot) + 1).into()],
         })
     }
 
     fn store_output(group: &mut Vec<Call>, access: &Self::Access, bus_slot: usize, _n_sets: i32) {
-        group.push(Call { addr: "robot", func: "select", args: vec![16.into()] });
-        group.push(Call { addr: "crafting", func: "craft", args: Vec::new() });
+        group.push(Call { addr: local_str!("robot"), func: local_str!("select"), args: vec![16.into()] });
+        group.push(Call { addr: local_str!("crafting"), func: local_str!("craft"), args: Vec::new() });
         group.push(Call {
-            addr: "inventory_controller",
-            func: "dropIntoSlot",
+            addr: local_str!("inventory_controller"),
+            func: local_str!("dropIntoSlot"),
             args: vec![access.bus_side.into(), (bus_slot + 1).into()],
         });
     }
 
     fn store_non_consumable(group: &mut Vec<Call>, _access: &Self::Access, non_consumable: &NonConsumable) {
         group.push(Call {
-            addr: "robot",
-            func: "select",
+            addr: local_str!("robot"),
+            func: local_str!("select"),
             args: vec![(map_robot_grid(non_consumable.crafting_grid_slot) + 1).into()],
         });
-        group.push(Call { addr: "robot", func: "transferTo", args: vec![(non_consumable.storage_slot + 1).into()] });
+        group.push(Call {
+            addr: local_str!("robot"),
+            func: local_str!("transferTo"),
+            args: vec![(non_consumable.storage_slot + 1).into()],
+        });
     }
 }
 
 impl Process for CraftingRobotProcess {
-    fn run(&self, factory: &Factory) -> ChildTask<Result<(), String>> { run_crafting_grid_process(self, factory) }
+    fn run(&self, factory: &Factory) -> ChildTask<Result<(), LocalStr>> { run_crafting_grid_process(self, factory) }
 }
 
 pub struct WorkbenchConfig {
-    pub name: &'static str,
+    pub name: LocalStr,
     pub accesses: Vec<WorkbenchAccess>,
     pub recipes: Vec<CraftingGridRecipe>,
 }
@@ -228,8 +241,8 @@ impl CraftingGridProcess for WorkbenchProcess {
 
     fn load_input(group: &mut Vec<Call>, access: &Self::Access, bus_slot: usize, inv_slot: usize, size: i32) {
         group.push(Call {
-            addr: access.input_addr,
-            func: "transferItem",
+            addr: access.input_addr.clone(),
+            func: local_str!("transferItem"),
             args: vec![
                 access.input_bus_side.into(),
                 DOWN.into(),
@@ -242,8 +255,8 @@ impl CraftingGridProcess for WorkbenchProcess {
 
     fn load_non_consumable(group: &mut Vec<Call>, access: &Self::Access, non_consumable: &NonConsumable) {
         group.push(Call {
-            addr: access.input_addr,
-            func: "transferItem",
+            addr: access.input_addr.clone(),
+            func: local_str!("transferItem"),
             args: vec![
                 access.non_consumable_side.into(),
                 DOWN.into(),
@@ -257,8 +270,8 @@ impl CraftingGridProcess for WorkbenchProcess {
     fn store_output(group: &mut Vec<Call>, access: &Self::Access, bus_slot: usize, n_sets: i32) {
         for _ in 0..n_sets {
             group.push(Call {
-                addr: access.output_addr,
-                func: "transferItem",
+                addr: access.output_addr.clone(),
+                func: local_str!("transferItem"),
                 args: vec![UP.into(), access.output_bus_side.into(), 64.into(), 1.into(), (bus_slot + 1).into()],
             })
         }
@@ -266,8 +279,8 @@ impl CraftingGridProcess for WorkbenchProcess {
 
     fn store_non_consumable(group: &mut Vec<Call>, access: &Self::Access, non_consumable: &NonConsumable) {
         group.push(Call {
-            addr: access.input_addr,
-            func: "transferItem",
+            addr: access.input_addr.clone(),
+            func: local_str!("transferItem"),
             args: vec![
                 DOWN.into(),
                 access.non_consumable_side.into(),
@@ -280,5 +293,5 @@ impl CraftingGridProcess for WorkbenchProcess {
 }
 
 impl Process for WorkbenchProcess {
-    fn run(&self, factory: &Factory) -> ChildTask<Result<(), String>> { run_crafting_grid_process(self, factory) }
+    fn run(&self, factory: &Factory) -> ChildTask<Result<(), LocalStr>> { run_crafting_grid_process(self, factory) }
 }

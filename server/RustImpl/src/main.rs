@@ -7,6 +7,7 @@ pub mod recipe;
 pub mod access;
 pub mod action;
 pub mod config;
+pub mod config_util;
 pub mod factory;
 pub mod item;
 pub mod lua_value;

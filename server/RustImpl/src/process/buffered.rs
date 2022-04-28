@@ -6,6 +6,7 @@ use super::super::recipe::{compute_demands, resolve_inputs, Demand, Input, Outpu
 use super::super::util::{alive, join_outputs, join_tasks, spawn};
 use super::{extract_output, list_inv, scattering_insert, ExtractFilter, IntoProcess, InvProcess, Process, SlotFilter};
 use abort_on_drop::ChildTask;
+use flexstr::{local_str, LocalStr};
 use fnv::FnvHashMap;
 use std::{
     cell::RefCell,
@@ -35,7 +36,7 @@ pub struct BufferedRecipe {
 impl_recipe!(BufferedRecipe, BufferedInput);
 
 pub struct BufferedConfig {
-    pub name: &'static str,
+    pub name: LocalStr,
     pub accesses: Vec<InvAccess>,
     pub slot_filter: Option<SlotFilter>,
     pub to_extract: Option<ExtractFilter>,
@@ -60,7 +61,7 @@ impl IntoProcess for BufferedConfig {
 }
 
 impl Process for BufferedProcess {
-    fn run(&self, factory: &Factory) -> ChildTask<Result<(), String>> {
+    fn run(&self, factory: &Factory) -> ChildTask<Result<(), LocalStr>> {
         if self.config.to_extract.is_none() && self.config.stocks.is_empty() {
             if compute_demands(factory, &self.config.recipes).is_empty() {
                 return spawn(async { Ok(()) });
@@ -117,7 +118,7 @@ impl Process for BufferedProcess {
                             continue;
                         }
                         *existing += n_inserted;
-                        let reservation = factory.reserve_item(this.config.name, item, n_inserted);
+                        let reservation = factory.reserve_item(&this.config.name, item, n_inserted);
                         tasks.push(scattering_insert(this, factory, reservation, insertions))
                     }
                 }
@@ -180,11 +181,11 @@ impl BufferedProcess {
         factory: &mut Factory,
         items: Vec<Rc<Item>>,
         plans: Vec<InsertPlan>,
-    ) -> ChildTask<Result<(), String>> {
+    ) -> ChildTask<Result<(), LocalStr>> {
         let mut bus_slots = Vec::new();
         let slots_to_free = Rc::new(RefCell::new(Vec::new()));
         for (i_input, item) in items.into_iter().enumerate() {
-            let reservation = factory.reserve_item(self.config.name, &item, plans[i_input].n_inserted);
+            let reservation = factory.reserve_item(&self.config.name, &item, plans[i_input].n_inserted);
             let bus_slot = factory.bus_allocate();
             let slots_to_free = slots_to_free.clone();
             let weak = self.factory.clone();
@@ -214,8 +215,8 @@ impl BufferedProcess {
                     for (i_input, InsertPlan { insertions, .. }) in plans.into_iter().enumerate() {
                         for (inv_slot, size) in insertions {
                             let action = ActionFuture::from(Call {
-                                addr: access.addr,
-                                func: "transferItem",
+                                addr: access.addr.clone(),
+                                func: local_str!("transferItem"),
                                 args: vec![
                                     access.bus_side.into(),
                                     access.inv_side.into(),
@@ -228,7 +229,7 @@ impl BufferedProcess {
                             tasks.push(spawn(async move { action.await.map(|_| ()) }))
                         }
                     }
-                    server.enqueue_request_group(access.client, group)
+                    server.enqueue_request_group(&access.client, group)
                 }
                 join_tasks(tasks).await?;
                 alive!(weak, this);

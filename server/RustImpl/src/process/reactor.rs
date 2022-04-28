@@ -6,6 +6,7 @@ use super::super::lua_value::call_result;
 use super::super::util::{alive, join_outputs, spawn};
 use super::{IntoProcess, Process};
 use abort_on_drop::ChildTask;
+use flexstr::{local_fmt, local_str, LocalStr};
 use std::{
     cell::RefCell,
     future::Future,
@@ -29,38 +30,47 @@ macro_rules! impl_reactor_process {
     };
 }
 
-fn run_reactor<T, U, F>(this: &T, factory: &Factory, run: F) -> ChildTask<Result<(), String>>
+fn run_reactor<T, U, F>(this: &T, factory: &Factory, run: F) -> ChildTask<Result<(), LocalStr>>
 where
     T: ReactorProcess,
-    U: Future<Output = Result<(), String>>,
+    U: Future<Output = Result<(), LocalStr>>,
     F: FnOnce(f64) -> U + 'static,
 {
-    if this.n_cyanite_wanted() > 0 && factory.search_n_stored(&Filter::Label("Cyanite Ingot")) < this.n_cyanite_wanted()
+    if this.n_cyanite_wanted() > 0
+        && factory.search_n_stored(&Filter::Label(local_str!("Cyanite Ingot"))) < this.n_cyanite_wanted()
     {
         return spawn(async move { run(0.0).await });
     }
     let server = factory.borrow_server();
     if this.has_turbine() {
         let states = ["getHotFluidAmount", "getHotFluidAmountMax"]
-            .iter()
-            .map(|func| {
+            .into_iter()
+            .map(|x| {
                 let access = server.load_balance(this.get_accesses()).1;
-                let action = ActionFuture::from(Call { addr: access.addr, func, args: Vec::new() });
-                server.enqueue_request_group(access.client, vec![action.clone().into()]);
+                let action = ActionFuture::from(Call {
+                    addr: access.addr.clone(),
+                    func: LocalStr::from_static(x),
+                    args: Vec::new(),
+                });
+                server.enqueue_request_group(&access.client, vec![action.clone().into()]);
                 spawn(async move { call_result::<f64>(action.await?) })
             })
             .collect();
         spawn(async move { run(join_outputs(states).await.map(|states| states[0] / states[1])?).await })
     } else {
         let access = server.load_balance(this.get_accesses()).1;
-        let action = ActionFuture::from(Call { addr: access.addr, func: "getEnergyStored", args: Vec::new() });
-        server.enqueue_request_group(access.client, vec![action.clone().into()]);
+        let action = ActionFuture::from(Call {
+            addr: access.addr.clone(),
+            func: local_str!("getEnergyStored"),
+            args: Vec::new(),
+        });
+        server.enqueue_request_group(&access.client, vec![action.clone().into()]);
         spawn(async move { run(action.await.and_then(call_result).map(|x: f64| x / 1E7)?).await })
     }
 }
 
 pub struct HysteresisReactorConfig {
-    pub name: &'static str,
+    pub name: LocalStr,
     pub accesses: Vec<ComponentAccess>,
     pub n_cyanite_wanted: i32,
     pub has_turbine: bool,
@@ -87,7 +97,7 @@ impl IntoProcess for HysteresisReactorConfig {
 }
 
 impl Process for HysteresisReactorProcess {
-    fn run(&self, factory: &Factory) -> ChildTask<Result<(), String>> {
+    fn run(&self, factory: &Factory) -> ChildTask<Result<(), LocalStr>> {
         let weak = self.weak.clone();
         run_reactor(self, factory, |pv| async move {
             let action;
@@ -106,14 +116,18 @@ impl Process for HysteresisReactorProcess {
                 }
                 upgrade!(this.factory, factory);
                 factory.log(Print {
-                    text: format!("{}: {}", this.config.name, if on { "on" } else { "off" }),
+                    text: local_fmt!("{}: {}", this.config.name, if on { "on" } else { "off" }),
                     color: 0xFF4FFF,
                     beep: None,
                 });
                 let server = factory.borrow_server();
                 let access = server.load_balance(&this.config.accesses).1;
-                action = ActionFuture::from(Call { addr: access.addr, func: "setActive", args: vec![on.into()] });
-                server.enqueue_request_group(access.client, vec![action.clone().into()]);
+                action = ActionFuture::from(Call {
+                    addr: access.addr.clone(),
+                    func: local_str!("setActive"),
+                    args: vec![on.into()],
+                });
+                server.enqueue_request_group(&access.client, vec![action.clone().into()]);
             };
             action.await?;
             alive(&weak)?.borrow_mut().prev_on = Some(on);
@@ -123,7 +137,7 @@ impl Process for HysteresisReactorProcess {
 }
 
 pub struct ProportionalReactorConfig {
-    pub name: &'static str,
+    pub name: LocalStr,
     pub accesses: Vec<ComponentAccess>,
     pub n_cyanite_wanted: i32,
     pub has_turbine: bool,
@@ -150,7 +164,7 @@ impl IntoProcess for ProportionalReactorConfig {
 fn to_percent(x: f64) -> i16 { (x * 100.0).round() as _ }
 
 impl Process for ProportionalReactorProcess {
-    fn run(&self, factory: &Factory) -> ChildTask<Result<(), String>> {
+    fn run(&self, factory: &Factory) -> ChildTask<Result<(), LocalStr>> {
         let weak = self.weak.clone();
         run_reactor(self, factory, |pv| async move {
             let rod = to_percent(pv);
@@ -158,18 +172,18 @@ impl Process for ProportionalReactorProcess {
             {
                 alive!(weak, this);
                 upgrade!(this.factory, factory);
-                factory.log(Print { text: format!("{}: {}%", this.config.name, rod), color: 0xFF4FFF, beep: None });
+                factory.log(Print { text: local_fmt!("{}: {}%", this.config.name, rod), color: 0xFF4FFF, beep: None });
                 if this.prev_rod == Some(rod) {
                     return Ok(());
                 }
                 let server = factory.borrow_server();
                 let access = server.load_balance(&this.config.accesses).1;
                 action = ActionFuture::from(Call {
-                    addr: access.addr,
-                    func: "setAllControlRodLevels",
+                    addr: access.addr.clone(),
+                    func: local_str!("setAllControlRodLevels"),
                     args: vec![rod.into()],
                 });
-                server.enqueue_request_group(access.client, vec![action.clone().into()]);
+                server.enqueue_request_group(&access.client, vec![action.clone().into()]);
             };
             action.await?;
             alive(&weak)?.borrow_mut().prev_rod = Some(rod);
@@ -179,7 +193,7 @@ impl Process for ProportionalReactorProcess {
 }
 
 pub struct PIDReactorConfig {
-    pub name: &'static str,
+    pub name: LocalStr,
     pub accesses: Vec<ComponentAccess>,
     pub n_cyanite_wanted: i32,
     pub has_turbine: bool,
@@ -220,7 +234,7 @@ impl IntoProcess for PIDReactorConfig {
 }
 
 impl Process for PIDReactorProcess {
-    fn run(&self, factory: &Factory) -> ChildTask<Result<(), String>> {
+    fn run(&self, factory: &Factory) -> ChildTask<Result<(), LocalStr>> {
         let weak = self.weak.clone();
         run_reactor(self, factory, |pv| async move {
             let rod;
@@ -241,7 +255,7 @@ impl Process for PIDReactorProcess {
                 rod = to_percent((0.5 - op).clamp(0.0, 1.0));
                 upgrade!(this.factory, factory);
                 factory.log(Print {
-                    text: format!(
+                    text: local_fmt!(
                         "{}: E={}%, I={}%, O={}%",
                         this.config.name,
                         to_percent(-e),
@@ -257,11 +271,11 @@ impl Process for PIDReactorProcess {
                 let server = factory.borrow_server();
                 let access = server.load_balance(&this.config.accesses).1;
                 action = ActionFuture::from(Call {
-                    addr: access.addr,
-                    func: "setAllControlRodLevels",
+                    addr: access.addr.clone(),
+                    func: local_str!("setAllControlRodLevels"),
                     args: vec![rod.into()],
                 });
-                server.enqueue_request_group(access.client, vec![action.clone().into()]);
+                server.enqueue_request_group(&access.client, vec![action.clone().into()]);
             };
             action.await?;
             alive(&weak)?.borrow_mut().prev_rod = Some(rod);

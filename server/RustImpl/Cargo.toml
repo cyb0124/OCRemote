@@ -13,6 +13,7 @@ abort-on-drop = "0"
 ordered-float = "2"
 num-traits = "0"
 socket2 = "0"
+flexstr = "0"
 fnv = "1"
 
 [profile.dev]

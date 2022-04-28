@@ -6,16 +6,17 @@ use super::super::lua_value::call_result;
 use super::super::util::{alive, spawn};
 use super::{IntoProcess, Process};
 use abort_on_drop::ChildTask;
+use flexstr::{local_fmt, local_str, LocalStr};
 use std::{
     cell::RefCell,
     rc::{Rc, Weak},
 };
 
 pub type RedstoneOutput = Box<dyn Fn(&Factory) -> i32>;
-pub fn emit_when_want_item(name: &'static str, item: Filter, n_wanted: i32) -> RedstoneOutput {
+pub fn emit_when_want_item(name: LocalStr, item: Filter, n_wanted: i32) -> RedstoneOutput {
     Box::new(move |factory| {
         if factory.search_n_stored(&item) < n_wanted {
-            factory.log(Print { text: format!("{}: on", name), color: 0xFF4FFF, beep: None });
+            factory.log(Print { text: local_fmt!("{}: on", name), color: 0xFF4FFF, beep: None });
             15
         } else {
             0
@@ -42,7 +43,7 @@ impl IntoProcess for RedstoneEmitterConfig {
 }
 
 impl Process for RedstoneEmitterProcess {
-    fn run(&self, factory: &Factory) -> ChildTask<Result<(), String>> {
+    fn run(&self, factory: &Factory) -> ChildTask<Result<(), LocalStr>> {
         let value = (self.config.output)(factory);
         if Some(value) == self.prev_value {
             spawn(async { Ok(()) })
@@ -50,11 +51,11 @@ impl Process for RedstoneEmitterProcess {
             let server = factory.borrow_server();
             let access = server.load_balance(&self.config.accesses).1;
             let action = ActionFuture::from(Call {
-                addr: access.addr,
-                func: "setOutput",
+                addr: access.addr.clone(),
+                func: local_str!("setOutput"),
                 args: vec![access.side.into(), value.into()],
             });
-            server.enqueue_request_group(access.client, vec![action.clone().into()]);
+            server.enqueue_request_group(&access.client, vec![action.clone().into()]);
             let weak = self.weak.clone();
             spawn(async move {
                 action.await?;
@@ -67,7 +68,7 @@ impl Process for RedstoneEmitterProcess {
 }
 
 pub struct RedstoneConditionalConfig<T: IntoProcess> {
-    pub name: Option<&'static str>,
+    pub name: Option<LocalStr>,
     pub accesses: Vec<SidedAccess>,
     pub condition: Box<dyn Fn(i32) -> bool>,
     pub child: T,
@@ -76,7 +77,7 @@ pub struct RedstoneConditionalConfig<T: IntoProcess> {
 pub struct RedstoneConditionalProcess<T: Process> {
     weak: Weak<RefCell<RedstoneConditionalProcess<T>>>,
     factory: Weak<RefCell<Factory>>,
-    name: Option<&'static str>,
+    name: Option<LocalStr>,
     accesses: Vec<SidedAccess>,
     condition: Box<dyn Fn(i32) -> bool>,
     child: Rc<RefCell<T>>,
@@ -99,11 +100,15 @@ impl<T: IntoProcess> IntoProcess for RedstoneConditionalConfig<T> {
 }
 
 impl<T: Process> Process for RedstoneConditionalProcess<T> {
-    fn run(&self, factory: &Factory) -> ChildTask<Result<(), String>> {
+    fn run(&self, factory: &Factory) -> ChildTask<Result<(), LocalStr>> {
         let server = factory.borrow_server();
         let access = server.load_balance(&self.accesses).1;
-        let action = ActionFuture::from(Call { addr: access.addr, func: "getInput", args: vec![access.side.into()] });
-        server.enqueue_request_group(access.client, vec![action.clone().into()]);
+        let action = ActionFuture::from(Call {
+            addr: access.addr.clone(),
+            func: local_str!("getInput"),
+            args: vec![access.side.into()],
+        });
+        server.enqueue_request_group(&access.client, vec![action.clone().into()]);
         let weak = self.weak.clone();
         spawn(async move {
             let value = call_result(action.await?)?;
@@ -113,8 +118,8 @@ impl<T: Process> Process for RedstoneConditionalProcess<T> {
                 if (this.condition)(value) {
                     this.child.borrow().run(factory)
                 } else {
-                    if let Some(name) = this.name {
-                        factory.log(Print { text: format!("{}: skipped", name), color: 0xFF4FFF, beep: None })
+                    if let Some(name) = &this.name {
+                        factory.log(Print { text: local_fmt!("{}: skipped", name), color: 0xFF4FFF, beep: None })
                     }
                     return Ok(());
                 }
