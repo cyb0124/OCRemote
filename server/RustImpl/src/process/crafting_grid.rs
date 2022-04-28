@@ -16,8 +16,8 @@ use std::{
 
 pub struct CraftingGridInput {
     item: Filter,
-    pub size: i32,
-    pub slots: Vec<usize>,
+    size: i32,
+    slots: Vec<usize>,
     allow_backup: bool,
     extra_backup: i32,
 }

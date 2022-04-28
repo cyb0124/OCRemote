@@ -68,3 +68,16 @@ pub struct WorkbenchAccess {
 }
 
 impl_access!(WorkbenchAccess);
+
+pub struct EachInvAccess {
+    pub addr: LocalStr,
+    pub bus_side: u8,
+    pub inv_side: u8,
+}
+
+pub struct MultiInvAccess {
+    pub client: LocalStr,
+    pub invs: Vec<EachInvAccess>,
+}
+
+impl_access!(MultiInvAccess);

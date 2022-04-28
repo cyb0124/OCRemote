@@ -1,10 +1,10 @@
-use super::super::access::InvAccess;
+use super::super::access::{InvAccess, MultiInvAccess};
 use super::super::action::{ActionFuture, Call};
 use super::super::factory::Factory;
 use super::super::item::{Filter, ItemStack};
 use super::super::recipe::{compute_demands, Demand, Input, Outputs, Recipe};
 use super::super::util::{alive, join_outputs, join_tasks, spawn};
-use super::{extract_output, list_inv, ExtractFilter, IntoProcess, Inventory, Process};
+use super::{extract_output, list_inv, IntoProcess, Inventory, Process};
 use abort_on_drop::ChildTask;
 use flexstr::{local_str, LocalStr};
 use fnv::{FnvHashMap, FnvHashSet};
@@ -14,89 +14,156 @@ use std::{
     rc::{Rc, Weak},
 };
 
-pub struct SlottedInput {
+pub struct MultiInvSlottedInput {
     item: Filter,
     size: i32,
-    slots: Vec<(usize, i32)>,
+    slots: Vec<(usize, usize, i32)>,
     allow_backup: bool,
     extra_backup: i32,
 }
 
-impl SlottedInput {
-    pub fn new(item: Filter, slots: Vec<(usize, i32)>) -> Self {
-        let size = slots.iter().map(|(_, size)| size).sum();
-        SlottedInput { item, size, slots, allow_backup: false, extra_backup: 0 }
+impl MultiInvSlottedInput {
+    pub fn new(item: Filter, slots: Vec<(usize, usize, i32)>) -> Self {
+        let size = slots.iter().map(|(_, _, size)| size).sum();
+        MultiInvSlottedInput { item, size, slots, allow_backup: false, extra_backup: 0 }
     }
 }
 
-impl_input!(SlottedInput);
+impl_input!(MultiInvSlottedInput);
 
-pub struct SlottedRecipe {
+pub struct MultiInvSlottedRecipe {
     pub outputs: Box<dyn Outputs>,
-    pub inputs: Vec<SlottedInput>,
+    pub inputs: Vec<MultiInvSlottedInput>,
     pub max_sets: i32,
 }
 
-impl_recipe!(SlottedRecipe, SlottedInput);
+impl_recipe!(MultiInvSlottedRecipe, MultiInvSlottedInput);
 
-pub struct SlottedConfig {
+pub type MultiInvExtractFilter = Box<dyn Fn(usize, usize, &ItemStack) -> bool>;
+pub fn multi_inv_extract_all() -> Option<MultiInvExtractFilter> { Some(Box::new(|_, _, _| true)) }
+
+pub struct MultiInvSlottedConfig {
     pub name: LocalStr,
-    pub accesses: Vec<InvAccess>,
-    pub input_slots: Vec<usize>,
-    pub to_extract: Option<ExtractFilter>,
-    pub recipes: Vec<SlottedRecipe>,
+    pub accesses: Vec<MultiInvAccess>,
+    pub input_slots: Vec<Vec<usize>>,
+    pub to_extract: Option<MultiInvExtractFilter>,
+    pub recipes: Vec<MultiInvSlottedRecipe>,
 }
 
-pub struct SlottedProcess {
-    weak: Weak<RefCell<SlottedProcess>>,
-    config: SlottedConfig,
+struct EachInvConfig {
+    pub accesses: Vec<InvAccess>,
+    pub input_slots: Vec<usize>,
+}
+
+struct EachInv {
+    weak: Weak<RefCell<EachInv>>,
+    config: EachInvConfig,
     factory: Weak<RefCell<Factory>>,
 }
 
-impl_inventory!(SlottedProcess);
+impl_inventory!(EachInv);
 
-impl IntoProcess for SlottedConfig {
-    type Output = SlottedProcess;
+pub struct MultiInvSlottedProcess {
+    weak: Weak<RefCell<MultiInvSlottedProcess>>,
+    factory: Weak<RefCell<Factory>>,
+    name: LocalStr,
+    accesses: Vec<MultiInvAccess>,
+    to_extract: Option<MultiInvExtractFilter>,
+    recipes: Vec<MultiInvSlottedRecipe>,
+    invs: Vec<Rc<RefCell<EachInv>>>,
+}
+
+impl IntoProcess for MultiInvSlottedConfig {
+    type Output = MultiInvSlottedProcess;
     fn into_process(self, factory: &Weak<RefCell<Factory>>) -> Rc<RefCell<Self::Output>> {
-        Rc::new_cyclic(|weak| RefCell::new(Self::Output { weak: weak.clone(), config: self, factory: factory.clone() }))
+        Rc::new_cyclic(|weak| {
+            let accesses = self.accesses;
+            let invs = self
+                .input_slots
+                .into_iter()
+                .enumerate()
+                .map(|(i, input_slots)| {
+                    Rc::new_cyclic(|weak| {
+                        RefCell::new(EachInv {
+                            weak: weak.clone(),
+                            config: EachInvConfig {
+                                accesses: accesses
+                                    .iter()
+                                    .map(|access| {
+                                        let each = &access.invs[i];
+                                        InvAccess {
+                                            client: access.client.clone(),
+                                            addr: each.addr.clone(),
+                                            bus_side: each.bus_side,
+                                            inv_side: each.inv_side,
+                                        }
+                                    })
+                                    .collect(),
+                                input_slots,
+                            },
+                            factory: factory.clone(),
+                        })
+                    })
+                })
+                .collect();
+            RefCell::new(Self::Output {
+                weak: weak.clone(),
+                factory: factory.clone(),
+                name: self.name,
+                accesses,
+                to_extract: self.to_extract,
+                recipes: self.recipes,
+                invs,
+            })
+        })
     }
 }
 
-impl Process for SlottedProcess {
+impl Process for MultiInvSlottedProcess {
     fn run(&self, factory: &Factory) -> ChildTask<Result<(), LocalStr>> {
-        if self.config.to_extract.is_none() && compute_demands(factory, &self.config.recipes).is_empty() {
+        if self.to_extract.is_none() && compute_demands(factory, &self.recipes).is_empty() {
             return spawn(async { Ok(()) });
         }
-        let stacks = list_inv(self, factory);
+        let stacks: Vec<_> = self.invs.iter().map(|inv| spawn(list_inv(&*inv.borrow(), factory))).collect();
         let weak = self.weak.clone();
         spawn(async move {
-            let stacks = stacks.await?;
+            let stacks = join_outputs(stacks).await?;
             let mut tasks = Vec::new();
             {
                 alive!(weak, this);
                 upgrade_mut!(this.factory, factory);
-                let mut existing_inputs = FnvHashMap::<usize, Option<ItemStack>>::default();
-                for slot in &this.config.input_slots {
-                    existing_inputs.insert(*slot, None);
+                let mut existing_inputs = FnvHashMap::<(usize, usize), Option<ItemStack>>::default();
+                for (i, inv) in this.invs.iter().enumerate() {
+                    for slot in &inv.borrow().config.input_slots {
+                        existing_inputs.insert((i, *slot), None);
+                    }
                 }
-                for (slot, stack) in stacks.into_iter().enumerate() {
-                    if let Some(stack) = stack {
-                        if let Some(existing_input) = existing_inputs.get_mut(&slot) {
-                            *existing_input = Some(stack)
-                        } else if let Some(ref to_extract) = this.config.to_extract {
-                            if to_extract(slot, &stack) {
-                                tasks.push(extract_output(this, factory, slot, stack.item.max_size))
+                for (i, stacks) in stacks.into_iter().enumerate() {
+                    for (slot, stack) in stacks.into_iter().enumerate() {
+                        if let Some(stack) = stack {
+                            if let Some(existing_input) = existing_inputs.get_mut(&(i, slot)) {
+                                *existing_input = Some(stack)
+                            } else if let Some(ref to_extract) = this.to_extract {
+                                if to_extract(i, slot, &stack) {
+                                    tasks.push(extract_output(
+                                        &*this.invs[i].borrow(),
+                                        factory,
+                                        slot,
+                                        stack.item.max_size,
+                                    ))
+                                }
                             }
                         }
                     }
                 }
-                let demands = compute_demands(factory, &this.config.recipes);
+                let demands = compute_demands(factory, &this.recipes);
                 'recipe: for mut demand in demands.into_iter() {
-                    let recipe = &this.config.recipes[demand.i_recipe];
-                    let mut used_slots = FnvHashSet::<usize>::default();
+                    let recipe = &this.recipes[demand.i_recipe];
+                    let mut used_slots = FnvHashSet::<(usize, usize)>::default();
                     for (i_input, input) in recipe.inputs.iter().enumerate() {
-                        for (slot, mult) in &input.slots {
-                            let existing_input = existing_inputs.get(slot).unwrap();
+                        for (inv, inv_slot, mult) in &input.slots {
+                            let slot = (*inv, *inv_slot);
+                            let existing_input = existing_inputs.get(&slot).unwrap();
                             let existing_size = if let Some(existing_input) = existing_input {
                                 if existing_input.item != demand.inputs.items[i_input] {
                                     continue 'recipe;
@@ -113,7 +180,7 @@ impl Process for SlottedProcess {
                             if demand.inputs.n_sets <= 0 {
                                 continue 'recipe;
                             }
-                            used_slots.insert(*slot);
+                            used_slots.insert(slot);
                         }
                     }
                     for (slot, existing_input) in &existing_inputs {
@@ -130,17 +197,14 @@ impl Process for SlottedProcess {
     }
 }
 
-impl SlottedProcess {
+impl MultiInvSlottedProcess {
     fn execute_recipe(&self, factory: &mut Factory, demand: Demand) -> ChildTask<Result<(), LocalStr>> {
         let mut bus_slots = Vec::new();
         let slots_to_free = Rc::new(RefCell::new(Vec::new()));
-        let recipe = &self.config.recipes[demand.i_recipe];
+        let recipe = &self.recipes[demand.i_recipe];
         for (i_input, input) in recipe.inputs.iter().enumerate() {
-            let reservation = factory.reserve_item(
-                &self.config.name,
-                &demand.inputs.items[i_input],
-                demand.inputs.n_sets * input.size,
-            );
+            let reservation =
+                factory.reserve_item(&self.name, &demand.inputs.items[i_input], demand.inputs.n_sets * input.size);
             let bus_slot = factory.bus_allocate();
             let slots_to_free = slots_to_free.clone();
             let weak = self.factory.clone();
@@ -165,11 +229,12 @@ impl SlottedProcess {
                     alive!(weak, this);
                     upgrade!(this.factory, factory);
                     let server = factory.borrow_server();
-                    let access = server.load_balance(&this.config.accesses).1;
+                    let access = server.load_balance(&this.accesses).1;
                     let mut group = Vec::new();
-                    let recipe = &this.config.recipes[demand.i_recipe];
+                    let recipe = &this.recipes[demand.i_recipe];
                     for (i_input, input) in recipe.inputs.iter().enumerate() {
-                        for (inv_slot, mult) in &input.slots {
+                        for (inv, inv_slot, mult) in &input.slots {
+                            let access = &access.invs[*inv];
                             let action = ActionFuture::from(Call {
                                 addr: access.addr.clone(),
                                 func: local_str!("transferItem"),
