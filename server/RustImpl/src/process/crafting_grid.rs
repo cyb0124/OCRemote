@@ -1,9 +1,8 @@
 use super::super::access::{Access, CraftingRobotAccess, WorkbenchAccess};
 use super::super::action::{ActionFuture, Call};
 use super::super::factory::Factory;
-use super::super::recipe::{
-    compute_demands, resolve_inputs, CraftingGridRecipe, Demand, NonConsumable, ResolvedInputs,
-};
+use super::super::item::Filter;
+use super::super::recipe::{compute_demands, resolve_inputs, Demand, Input, Outputs, Recipe, ResolvedInputs};
 use super::super::side::{DOWN, UP};
 use super::super::util::{alive, join_outputs, join_tasks, spawn};
 use super::{IntoProcess, Process};
@@ -14,6 +13,44 @@ use std::{
     cmp::min,
     rc::{Rc, Weak},
 };
+
+pub struct CraftingGridInput {
+    item: Filter,
+    pub size: i32,
+    pub slots: Vec<usize>,
+    allow_backup: bool,
+    extra_backup: i32,
+}
+
+impl CraftingGridInput {
+    pub fn new(item: Filter, slots: Vec<usize>) -> Self {
+        CraftingGridInput { item, size: slots.len() as i32, slots, allow_backup: false, extra_backup: 0 }
+    }
+}
+
+impl_input!(CraftingGridInput);
+
+pub struct NonConsumable {
+    // for crafting robot:
+    //   3, 7, 11, 12, 13, 14
+    //   with extra inventory: 16, 17, ..
+    pub storage_slot: usize,
+    pub crafting_grid_slot: usize,
+}
+
+pub struct CraftingGridRecipe {
+    pub outputs: Box<dyn Outputs>,
+    // slots:
+    //   0, 1, 2
+    //   3, 4, 5
+    //   6, 7, 8
+    pub inputs: Vec<CraftingGridInput>,
+    // can't craft more than one stack at a time.
+    pub max_sets: i32,
+    pub non_consumables: Vec<NonConsumable>,
+}
+
+impl_recipe!(CraftingGridRecipe, CraftingGridInput);
 
 trait CraftingGridProcess: 'static {
     type Access: Access;

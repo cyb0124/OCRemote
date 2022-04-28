@@ -46,18 +46,18 @@ pub fn build_factory() -> Rc<RefCell<Factory>> {
             recipes: vec![
                 SlottedRecipe {
                     outputs: Output::new(label("Sand"), 64),
-                    inputs: vec![SlottedInput::new(label("Cobblestone"), 1, vec![0])],
-                    max_per_slot: 8,
+                    inputs: vec![SlottedInput::new(label("Cobblestone"), vec![(0, 1)])],
+                    max_sets: 8,
                 },
                 SlottedRecipe {
                     outputs: Output::new(label("Niter"), 64),
-                    inputs: vec![SlottedInput::new(label("Sandstone"), 1, vec![0])],
-                    max_per_slot: 8,
+                    inputs: vec![SlottedInput::new(label("Sandstone"), vec![(0, 1)])],
+                    max_sets: 8,
                 },
                 SlottedRecipe {
                     outputs: Output::new(label("Pulverized Charcoal"), 64),
-                    inputs: vec![SlottedInput::new(label("Charcoal"), 1, vec![0])],
-                    max_per_slot: 8,
+                    inputs: vec![SlottedInput::new(label("Charcoal"), vec![(0, 1)])],
+                    max_sets: 8,
                 },
             ],
         });
@@ -102,8 +102,8 @@ pub fn build_factory() -> Rc<RefCell<Factory>> {
             to_extract: None,
             recipes: vec![SlottedRecipe {
                 outputs: Output::new(label("Fluxed Phyto-Gro"), 64),
-                inputs: vec![SlottedInput::new(label("Rich Phyto-Gro"), 1, vec![0])],
-                max_per_slot: i32::MAX,
+                inputs: vec![SlottedInput::new(label("Rich Phyto-Gro"), vec![(0, 1)])],
+                max_sets: i32::MAX,
             }],
         });
         factory.add_process(ScatteringConfig {
@@ -136,18 +136,18 @@ pub fn build_factory() -> Rc<RefCell<Factory>> {
             recipes: vec![
                 SlottedRecipe {
                     outputs: Output::new(label("Potato"), 64),
-                    inputs: vec![SlottedInput::new(label("Potato"), 1, vec![0]).allow_backup()],
-                    max_per_slot: 4,
+                    inputs: vec![SlottedInput::new(label("Potato"), vec![(0, 1)]).allow_backup()],
+                    max_sets: 4,
                 },
                 SlottedRecipe {
                     outputs: Output::new(label("Redstone Essence"), 64),
-                    inputs: vec![SlottedInput::new(label("Redstone Seeds"), 1, vec![0])],
-                    max_per_slot: 4,
+                    inputs: vec![SlottedInput::new(label("Redstone Seeds"), vec![(0, 1)])],
+                    max_sets: 4,
                 },
                 SlottedRecipe {
                     outputs: Output::new(label("Birch Wood"), 64),
-                    inputs: vec![SlottedInput::new(label("Birch Sapling"), 1, vec![0])],
-                    max_per_slot: 4,
+                    inputs: vec![SlottedInput::new(label("Birch Sapling"), vec![(0, 1)])],
+                    max_sets: 4,
                 },
             ],
         });
@@ -159,10 +159,10 @@ pub fn build_factory() -> Rc<RefCell<Factory>> {
             recipes: vec![SlottedRecipe {
                 outputs: Output::new(label("Rich Slag"), 64),
                 inputs: vec![
-                    SlottedInput::new(label("Sand"), 1, vec![0]),
-                    SlottedInput::new(label("Compass"), 1, vec![1]),
+                    SlottedInput::new(label("Sand"), vec![(0, 1)]),
+                    SlottedInput::new(label("Compass"), vec![(1, 1)]),
                 ],
-                max_per_slot: 8,
+                max_sets: 8,
             }],
         });
         factory.add_process(BufferedConfig {
