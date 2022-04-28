@@ -39,10 +39,10 @@ OCRemote doesn't analyze any tree structure for recipe dependencies; instead it 
     This process uses robots to handle all crafting-grid recipes. It also allows non-consumable items in recipes (e.g. Pam's Harvestcraft recipes that require cookwares, or master infusion crystal). Multiple robots can be used for parallelization.
   - **RFToolsControlWorkbench**\
     Same as CraftingRobot process, but uses RFTools Control's Workbench as the crafter. In this case, non-consumable items are stored in a neighboring inventory.\
-    ![Grid crafting with workbench](workbench2.gif "Grid crafting with workbench")
+    ![Automate crafting-grid with workbench](workbench2.gif "Automate crafting-grid with workbench")
   - **Buffered**\
-    This process is intended for machines that can run multiple recipes at once, or for general buffering/pipelining of recipe inputs. In additional to recipes, it also allows items to be constantly refilled at the target inventory. This process can both regulate the total amount of items in the buffer, and limit each individual recipe's maximum number of items being processed. This process respects the ratio of the input items and only sends complete sets of inputs, which is useful for machines such as auto-compressors or gear presses.
-    ![ProcessBuffered with Auto Compressor](comp.gif "ProcessBuffered with Auto Compressor")
+    This process is intended for machines that can run multiple recipes at once, or for general buffering/pipelining of recipe inputs. In additional to recipes, it also allows items to be constantly refilled at the target inventory. This process can both regulate the total amount of items in the buffer, and limit each individual recipe's maximum number of items being processed. This process respects the ratio of the input items and only sends complete sets of inputs, which is useful for machines such as auto-compressors or gear presses.\
+    ![Regulating the buffer of Auto Compressor](comp.gif "Regulating the buffer of Auto Compressor")
   - **MultiInvSlotted**\
     This process allows you to send complete sets of inputs to multiple locations and wait for crafting to finish before sending new inputs. Here are some examples:
     - Automating all crafting-grid recipes using a single mechanical crafter ([video](https://www.youtube.com/watch?v=HKk70owisso))
@@ -73,6 +73,9 @@ OCRemote doesn't analyze any tree structure for recipe dependencies; instead it 
 
 ## Usage for OpenComputers
 The storage/auto-crafting configuration is a part of the server program [here](server/RustImpl/src/config.rs). It contains a sample configuration which you can adapt for your own use. To use OCRemote, you need to build and run the [server program](server/RustImpl) on a server that can be reached from OpenComputers' Internet Card. The server requires a [Rust nightly toolchain](https://rustup.rs/) to build. To setup the computers in Minecraft, edit the last line of the [loader script](client/loader.lua) and flash it to an EEPROM (the computers are meant to run without any OS or storage medium). The last line of the loader script specifies the server address, server port, client name and the screen resolution.
+
+The following image shows how common recipes are specified.\
+![Configuration of common recipes](recipe-help.png "Configuration of common recipes")
 
 ## Usage for ComputerCraft
 The code for ComputerCraft is in another repository [here](https://github.com/cyb0124/CCRemote). The procedure is similar to OpenComputers, but instead of flashing the loader script to an EEPROM, put it in a file named `startup`.
