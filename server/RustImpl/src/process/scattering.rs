@@ -3,7 +3,7 @@ use super::super::factory::Factory;
 use super::super::item::{Filter, ItemStack};
 use super::super::recipe::{compute_demands, resolve_inputs, Demand, Input, Output, Recipe};
 use super::super::util::{alive, join_tasks, spawn};
-use super::{extract_output, list_inv, scattering_insert, ExtractFilter, IntoProcess, InvProcess, Process};
+use super::{extract_output, list_inv, scattering_insert, ExtractFilter, IntoProcess, Inventory, Process};
 use abort_on_drop::ChildTask;
 use flexstr::{local_fmt, LocalStr};
 use fnv::FnvHashMap;
@@ -55,7 +55,7 @@ pub struct ScatteringProcess {
     factory: Weak<RefCell<Factory>>,
 }
 
-impl_inv_process!(ScatteringProcess);
+impl_inventory!(ScatteringProcess);
 
 impl IntoProcess for ScatteringConfig {
     type Output = ScatteringProcess;

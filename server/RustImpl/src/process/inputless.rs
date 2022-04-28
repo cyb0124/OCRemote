@@ -3,7 +3,7 @@ use super::super::factory::Factory;
 use super::super::item::Item;
 use super::super::recipe::Output;
 use super::super::util::{alive, join_tasks, spawn};
-use super::{extract_output, list_inv, IntoProcess, InvProcess, Process, SlotFilter};
+use super::{extract_output, list_inv, IntoProcess, Inventory, Process, SlotFilter};
 use abort_on_drop::ChildTask;
 use flexstr::LocalStr;
 use fnv::FnvHashMap;
@@ -26,7 +26,7 @@ pub struct InputlessProcess {
     factory: Weak<RefCell<Factory>>,
 }
 
-impl_inv_process!(InputlessProcess);
+impl_inventory!(InputlessProcess);
 
 impl IntoProcess for InputlessConfig {
     type Output = InputlessProcess;

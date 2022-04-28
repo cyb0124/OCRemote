@@ -7,9 +7,6 @@
 5. Backport ItemCycleProcess from CCRemote
 6. Backport new output logic from CCRemote
 7. Backport emit_when_want_item output parameters from CCRemote
-8. Backport flexstr from CCRemote
-    Check for format!, String and &'static str
-9. Backport config_util from CCRemote
 10. Change README to mostly describe the Rust implementation.
     Deprecate the C++ version
     All processes from both OC and CC

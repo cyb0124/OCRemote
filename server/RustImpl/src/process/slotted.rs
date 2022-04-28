@@ -4,7 +4,7 @@ use super::super::factory::Factory;
 use super::super::item::ItemStack;
 use super::super::recipe::{compute_demands, Demand, Output, Recipe, SlottedInput};
 use super::super::util::{alive, join_outputs, join_tasks, spawn};
-use super::{extract_output, list_inv, ExtractFilter, IntoProcess, InvProcess, Process};
+use super::{extract_output, list_inv, ExtractFilter, IntoProcess, Inventory, Process};
 use abort_on_drop::ChildTask;
 use flexstr::{local_str, LocalStr};
 use fnv::{FnvHashMap, FnvHashSet};
@@ -36,7 +36,7 @@ pub struct SlottedProcess {
     factory: Weak<RefCell<Factory>>,
 }
 
-impl_inv_process!(SlottedProcess);
+impl_inventory!(SlottedProcess);
 
 impl IntoProcess for SlottedConfig {
     type Output = SlottedProcess;

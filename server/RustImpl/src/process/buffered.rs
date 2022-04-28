@@ -4,7 +4,7 @@ use super::super::factory::Factory;
 use super::super::item::{insert_into_inventory, jammer, Filter, InsertPlan, Item, ItemStack};
 use super::super::recipe::{compute_demands, resolve_inputs, Demand, Input, Output, Recipe};
 use super::super::util::{alive, join_outputs, join_tasks, spawn};
-use super::{extract_output, list_inv, scattering_insert, ExtractFilter, IntoProcess, InvProcess, Process, SlotFilter};
+use super::{extract_output, list_inv, scattering_insert, ExtractFilter, IntoProcess, Inventory, Process, SlotFilter};
 use abort_on_drop::ChildTask;
 use flexstr::{local_str, LocalStr};
 use fnv::FnvHashMap;
@@ -51,7 +51,7 @@ pub struct BufferedProcess {
     factory: Weak<RefCell<Factory>>,
 }
 
-impl_inv_process!(BufferedProcess);
+impl_inventory!(BufferedProcess);
 
 impl IntoProcess for BufferedConfig {
     type Output = BufferedProcess;

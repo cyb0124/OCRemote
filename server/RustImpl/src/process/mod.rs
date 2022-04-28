@@ -24,15 +24,15 @@ pub type SlotFilter = Box<dyn Fn(usize) -> bool>;
 pub type ExtractFilter = Box<dyn Fn(usize, &ItemStack) -> bool>;
 pub fn extract_all() -> Option<ExtractFilter> { Some(Box::new(|_, _| true)) }
 
-pub trait InvProcess: 'static {
+pub trait Inventory: 'static {
     fn get_accesses(&self) -> &Vec<InvAccess>;
     fn get_weak(&self) -> &Weak<RefCell<Self>>;
     fn get_factory(&self) -> &Weak<RefCell<Factory>>;
 }
 
-macro_rules! impl_inv_process {
+macro_rules! impl_inventory {
     ($i:ident) => {
-        impl InvProcess for $i {
+        impl Inventory for $i {
             fn get_accesses(&self) -> &Vec<InvAccess> { &self.config.accesses }
             fn get_weak(&self) -> &Weak<RefCell<Self>> { &self.weak }
             fn get_factory(&self) -> &Weak<RefCell<Factory>> { &self.factory }
@@ -42,7 +42,7 @@ macro_rules! impl_inv_process {
 
 fn list_inv<T>(this: &T, factory: &Factory) -> ActionFuture<List>
 where
-    T: InvProcess,
+    T: Inventory,
 {
     let server = factory.borrow_server();
     let access = server.load_balance(this.get_accesses()).1;
@@ -53,7 +53,7 @@ where
 
 fn extract_output<T>(this: &T, factory: &mut Factory, slot: usize, size: i32) -> ChildTask<Result<(), LocalStr>>
 where
-    T: InvProcess,
+    T: Inventory,
 {
     let bus_slot = factory.bus_allocate();
     let weak = this.get_weak().clone();
@@ -93,7 +93,7 @@ fn scattering_insert<T, U>(
     insertions: U,
 ) -> ChildTask<Result<(), LocalStr>>
 where
-    T: InvProcess,
+    T: Inventory,
     U: IntoIterator<Item = (usize, i32)> + 'static,
 {
     let bus_slot = factory.bus_allocate();
