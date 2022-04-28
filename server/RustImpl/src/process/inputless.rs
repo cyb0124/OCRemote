@@ -2,8 +2,9 @@ use super::super::access::InvAccess;
 use super::super::factory::Factory;
 use super::super::item::Item;
 use super::super::recipe::Output;
-use super::super::util::{alive, join_tasks, spawn, AbortOnDrop};
+use super::super::util::{alive, join_tasks, spawn};
 use super::{extract_output, list_inv, IntoProcess, InvProcess, Process, SlotFilter};
+use abort_on_drop::ChildTask;
 use fnv::FnvHashMap;
 use std::{
     cell::RefCell,
@@ -39,7 +40,7 @@ struct InputlessInfo {
 }
 
 impl Process for InputlessProcess {
-    fn run(&self, factory: &Factory) -> AbortOnDrop<Result<(), String>> {
+    fn run(&self, factory: &Factory) -> ChildTask<Result<(), String>> {
         let mut enough = true;
         for output in &self.config.outputs {
             if factory.search_n_stored(&output.item) < output.n_wanted {

@@ -3,8 +3,9 @@ use super::super::action::{ActionFuture, Call, Print};
 use super::super::factory::Factory;
 use super::super::item::Filter;
 use super::super::lua_value::call_result;
-use super::super::util::{alive, spawn, AbortOnDrop};
+use super::super::util::{alive, spawn};
 use super::{IntoProcess, Process};
+use abort_on_drop::ChildTask;
 use std::{
     cell::RefCell,
     rc::{Rc, Weak},
@@ -41,7 +42,7 @@ impl IntoProcess for RedstoneEmitterConfig {
 }
 
 impl Process for RedstoneEmitterProcess {
-    fn run(&self, factory: &Factory) -> AbortOnDrop<Result<(), String>> {
+    fn run(&self, factory: &Factory) -> ChildTask<Result<(), String>> {
         let value = (self.config.output)(factory);
         if Some(value) == self.prev_value {
             spawn(async { Ok(()) })
@@ -98,7 +99,7 @@ impl<T: IntoProcess> IntoProcess for RedstoneConditionalConfig<T> {
 }
 
 impl<T: Process> Process for RedstoneConditionalProcess<T> {
-    fn run(&self, factory: &Factory) -> AbortOnDrop<Result<(), String>> {
+    fn run(&self, factory: &Factory) -> ChildTask<Result<(), String>> {
         let server = factory.borrow_server();
         let access = server.load_balance(&self.accesses).1;
         let action = ActionFuture::from(Call { addr: access.addr, func: "getInput", args: vec![access.side.into()] });
@@ -118,7 +119,7 @@ impl<T: Process> Process for RedstoneConditionalProcess<T> {
                     return Ok(());
                 }
             };
-            task.into_future().await
+            task.await.unwrap()
         })
     }
 }

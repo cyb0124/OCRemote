@@ -2,13 +2,14 @@
 name = "oc-remote"
 version = "0.1.0"
 authors = ["Yibo Cao <cyb@ieee.org>"]
-edition = "2018"
+edition = "2021"
 
 [features]
 dump_traffic = []
 
 [dependencies]
 tokio = { version = "1", features = ["rt", "net", "time", "signal", "macros", "io-util"] }
+abort-on-drop = "0"
 ordered-float = "2"
 num-traits = "0"
 socket2 = "0"

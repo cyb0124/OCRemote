@@ -3,8 +3,9 @@ use super::super::action::{ActionFuture, Call, Print};
 use super::super::factory::Factory;
 use super::super::item::Filter;
 use super::super::lua_value::call_result;
-use super::super::util::{alive, join_outputs, spawn, AbortOnDrop};
+use super::super::util::{alive, join_outputs, spawn};
 use super::{IntoProcess, Process};
+use abort_on_drop::ChildTask;
 use std::{
     cell::RefCell,
     future::Future,
@@ -28,7 +29,7 @@ macro_rules! impl_reactor_process {
     };
 }
 
-fn run_reactor<T, U, F>(this: &T, factory: &Factory, run: F) -> AbortOnDrop<Result<(), String>>
+fn run_reactor<T, U, F>(this: &T, factory: &Factory, run: F) -> ChildTask<Result<(), String>>
 where
     T: ReactorProcess,
     U: Future<Output = Result<(), String>>,
@@ -86,7 +87,7 @@ impl IntoProcess for HysteresisReactorConfig {
 }
 
 impl Process for HysteresisReactorProcess {
-    fn run(&self, factory: &Factory) -> AbortOnDrop<Result<(), String>> {
+    fn run(&self, factory: &Factory) -> ChildTask<Result<(), String>> {
         let weak = self.weak.clone();
         run_reactor(self, factory, |pv| async move {
             let action;
@@ -149,7 +150,7 @@ impl IntoProcess for ProportionalReactorConfig {
 fn to_percent(x: f64) -> i16 { (x * 100.0).round() as _ }
 
 impl Process for ProportionalReactorProcess {
-    fn run(&self, factory: &Factory) -> AbortOnDrop<Result<(), String>> {
+    fn run(&self, factory: &Factory) -> ChildTask<Result<(), String>> {
         let weak = self.weak.clone();
         run_reactor(self, factory, |pv| async move {
             let rod = to_percent(pv);
@@ -219,7 +220,7 @@ impl IntoProcess for PIDReactorConfig {
 }
 
 impl Process for PIDReactorProcess {
-    fn run(&self, factory: &Factory) -> AbortOnDrop<Result<(), String>> {
+    fn run(&self, factory: &Factory) -> ChildTask<Result<(), String>> {
         let weak = self.weak.clone();
         run_reactor(self, factory, |pv| async move {
             let rod;

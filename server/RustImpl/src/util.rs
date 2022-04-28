@@ -1,3 +1,4 @@
+use abort_on_drop::ChildTask;
 use std::{
     cell::RefCell,
     future::Future,
@@ -5,30 +6,14 @@ use std::{
     rc::{Rc, Weak},
     task::{Context, Poll, Waker},
 };
-use tokio::task::{spawn_local, JoinHandle};
+use tokio::task::spawn_local;
 
-pub struct AbortOnDrop<T>(Option<JoinHandle<T>>);
+pub fn spawn<T: 'static>(future: impl Future<Output = T> + 'static) -> ChildTask<T> { spawn_local(future).into() }
 
-impl<T> Drop for AbortOnDrop<T> {
-    fn drop(&mut self) {
-        if let Some(ref x) = self.0 {
-            x.abort()
-        }
-    }
-}
-
-impl<T> AbortOnDrop<T> {
-    pub async fn into_future(mut self) -> T { self.0.take().unwrap().await.unwrap() }
-}
-
-pub fn spawn<T: 'static>(future: impl Future<Output = T> + 'static) -> AbortOnDrop<T> {
-    AbortOnDrop(Some(spawn_local(future)))
-}
-
-pub async fn join_tasks(tasks: Vec<AbortOnDrop<Result<(), String>>>) -> Result<(), String> {
+pub async fn join_tasks(tasks: Vec<ChildTask<Result<(), String>>>) -> Result<(), String> {
     let mut result: Result<(), String> = Ok(());
     for task in tasks {
-        if let Err(e) = task.into_future().await {
+        if let Err(e) = task.await.unwrap() {
             if let Err(ref mut result) = result {
                 result.push_str("; ");
                 result.push_str(&e)
@@ -40,10 +25,10 @@ pub async fn join_tasks(tasks: Vec<AbortOnDrop<Result<(), String>>>) -> Result<(
     result
 }
 
-pub async fn join_outputs<T>(tasks: Vec<AbortOnDrop<Result<T, String>>>) -> Result<Vec<T>, String> {
+pub async fn join_outputs<T>(tasks: Vec<ChildTask<Result<T, String>>>) -> Result<Vec<T>, String> {
     let mut result: Result<Vec<T>, String> = Ok(Vec::new());
     for task in tasks {
-        match task.into_future().await {
+        match task.await.unwrap() {
             Err(e) => {
                 if let Err(ref mut result) = result {
                     result.push_str("; ");

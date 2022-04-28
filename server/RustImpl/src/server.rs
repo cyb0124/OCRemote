@@ -1,7 +1,8 @@
 use super::access::Access;
 use super::action::ActionRequest;
 use super::lua_value::{serialize, vec_to_table, Parser, Value};
-use super::util::{spawn, AbortOnDrop};
+use super::util::spawn;
+use abort_on_drop::ChildTask;
 use fnv::FnvHashMap;
 use socket2::{Domain, SockAddr, Socket, Type};
 use std::{
@@ -22,7 +23,7 @@ use tokio::{
 pub struct Server {
     clients: Option<Rc<RefCell<Client>>>,
     logins: FnvHashMap<String, Weak<RefCell<Client>>>,
-    _acceptor: AbortOnDrop<()>,
+    _acceptor: ChildTask<()>,
 }
 
 impl Drop for Server {
@@ -40,7 +41,7 @@ impl Drop for Server {
 
 enum WriterState {
     NotWriting(OwnedWriteHalf),
-    Writing(AbortOnDrop<()>),
+    Writing(ChildTask<()>),
     Invalid,
 }
 
@@ -51,12 +52,12 @@ struct Client {
     prev: Option<Weak<RefCell<Client>>>,
     server: Weak<RefCell<Server>>,
     login: Option<String>,
-    _reader: AbortOnDrop<()>,
+    _reader: ChildTask<()>,
     request_queue: VecDeque<Vec<Rc<RefCell<dyn ActionRequest>>>>,
     request_queue_size: usize,
     response_queue: VecDeque<Rc<RefCell<dyn ActionRequest>>>,
     writer: WriterState,
-    timeout: Option<AbortOnDrop<()>>,
+    timeout: Option<ChildTask<()>>,
 }
 
 impl Drop for Client {

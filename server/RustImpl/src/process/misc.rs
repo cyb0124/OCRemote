@@ -3,8 +3,9 @@ use super::super::action::{ActionFuture, Call, Print};
 use super::super::factory::Factory;
 use super::super::item::Filter;
 use super::super::lua_value::{call_result, Table};
-use super::super::util::{alive, join_tasks, spawn, AbortOnDrop};
+use super::super::util::{alive, join_tasks, spawn};
 use super::{IntoProcess, Process, RedstoneEmitterConfig, RedstoneEmitterProcess};
+use abort_on_drop::ChildTask;
 use std::{
     cell::RefCell,
     convert::TryInto,
@@ -29,7 +30,7 @@ impl<T: IntoProcess> IntoProcess for ConditionalConfig<T> {
 }
 
 impl<T: Process> Process for ConditionalProcess<T> {
-    fn run(&self, factory: &Factory) -> AbortOnDrop<Result<(), String>> {
+    fn run(&self, factory: &Factory) -> ChildTask<Result<(), String>> {
         if (self.condition)(factory) {
             self.child.borrow().run(factory)
         } else {
@@ -64,7 +65,7 @@ const COLORS: [&'static str; 16] = [
 ];
 
 impl Process for PlasticMixerProcess {
-    fn run(&self, factory: &Factory) -> AbortOnDrop<Result<(), String>> {
+    fn run(&self, factory: &Factory) -> ChildTask<Result<(), String>> {
         let (i, color, n_stored) = COLORS
             .iter()
             .enumerate()
@@ -148,7 +149,7 @@ impl IntoProcess for FluxNetworkConfig {
 }
 
 impl Process for FluxNetworkProcess {
-    fn run(&self, factory: &Factory) -> AbortOnDrop<Result<(), String>> {
+    fn run(&self, factory: &Factory) -> ChildTask<Result<(), String>> {
         let server = factory.borrow_server();
         let access = server.load_balance(&self.accesses).1;
         let action = ActionFuture::from(Call { addr: access.addr, func: "getEnergyInfo", args: Vec::new() });

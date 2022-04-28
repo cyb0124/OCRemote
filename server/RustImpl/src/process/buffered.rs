@@ -3,8 +3,9 @@ use super::super::action::{ActionFuture, Call};
 use super::super::factory::Factory;
 use super::super::item::{insert_into_inventory, jammer, Filter, InsertPlan, Item, ItemStack};
 use super::super::recipe::{compute_demands, resolve_inputs, Demand, Input, Output, Recipe};
-use super::super::util::{alive, join_outputs, join_tasks, spawn, AbortOnDrop};
+use super::super::util::{alive, join_outputs, join_tasks, spawn};
 use super::{extract_output, list_inv, scattering_insert, ExtractFilter, IntoProcess, InvProcess, Process, SlotFilter};
+use abort_on_drop::ChildTask;
 use fnv::FnvHashMap;
 use std::{
     cell::RefCell,
@@ -59,7 +60,7 @@ impl IntoProcess for BufferedConfig {
 }
 
 impl Process for BufferedProcess {
-    fn run(&self, factory: &Factory) -> AbortOnDrop<Result<(), String>> {
+    fn run(&self, factory: &Factory) -> ChildTask<Result<(), String>> {
         if self.config.to_extract.is_none() && self.config.stocks.is_empty() {
             if compute_demands(factory, &self.config.recipes).is_empty() {
                 return spawn(async { Ok(()) });
@@ -179,7 +180,7 @@ impl BufferedProcess {
         factory: &mut Factory,
         items: Vec<Rc<Item>>,
         plans: Vec<InsertPlan>,
-    ) -> AbortOnDrop<Result<(), String>> {
+    ) -> ChildTask<Result<(), String>> {
         let mut bus_slots = Vec::new();
         let slots_to_free = Rc::new(RefCell::new(Vec::new()));
         for (i_input, item) in items.into_iter().enumerate() {

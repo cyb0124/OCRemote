@@ -2,7 +2,8 @@ use super::access::{InvAccess, MEAccess};
 use super::action::{ActionFuture, Call, List, ListME, XferME};
 use super::factory::Factory;
 use super::item::{Filter, Item, ItemStack};
-use super::util::{alive, spawn, AbortOnDrop};
+use super::util::{alive, spawn};
+use abort_on_drop::ChildTask;
 use fnv::FnvHashMap;
 use std::{
     cell::{Cell, RefCell},
@@ -12,11 +13,11 @@ use std::{
 
 pub struct DepositResult {
     pub n_deposited: i32,
-    pub task: AbortOnDrop<Result<(), String>>,
+    pub task: ChildTask<Result<(), String>>,
 }
 
 pub trait Storage: 'static {
-    fn update(&self, factory: &Factory) -> AbortOnDrop<Result<(), String>>;
+    fn update(&self, factory: &Factory) -> ChildTask<Result<(), String>>;
     fn cleanup(&mut self);
     fn deposit_priority(&mut self, item: &Rc<Item>) -> Option<i32>;
     fn deposit(&mut self, factory: &Factory, stack: &ItemStack, bus_slot: usize) -> DepositResult;
@@ -28,7 +29,7 @@ pub trait IntoStorage {
 }
 
 pub trait Extractor {
-    fn extract(&self, factory: &Factory, size: i32, bus_slot: usize) -> AbortOnDrop<Result<(), String>>;
+    fn extract(&self, factory: &Factory, size: i32, bus_slot: usize) -> ChildTask<Result<(), String>>;
 }
 
 pub struct Provider {
@@ -84,7 +85,7 @@ impl IntoStorage for ChestConfig {
 }
 
 impl Storage for ChestStorage {
-    fn update(&self, factory: &Factory) -> AbortOnDrop<Result<(), String>> {
+    fn update(&self, factory: &Factory) -> ChildTask<Result<(), String>> {
         let server = factory.borrow_server();
         let access = server.load_balance(&self.config.accesses).1;
         let action = ActionFuture::from(List { addr: access.addr, side: access.inv_side });
@@ -167,7 +168,7 @@ impl Storage for ChestStorage {
 }
 
 impl Extractor for ChestExtractor {
-    fn extract(&self, factory: &Factory, size: i32, bus_slot: usize) -> AbortOnDrop<Result<(), String>> {
+    fn extract(&self, factory: &Factory, size: i32, bus_slot: usize) -> ChildTask<Result<(), String>> {
         let inv_slot = self.inv_slot;
         let server = factory.borrow_server();
         upgrade!(self.weak, this);
@@ -223,7 +224,7 @@ impl IntoStorage for DrawerConfig {
 }
 
 impl Storage for DrawerStorage {
-    fn update(&self, factory: &Factory) -> AbortOnDrop<Result<(), String>> {
+    fn update(&self, factory: &Factory) -> ChildTask<Result<(), String>> {
         let server = factory.borrow_server();
         let access = server.load_balance(&self.config.accesses).1;
         let action = ActionFuture::from(List { addr: access.addr, side: access.inv_side });
@@ -273,7 +274,7 @@ impl Storage for DrawerStorage {
 }
 
 impl Extractor for DrawerExtractor {
-    fn extract(&self, factory: &Factory, size: i32, bus_slot: usize) -> AbortOnDrop<Result<(), String>> {
+    fn extract(&self, factory: &Factory, size: i32, bus_slot: usize) -> ChildTask<Result<(), String>> {
         upgrade!(self.weak, this);
         let server = factory.borrow_server();
         let access = server.load_balance(&this.config.accesses).1;
@@ -324,7 +325,7 @@ impl IntoStorage for MEConfig {
 }
 
 impl Storage for MEStorage {
-    fn update(&self, factory: &Factory) -> AbortOnDrop<Result<(), String>> {
+    fn update(&self, factory: &Factory) -> ChildTask<Result<(), String>> {
         let server = factory.borrow_server();
         let access = server.load_balance(&self.config.accesses).1;
         let action = ActionFuture::from(ListME { addr: access.me_addr });
@@ -372,7 +373,7 @@ impl Storage for MEStorage {
 }
 
 impl Extractor for MEExtractor {
-    fn extract(&self, factory: &Factory, size: i32, bus_slot: usize) -> AbortOnDrop<Result<(), String>> {
+    fn extract(&self, factory: &Factory, size: i32, bus_slot: usize) -> ChildTask<Result<(), String>> {
         upgrade_mut!(self.weak, this);
         let server = factory.borrow_server();
         let accesses = &this.config.accesses;

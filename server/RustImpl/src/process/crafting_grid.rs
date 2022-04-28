@@ -5,8 +5,9 @@ use super::super::recipe::{
     compute_demands, resolve_inputs, CraftingGridRecipe, Demand, NonConsumable, ResolvedInputs,
 };
 use super::super::side::{DOWN, UP};
-use super::super::util::{alive, join_outputs, join_tasks, spawn, AbortOnDrop};
+use super::super::util::{alive, join_outputs, join_tasks, spawn};
 use super::{IntoProcess, Process};
+use abort_on_drop::ChildTask;
 use std::{
     cell::RefCell,
     cmp::min,
@@ -36,7 +37,7 @@ macro_rules! impl_crafting_grid_process {
     };
 }
 
-fn run_crafting_grid_process<T>(this: &T, factory: &Factory) -> AbortOnDrop<Result<(), String>>
+fn run_crafting_grid_process<T>(this: &T, factory: &Factory) -> ChildTask<Result<(), String>>
 where
     T: CraftingGridProcess,
 {
@@ -199,7 +200,7 @@ impl CraftingGridProcess for CraftingRobotProcess {
 }
 
 impl Process for CraftingRobotProcess {
-    fn run(&self, factory: &Factory) -> AbortOnDrop<Result<(), String>> { run_crafting_grid_process(self, factory) }
+    fn run(&self, factory: &Factory) -> ChildTask<Result<(), String>> { run_crafting_grid_process(self, factory) }
 }
 
 pub struct WorkbenchConfig {
@@ -279,5 +280,5 @@ impl CraftingGridProcess for WorkbenchProcess {
 }
 
 impl Process for WorkbenchProcess {
-    fn run(&self, factory: &Factory) -> AbortOnDrop<Result<(), String>> { run_crafting_grid_process(self, factory) }
+    fn run(&self, factory: &Factory) -> ChildTask<Result<(), String>> { run_crafting_grid_process(self, factory) }
 }

@@ -1,0 +1,14 @@
+1. Backport SlottedProcess max_sets from CCRemote
+2. Backport MultiInvSlottedProcess from CCRemote
+3. Separate storages
+4. Backport LowAlert from CCRemote
+5. Backport ItemCycleProcess from CCRemote
+6. Backport new output logic from CCRemote
+7. Backport emit_when_want_item output parameters from CCRemote
+8. Backport flexstr from CCRemote
+9. Backport config_util from CCRemote
+10. Change README to mostly describe the Rust implementation.
+    Deprecate the C++ version
+    All processes from both OC and CC
+    Example config
+    TurtleRC

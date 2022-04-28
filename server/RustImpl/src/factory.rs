@@ -4,7 +4,8 @@ use super::item::{Filter, Item, ItemStack};
 use super::process::{IntoProcess, Process};
 use super::server::Server;
 use super::storage::{DepositResult, Extractor, IntoStorage, Provider, Storage};
-use super::util::{alive, join_tasks, make_local_one_shot, spawn, AbortOnDrop, LocalReceiver, LocalSender};
+use super::util::{alive, join_tasks, make_local_one_shot, spawn, LocalReceiver, LocalSender};
+use abort_on_drop::ChildTask;
 use fnv::{FnvHashMap, FnvHashSet};
 use std::{
     cell::{Ref, RefCell},
@@ -82,7 +83,7 @@ pub struct FactoryConfig {
 
 pub struct Factory {
     weak: Weak<RefCell<Factory>>,
-    _task: AbortOnDrop<Result<(), String>>,
+    _task: ChildTask<Result<(), String>>,
     config: FactoryConfig,
     storages: Vec<Rc<RefCell<dyn Storage>>>,
     processes: Vec<Rc<RefCell<dyn Process>>>,
@@ -91,7 +92,7 @@ pub struct Factory {
     label_map: FnvHashMap<String, Vec<Rc<Item>>>,
     name_map: FnvHashMap<String, Vec<Rc<Item>>>,
 
-    bus_task: Option<AbortOnDrop<Result<(), String>>>,
+    bus_task: Option<ChildTask<Result<(), String>>>,
     bus_allocations: FnvHashSet<usize>,
     bus_wait_queue: VecDeque<LocalSender<usize>>,
     bus_free_queue: Vec<usize>,
@@ -231,7 +232,7 @@ impl Factory {
         }
     }
 
-    fn deposit(&self, bus_slot: usize, mut stack: ItemStack, tasks: &mut Vec<AbortOnDrop<Result<(), String>>>) {
+    fn deposit(&self, bus_slot: usize, mut stack: ItemStack, tasks: &mut Vec<ChildTask<Result<(), String>>>) {
         self.log(Print { text: format!("{}*{}", stack.item.label, stack.size), color: 0xFFA500, beep: None });
         while stack.size > 0 {
             let mut best: Option<(&Rc<RefCell<dyn Storage>>, i32)> = None;
@@ -309,7 +310,7 @@ async fn factory_main(factory: Weak<RefCell<Factory>>) -> Result<(), String> {
             }
         }
         if let Some(task) = bus_task {
-            task.into_future().await?
+            task.await.unwrap()?
         }
         let min_cycle_time = {
             alive_mut!(factory, this);
