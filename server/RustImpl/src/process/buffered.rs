@@ -2,7 +2,7 @@ use super::super::access::InvAccess;
 use super::super::action::{ActionFuture, Call};
 use super::super::factory::Factory;
 use super::super::item::{insert_into_inventory, jammer, Filter, InsertPlan, Item, ItemStack};
-use super::super::recipe::{compute_demands, resolve_inputs, Demand, Input, Output, Recipe};
+use super::super::recipe::{compute_demands, resolve_inputs, Demand, Input, Outputs, Recipe};
 use super::super::util::{alive, join_outputs, join_tasks, spawn};
 use super::{extract_output, list_inv, scattering_insert, ExtractFilter, IntoProcess, Inventory, Process, SlotFilter};
 use abort_on_drop::ChildTask;
@@ -28,7 +28,7 @@ impl BufferedInput {
 impl_input!(BufferedInput);
 
 pub struct BufferedRecipe {
-    pub outputs: Vec<Output>,
+    pub outputs: Box<dyn Outputs>,
     pub inputs: Vec<BufferedInput>,
     pub max_inputs: i32,
 }

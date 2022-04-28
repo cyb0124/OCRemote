@@ -45,17 +45,17 @@ pub fn build_factory() -> Rc<RefCell<Factory>> {
             to_extract: None,
             recipes: vec![
                 SlottedRecipe {
-                    outputs: vec![Output { item: label("Sand"), n_wanted: 64 }],
+                    outputs: Output::new(label("Sand"), 64),
                     inputs: vec![SlottedInput::new(label("Cobblestone"), 1, vec![0])],
                     max_per_slot: 8,
                 },
                 SlottedRecipe {
-                    outputs: vec![Output { item: label("Niter"), n_wanted: 64 }],
+                    outputs: Output::new(label("Niter"), 64),
                     inputs: vec![SlottedInput::new(label("Sandstone"), 1, vec![0])],
                     max_per_slot: 8,
                 },
                 SlottedRecipe {
-                    outputs: vec![Output { item: label("Pulverized Charcoal"), n_wanted: 64 }],
+                    outputs: Output::new(label("Pulverized Charcoal"), 64),
                     inputs: vec![SlottedInput::new(label("Charcoal"), 1, vec![0])],
                     max_per_slot: 8,
                 },
@@ -68,12 +68,12 @@ pub fn build_factory() -> Rc<RefCell<Factory>> {
             to_extract: None,
             recipes: vec![
                 BufferedRecipe {
-                    outputs: vec![Output { item: label("Sandstone"), n_wanted: 64 }],
+                    outputs: Output::new(label("Sandstone"), 64),
                     inputs: vec![BufferedInput::new(label("Sand"), 4)],
                     max_inputs: i32::MAX,
                 },
                 BufferedRecipe {
-                    outputs: vec![Output { item: label("Rich Phyto-Gro"), n_wanted: 64 }],
+                    outputs: Output::new(label("Rich Phyto-Gro"), 64),
                     inputs: vec![
                         BufferedInput::new(label("Pulverized Charcoal"), 1),
                         BufferedInput::new(label("Niter"), 1),
@@ -82,12 +82,12 @@ pub fn build_factory() -> Rc<RefCell<Factory>> {
                     max_inputs: i32::MAX,
                 },
                 BufferedRecipe {
-                    outputs: vec![Output { item: label("Compass"), n_wanted: 64 }],
+                    outputs: Output::new(label("Compass"), 64),
                     inputs: vec![BufferedInput::new(label("Iron Ingot"), 4), BufferedInput::new(label("Redstone"), 1)],
                     max_inputs: i32::MAX,
                 },
                 BufferedRecipe {
-                    outputs: vec![Output { item: label("Redstone"), n_wanted: 64 }],
+                    outputs: Output::new(label("Redstone"), 64),
                     inputs: vec![BufferedInput::new(label("Redstone Essence"), 9)],
                     max_inputs: i32::MAX,
                 },
@@ -101,7 +101,7 @@ pub fn build_factory() -> Rc<RefCell<Factory>> {
             input_slots: vec![0],
             to_extract: None,
             recipes: vec![SlottedRecipe {
-                outputs: vec![Output { item: label("Fluxed Phyto-Gro"), n_wanted: 64 }],
+                outputs: Output::new(label("Fluxed Phyto-Gro"), 64),
                 inputs: vec![SlottedInput::new(label("Rich Phyto-Gro"), 1, vec![0])],
                 max_per_slot: i32::MAX,
             }],
@@ -112,7 +112,7 @@ pub fn build_factory() -> Rc<RefCell<Factory>> {
             input_slots: vec![0, 1, 2, 3, 4, 5, 6],
             to_extract: None,
             recipes: vec![ScatteringRecipe::new(
-                vec![Output { item: label("Bio Fuel"), n_wanted: 64 }],
+                Output::new(label("Bio Fuel"), 64),
                 ScatteringInput::new(label("Potato")),
             )],
             max_per_slot: 4,
@@ -123,7 +123,7 @@ pub fn build_factory() -> Rc<RefCell<Factory>> {
             input_slots: vec![0, 1, 2, 3, 4, 5, 6],
             to_extract: None,
             recipes: vec![ScatteringRecipe::new(
-                vec![Output { item: label("Charcoal"), n_wanted: 64 }],
+                Output::new(label("Charcoal"), 64),
                 ScatteringInput::new(label("Birch Wood")),
             )],
             max_per_slot: 4,
@@ -135,17 +135,17 @@ pub fn build_factory() -> Rc<RefCell<Factory>> {
             to_extract: None,
             recipes: vec![
                 SlottedRecipe {
-                    outputs: vec![Output { item: label("Potato"), n_wanted: 64 }],
+                    outputs: Output::new(label("Potato"), 64),
                     inputs: vec![SlottedInput::new(label("Potato"), 1, vec![0]).allow_backup()],
                     max_per_slot: 4,
                 },
                 SlottedRecipe {
-                    outputs: vec![Output { item: label("Redstone Essence"), n_wanted: 64 }],
+                    outputs: Output::new(label("Redstone Essence"), 64),
                     inputs: vec![SlottedInput::new(label("Redstone Seeds"), 1, vec![0])],
                     max_per_slot: 4,
                 },
                 SlottedRecipe {
-                    outputs: vec![Output { item: label("Birch Wood"), n_wanted: 64 }],
+                    outputs: Output::new(label("Birch Wood"), 64),
                     inputs: vec![SlottedInput::new(label("Birch Sapling"), 1, vec![0])],
                     max_per_slot: 4,
                 },
@@ -157,7 +157,7 @@ pub fn build_factory() -> Rc<RefCell<Factory>> {
             input_slots: vec![0, 1],
             to_extract: None,
             recipes: vec![SlottedRecipe {
-                outputs: vec![Output { item: label("Rich Slag"), n_wanted: 64 }],
+                outputs: Output::new(label("Rich Slag"), 64),
                 inputs: vec![
                     SlottedInput::new(label("Sand"), 1, vec![0]),
                     SlottedInput::new(label("Compass"), 1, vec![1]),
@@ -172,17 +172,17 @@ pub fn build_factory() -> Rc<RefCell<Factory>> {
             to_extract: None,
             recipes: vec![
                 BufferedRecipe {
-                    outputs: vec![],
+                    outputs: ignore_outputs(0.),
                     inputs: vec![BufferedInput::new(label("Poisonous Potato"), 1).extra_backup(64)],
                     max_inputs: i32::MAX,
                 },
                 BufferedRecipe {
-                    outputs: vec![],
+                    outputs: ignore_outputs(0.),
                     inputs: vec![BufferedInput::new(label("Redstone Seeds"), 1).extra_backup(64)],
                     max_inputs: i32::MAX,
                 },
                 BufferedRecipe {
-                    outputs: vec![],
+                    outputs: ignore_outputs(0.),
                     inputs: vec![BufferedInput::new(label("Birch Sapling"), 1).extra_backup(64)],
                     max_inputs: i32::MAX,
                 },

@@ -1,11 +1,60 @@
 use super::factory::Factory;
 use super::item::{Filter, Item};
 use fnv::FnvHashMap;
-use std::{cmp::min, collections::hash_map::Entry, rc::Rc};
+use std::{
+    cmp::{max_by, min, min_by},
+    collections::hash_map::Entry,
+    rc::Rc,
+};
+
+pub trait Outputs {
+    fn get_priority(&self, factory: &Factory) -> Option<f64>;
+}
+
+impl<T: Fn(&Factory) -> Option<f64>> Outputs for T {
+    fn get_priority(&self, factory: &Factory) -> Option<f64> { self(factory) }
+}
+
+pub trait BoxedOutputs {
+    fn and(self, other: Self) -> Self;
+    fn or(self, other: Self) -> Self;
+}
+
+impl BoxedOutputs for Box<dyn Outputs> {
+    fn and(self, other: Self) -> Self {
+        Box::new(move |factory: &_| {
+            max_by(self.get_priority(factory), other.get_priority(factory), |x, y| x.partial_cmp(y).unwrap())
+        })
+    }
+
+    fn or(self, other: Self) -> Self {
+        Box::new(move |factory: &_| {
+            min_by(self.get_priority(factory), other.get_priority(factory), |x, y| x.partial_cmp(y).unwrap())
+        })
+    }
+}
+
+pub fn ignore_outputs(priority: f64) -> Box<dyn Outputs> { Box::new(move |_: &_| Some(priority)) }
 
 pub struct Output {
     pub item: Filter,
     pub n_wanted: i32,
+}
+
+impl Output {
+    pub fn new(item: Filter, n_wanted: i32) -> Box<dyn Outputs> { Box::new(Self { item, n_wanted }) }
+}
+
+impl Outputs for Output {
+    fn get_priority(&self, factory: &Factory) -> Option<f64> {
+        let n_stored = factory.search_n_stored(&self.item);
+        let n_needed = self.n_wanted - n_stored;
+        if n_needed > 0 {
+            Some(n_needed as f64 / self.n_wanted as f64)
+        } else {
+            None
+        }
+    }
 }
 
 pub trait Input {
@@ -40,7 +89,7 @@ macro_rules! impl_input {
 
 pub trait Recipe {
     type In: Input;
-    fn get_outputs(&self) -> &Vec<Output>;
+    fn get_outputs(&self) -> &dyn Outputs;
     fn get_inputs(&self) -> &Vec<Self::In>;
 }
 
@@ -48,7 +97,7 @@ macro_rules! impl_recipe {
     ($r:ident, $i:ident) => {
         impl Recipe for $r {
             type In = $i;
-            fn get_outputs(&self) -> &Vec<Output> { &self.outputs }
+            fn get_outputs(&self) -> &dyn Outputs { &*self.outputs }
             fn get_inputs(&self) -> &Vec<$i> { &self.inputs }
         }
     };
@@ -110,34 +159,19 @@ pub fn resolve_inputs(factory: &Factory, recipe: &impl Recipe) -> Option<Resolve
 pub struct Demand {
     pub i_recipe: usize,
     pub inputs: ResolvedInputs,
-    fullness: f64,
+    priority: f64,
 }
 
 pub fn compute_demands(factory: &Factory, recipes: &Vec<impl Recipe>) -> Vec<Demand> {
     let mut result = Vec::new();
     for (i_recipe, recipe) in recipes.iter().enumerate() {
-        let mut fullness: f64 = 2.0;
-        if !recipe.get_outputs().is_empty() {
-            let mut full = true;
-            for output in recipe.get_outputs() {
-                let n_stored = factory.search_n_stored(&output.item);
-                if n_stored < output.n_wanted {
-                    full = false;
-                    fullness = fullness.min(n_stored as f64 / output.n_wanted as f64);
-                    if n_stored <= 0 {
-                        break;
-                    }
-                }
+        if let Some(priority) = recipe.get_outputs().get_priority(factory) {
+            if let Some(inputs) = resolve_inputs(factory, recipe) {
+                result.push(Demand { i_recipe, inputs, priority })
             }
-            if full {
-                continue;
-            }
-        }
-        if let Some(inputs) = resolve_inputs(factory, recipe) {
-            result.push(Demand { i_recipe, inputs, fullness })
         }
     }
-    result.sort_unstable_by(|x: &Demand, y: &Demand| x.fullness.partial_cmp(&y.fullness).unwrap());
+    result.sort_unstable_by(|x: &Demand, y: &Demand| x.priority.partial_cmp(&y.priority).unwrap().reverse());
     result
 }
 
@@ -166,7 +200,7 @@ pub struct NonConsumable {
 }
 
 pub struct CraftingGridRecipe {
-    pub outputs: Vec<Output>,
+    pub outputs: Box<dyn Outputs>,
     // slots:
     //   0, 1, 2
     //   3, 4, 5

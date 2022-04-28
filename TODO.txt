@@ -1,13 +1,8 @@
 1. Backport SlottedProcess max_sets from CCRemote
 2. Backport MultiInvSlottedProcess from CCRemote
-3. Separate storages
-4. Remove factory argument from storages
-5. InvProcess -> Inventory
-4. Backport LowAlert from CCRemote
-5. Backport ItemCycleProcess from CCRemote
-6. Backport new output logic from CCRemote
-7. Backport emit_when_want_item output parameters from CCRemote
-10. Change README to mostly describe the Rust implementation.
+3. Backport LowAlert from CCRemote
+4. Backport ItemCycleProcess from CCRemote
+5. Change README to mostly describe the Rust implementation.
     Deprecate the C++ version
     All processes from both OC and CC
     Example config

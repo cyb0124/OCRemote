@@ -1,8 +1,8 @@
 use super::super::access::SidedAccess;
 use super::super::action::{ActionFuture, Call, Print};
 use super::super::factory::Factory;
-use super::super::item::Filter;
 use super::super::lua_value::call_result;
+use super::super::recipe::Outputs;
 use super::super::util::{alive, spawn};
 use super::{IntoProcess, Process};
 use abort_on_drop::ChildTask;
@@ -13,14 +13,13 @@ use std::{
 };
 
 pub type RedstoneOutput = Box<dyn Fn(&Factory) -> i32>;
-pub fn emit_when_want_item(name: LocalStr, item: Filter, n_wanted: i32) -> RedstoneOutput {
+pub fn emit_when_want_item(name: LocalStr, off: i32, on: i32, outputs: Box<dyn Outputs>) -> RedstoneOutput {
     Box::new(move |factory| {
-        if factory.search_n_stored(&item) < n_wanted {
+        if outputs.get_priority(&factory).is_some() {
             factory.log(Print { text: local_fmt!("{}: on", name), color: 0xFF4FFF, beep: None });
-            15
-        } else {
-            0
+            return on;
         }
+        off
     })
 }
 

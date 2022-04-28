@@ -2,7 +2,7 @@ use super::super::access::InvAccess;
 use super::super::action::{ActionFuture, Call};
 use super::super::factory::Factory;
 use super::super::item::ItemStack;
-use super::super::recipe::{compute_demands, Demand, Output, Recipe, SlottedInput};
+use super::super::recipe::{compute_demands, Demand, Outputs, Recipe, SlottedInput};
 use super::super::util::{alive, join_outputs, join_tasks, spawn};
 use super::{extract_output, list_inv, ExtractFilter, IntoProcess, Inventory, Process};
 use abort_on_drop::ChildTask;
@@ -15,7 +15,7 @@ use std::{
 };
 
 pub struct SlottedRecipe {
-    pub outputs: Vec<Output>,
+    pub outputs: Box<dyn Outputs>,
     pub inputs: Vec<SlottedInput>,
     pub max_per_slot: i32,
 }

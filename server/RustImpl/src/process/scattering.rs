@@ -1,7 +1,7 @@
 use super::super::access::InvAccess;
 use super::super::factory::Factory;
 use super::super::item::{Filter, ItemStack};
-use super::super::recipe::{compute_demands, resolve_inputs, Demand, Input, Output, Recipe};
+use super::super::recipe::{compute_demands, resolve_inputs, Demand, Input, Outputs, Recipe};
 use super::super::util::{alive, join_tasks, spawn};
 use super::{extract_output, list_inv, scattering_insert, ExtractFilter, IntoProcess, Inventory, Process};
 use abort_on_drop::ChildTask;
@@ -27,12 +27,12 @@ impl ScatteringInput {
 impl_input!(ScatteringInput);
 
 pub struct ScatteringRecipe {
-    outputs: Vec<Output>,
+    outputs: Box<dyn Outputs>,
     inputs: Vec<ScatteringInput>,
 }
 
 impl ScatteringRecipe {
-    pub fn new(outputs: Vec<Output>, input: ScatteringInput) -> Self {
+    pub fn new(outputs: Box<dyn Outputs>, input: ScatteringInput) -> Self {
         ScatteringRecipe { outputs, inputs: vec![input] }
     }
 }
