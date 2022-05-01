@@ -5,10 +5,12 @@ Main features:
   - User doesn't request crafting from this system. Instead, all craftable items are kept a constant stock of.
   - All input/output/crafting rules are configured as code. This allows extremely compact setups, such as defining 100+ recipes for a single machine, and specifying input, output and crafting all on the same side of a machine.
   - Robust handling of many types of automations, from simple ore-processing to complex multi-block/in-world crafting that requires you to send inputs in the exact amount/proportion to different locations like [this](https://www.youtube.com/watch?v=HKk70owisso). Items in machine buffers can also be precisely regulated: no clogging should ever happen.
-  - Prioritization of recipes based on demand. (e.g. deciding which ore to process first).
+  - Works with probabilistic recipes.
+  - Tolerates disruptions in the crafting process (e.g. even if someone manually takes inputs out from machines, auto-crafting still won't get stuck).
+  - Prioritization of recipes based on demand (e.g. deciding which ore to process first).
   - Compressing items for storage, and unpacking them before processing.
   - Preventing recipes from using up the last seed/sapling items.
-  - Allow defining rules to process/discard excessive items (e.g. saplings from tree farm).
+  - Allow defining rules to process/discard excessive items in storage (e.g. secondary outputs).
   - Multiple computers can be used to parallelize item-transfer, achieving more than 1 stack per tick of throughput.
 
 Please watch the [Demo Video](https://www.youtube.com/watch?v=Llr-lM0pIME) for an overview.
