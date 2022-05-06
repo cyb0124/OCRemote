@@ -150,18 +150,18 @@ where
     })
 }
 
+mod blocking_output;
 mod buffered;
 mod crafting_grid;
-mod inputless;
 mod misc;
 mod multi_inv_slotted;
 mod reactor;
 mod redstone;
 mod scattering;
 mod slotted;
+pub use blocking_output::*;
 pub use buffered::*;
 pub use crafting_grid::*;
-pub use inputless::*;
 pub use misc::*;
 pub use multi_inv_slotted::*;
 pub use reactor::*;

@@ -34,9 +34,9 @@ OCRemote currently supports 3 different types of storages:
     OpenComputers' access to ME system is slow (throttled), so OCRemote is able to use multiple computers to access the same ME system to parallelize accesses.
 
 ## Auto Crafting
-OCRemote doesn't analyze any tree structure for recipe dependencies; instead it will simply start to craft an item if the amount stored of that item falls below a set point and if all ingredients are available. This will eventually propagate through all recipe dependencies. If multiple recipes use the same machine, OCRemote will prefer the recipe with the lowest percentage amount stored. All processes can also regulate the amount of items in the machine buffer to prevent bloating the machine buffers. OCRemote currently supports the following types of auto-crafting processes:
+OCRemote doesn't analyze any tree structure for recipe dependencies; instead it will simply start to craft an item if the amount stored of that item falls below a set point and if all ingredients are available. This will eventually propagate through all recipe dependencies. If multiple recipes use the same machine, OCRemote will prefer the recipe with the lowest percentage amount stored. All processes can also regulate the amount of items in the machine buffer. OCRemote currently supports the following types of auto-crafting processes:
   - **Slotted**\
-    This process is intended for machines that can only run 1 recipe at once and the input items need to go into specific slot with the correct ratio. If there are already items in the machine, OCRemote will only send additional inputs that match the in-progress recipe.
+    This process is intended for machines that can only run 1 recipe at once and the input items need to go into specific slot with the correct ratio. If there are already items in the machine, OCRemote will only send additional inputs that match the in-progress recipe. Maximum sets of inputs in the machine buffer can be regulated.
   - **CraftingRobot**\
     This process uses robots to handle all crafting-grid recipes. It also allows non-consumable items in recipes (e.g. Pam's Harvestcraft recipes that require cookwares, or master infusion crystal). Multiple robots can be used for parallelization.
   - **RFToolsControlWorkbench**\
@@ -53,8 +53,8 @@ OCRemote doesn't analyze any tree structure for recipe dependencies; instead it 
     - Automating lightning crafting ([video](https://www.youtube.com/watch?v=dX8pQmfp4FQ))
   - **Scattering**\
     This process is intended for machine that can run multiple recipes at once but independently for each slot (e.g. Mekanism factory). This process will try to spread out input items among slots to help with parallelization.
-  - **Inputless**\
-    This process handles machines that passively generate outputs (e.g. cobblestone generators).
+  - **BlockingOutput**\
+    This process extracts output items from machine buffer, but only if we don't have enough of that item stored. This is generally used as the output stage of a processing pipeline, where the inputs are already continuously supplied and the processing would block if output is not extracted.
   - **RedstoneConditional**\
     This process conditionally executes another process based on a redstone signal. This is useful for crafting processes that require items to be dropped on the ground (e.g. terrasteel crafting and Sky Resources 2 combustion). In these cases, redstone can be used to detect the number of items already on the ground to prevent dropping excessive inputs.
   - **RedstoneEmitter**\

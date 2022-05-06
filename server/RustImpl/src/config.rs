@@ -33,7 +33,7 @@ pub fn build_factory() -> Rc<RefCell<Factory>> {
             max_recipe_inputs: 0,
             stocks: vec![BufferedInput::new(label("Bio Fuel"), 64), BufferedInput::new(label("Fluxed Phyto-Gro"), 64)],
         });
-        factory.add_process(InputlessConfig {
+        factory.add_process(BlockingOutputConfig {
             accesses: vec![InvAccess { client: s("1a"), addr: s("f59"), bus_side: EAST, inv_side: UP }],
             slot_filter: None,
             outputs: vec![Output { item: label("Cobblestone"), n_wanted: 64 }],

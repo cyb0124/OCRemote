@@ -14,33 +14,33 @@ use std::{
     rc::{Rc, Weak},
 };
 
-pub struct InputlessConfig {
+pub struct BlockingOutputConfig {
     pub accesses: Vec<InvAccess>,
     pub slot_filter: Option<SlotFilter>,
     pub outputs: Vec<Output>,
 }
 
-pub struct InputlessProcess {
-    weak: Weak<RefCell<InputlessProcess>>,
-    config: InputlessConfig,
+pub struct BlockingOutputProcess {
+    weak: Weak<RefCell<BlockingOutputProcess>>,
+    config: BlockingOutputConfig,
     factory: Weak<RefCell<Factory>>,
 }
 
-impl_inventory!(InputlessProcess);
+impl_inventory!(BlockingOutputProcess);
 
-impl IntoProcess for InputlessConfig {
-    type Output = InputlessProcess;
+impl IntoProcess for BlockingOutputConfig {
+    type Output = BlockingOutputProcess;
     fn into_process(self, factory: &Weak<RefCell<Factory>>) -> Rc<RefCell<Self::Output>> {
         Rc::new_cyclic(|weak| RefCell::new(Self::Output { weak: weak.clone(), config: self, factory: factory.clone() }))
     }
 }
 
-struct InputlessInfo {
+struct Info {
     n_stored: i32,
     n_wanted: i32,
 }
 
-impl Process for InputlessProcess {
+impl Process for BlockingOutputProcess {
     fn run(&self, factory: &Factory) -> ChildTask<Result<(), LocalStr>> {
         let mut enough = true;
         for output in &self.config.outputs {
@@ -60,7 +60,7 @@ impl Process for InputlessProcess {
             {
                 alive!(weak, this);
                 upgrade_mut!(this.factory, factory);
-                let mut infos = FnvHashMap::<&Rc<Item>, InputlessInfo>::default();
+                let mut infos = FnvHashMap::<&Rc<Item>, Info>::default();
                 for (slot, stack) in stacks.iter().enumerate() {
                     if let Some(ref slot_filter) = this.config.slot_filter {
                         if !slot_filter(slot) {
@@ -71,8 +71,7 @@ impl Process for InputlessProcess {
                         let info = match infos.entry(&stack.item) {
                             Entry::Occupied(entry) => entry.into_mut(),
                             Entry::Vacant(entry) => {
-                                let mut info =
-                                    InputlessInfo { n_wanted: 0, n_stored: factory.get_n_stored(&stack.item) };
+                                let mut info = Info { n_wanted: 0, n_stored: factory.get_n_stored(&stack.item) };
                                 for output in &this.config.outputs {
                                     if output.item.apply(&stack.item) {
                                         info.n_wanted = max(info.n_wanted, output.n_wanted)
