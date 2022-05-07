@@ -62,7 +62,7 @@ OCRemote doesn't analyze any tree structure for recipe dependencies; instead it 
   - **ItemCycle**\
     This process cycles through sending different items to an inventory. This allows automating Gourmaryllis with just one dropper.
   - **LowAlert**\
-    This process prints messages on the screen if the stored amount of specified items is low.
+    This process prints messages on the screen if the stored amount of specified items is low. It's recommended to use this process to keep track of recipe inputs that are not yet automated.
   - **ReactorHysteresis**/**ReactorProportional**/**ProcessReactorPID** (OpenComputers only)\
     Hysteresis/proportional/PID feedback controller for big/extreme reactors.
     These processes can also force the reactor to max output if cyanite stored is low.
