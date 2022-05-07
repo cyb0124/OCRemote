@@ -7,7 +7,7 @@ Main features:
   - Robust handling of many types of automations, from simple ore-processing to complex multi-block/in-world crafting that requires you to send inputs in the exact amount/proportion to different locations like [this](https://www.youtube.com/watch?v=HKk70owisso). Items in machine buffers can also be precisely regulated: no clogging should ever happen.
   - Works with probabilistic recipes.
   - Tolerates disruptions in the crafting process (e.g. even if someone manually takes inputs out from machines, auto-crafting still won't get stuck).
-  - Prioritization of recipes based on demand (e.g. deciding which ore to process first).
+  - Prioritization of recipes and inputs (e.g. process the most needed ore first; use the most abundant input variant).
   - Compressing items for storage, and unpacking them before processing.
   - Preventing recipes from using up the last seed/sapling items.
   - Allow defining rules to process/discard excessive items in storage (e.g. secondary outputs).
