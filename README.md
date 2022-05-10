@@ -70,6 +70,8 @@ OCRemote doesn't analyze any tree structure for recipe dependencies; instead it 
     This process automatically sets PneumaticCraft's plastic mixer's color setting to produce the plastic that has the lowest amount stored.
   - **FluxNetwork** (OpenComputers only)\
     This process reads the energy level of a FluxNetwork and emits redstone signal based on user-defined rules.
+  - **Turtle**/**Drone** (ComputerCraft only)\
+    These processes allow programming Turtle or PneumaticCraft's drones within OCRemote. States of the turtle/drone will be managed by the OCRemote server, and the in-game turtle/drone will execute actions sent by the server as programmed by the user.
   - **SyncAndRestock** (ComputerCraft only)\
     This process extracts or restocks an inventory upon receiving a request via redstone, and sends out a completion signal upon finishing the request. It is mainly used to dock and restock moving structures from the Create mod.
 
@@ -80,7 +82,7 @@ The following image shows how common recipes are specified.\
 ![Configuration of common recipes](recipe-help.png "Configuration of common recipes")
 
 ## Usage for ComputerCraft
-The code for ComputerCraft is in another repository [here](https://github.com/cyb0124/CCRemote). The procedure is similar to OpenComputers, but instead of flashing the loader script to an EEPROM, put it in a file named `startup`.
+The code for ComputerCraft is in another repository [here](https://github.com/cyb0124/CCRemote). The procedure is similar to OpenComputers, but instead of flashing the loader script to an EEPROM, put it in a file named `startup`. Besides storage & automation, the ComputerCraft version also includes a command-line tool for remote-controlling turtles.
 
 ### Old C++ Version
 The server program was originally developed in C++ and later rewritten in Rust. The old C++ version is still included in the repository [here](server/CPPImpl) and available for use, but is no longer maintained and lacks some features.
