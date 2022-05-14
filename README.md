@@ -5,20 +5,15 @@ Main features:
   - User doesn't request crafting from this system. Instead, all craftable items are kept a constant stock of.
   - All input/output/crafting rules are configured as code. This allows extremely compact setups, such as defining 100+ recipes for a single machine, and specifying input, output and crafting all on the same side of a machine.
   - Robust handling of many types of automations, from simple ore-processing to complex multi-block/in-world crafting that requires you to send inputs in the exact amount/proportion to different locations like [this](https://www.youtube.com/watch?v=HKk70owisso). Items in machine buffers can also be precisely regulated: no clogging should ever happen.
-  - Works with probabilistic recipes.
+  - Works with probabilistic recipes and recipes that give back inputs.
   - Tolerates disruptions in the crafting process (e.g. even if someone manually takes inputs out from machines, auto-crafting still won't get stuck).
   - Prioritization of recipes and inputs (e.g. process the most needed ore first; use the most abundant input variant).
   - Compressing items for storage, and unpacking them before processing.
-  - Preventing recipes from using up the last seed/sapling items.
+  - Preventing recipes from using up the last seed items for recipe loops that multiply items.
   - Allow defining rules to process/discard excessive items in storage (e.g. secondary outputs).
   - Multiple computers can be used to parallelize item-transfer, achieving more than 1 stack per tick of throughput.
 
 Please watch the [Demo Video](https://www.youtube.com/watch?v=Llr-lM0pIME) for an overview.
-
-## Server, Clients and the Asynchronous Architecture
-OCRemote includes a TCP server program running outside Minecraft. All decision-makings happen in the server. The computers in minecraft world connect to the server as clients to execute world-interaction tasks scheduled by the server. Multiple clients can connect to the same server to parallelize task execution and balance the load. In OCRemote, crafting processes can be interleaved with each other. For example, when a process starts, it needs to send a task to a computer to query the inventory of the machine, and wait for the response. Then, it needs to allocate some temporary storage space for transporting items to the machine, and if none is available, add itself to a wait-queue so that it can be resumed when space becomes available. During the waiting, other computers tasked by other processes could have moved items in and out of the storages, or transported items between machines. The design of OCRemote's server makes sure race conditions caused by reentrance are correctly handled so that no inconsistency could be caused by the asynchronous process execution.
-
-Note: it is safe to terminate the server at any time. However, it is not safe to shutdown the computer in Minecraft while the server is running, as it may cause incomplete set of input items to be sent to machines.
 
 ## Bus
 OCRemote requires a shared inventory to temporarily hold items for transferring. This inventory is called as the "bus" in the source code.\
@@ -54,7 +49,9 @@ OCRemote doesn't analyze any tree structure for recipe dependencies; instead it 
   - **Scattering**\
     This process is intended for machine that can run multiple recipes at once but independently for each slot (e.g. Mekanism factory). This process will try to spread out input items among slots to help with parallelization.
   - **BlockingOutput**\
-    This process extracts output items from machine buffer, but only if we don't have enough of that item stored. This is generally used as the output stage of a processing pipeline, where the inputs are already continuously supplied and the processing would block if output is not extracted.
+    This process extracts output items from machine buffer, but only if we don't have enough of that item stored. This is generally used as the output stage of a processing pipeline, where the inputs are already continuously supplied and the processing would block if output is not extracted. This can also be used to extract the correct slate from BM's altar, so that all slates can be automated using the same altar.
+  - **Conditional**\
+    This process conditionally executes another process based on user-defined rules that query stored items. This can be used, for example, to automatically swap the mob type of IF's Mob Duplicator.
   - **RedstoneConditional**\
     This process conditionally executes another process based on a redstone signal. This is useful for crafting processes that require items to be dropped on the ground (e.g. terrasteel crafting and Sky Resources 2 combustion). In these cases, redstone can be used to detect the number of items already on the ground to prevent dropping excessive inputs.
   - **RedstoneEmitter**\
@@ -74,6 +71,11 @@ OCRemote doesn't analyze any tree structure for recipe dependencies; instead it 
     These processes allow programming Turtle or PneumaticCraft's drones within OCRemote. States of the turtle/drone will be managed by the OCRemote server, and the in-game turtle/drone will execute actions sent by the server as programmed by the user.
   - **SyncAndRestock** (ComputerCraft only)\
     This process extracts or restocks an inventory upon receiving a request via redstone, and sends out a completion signal upon finishing the request. It is mainly used to dock and restock moving structures from the Create mod.
+
+## External Server and the Asynchronous Architecture
+OCRemote includes a TCP server program running outside Minecraft. All decision-makings happen in this external server. The computers in Minecraft only execute world-interaction tasks scheduled by the server. This makes OCRemote server-friendly, and allows you to control and monitor your base's storage and automation without needing to log into the game. Multiple computers can connect to the same server to parallelize task execution and balance the load. In OCRemote, crafting processes can be interleaved with each other. For example, when a process starts, it needs to send a task to a computer to query the inventory of the machine, and wait for the response. Then, it needs to allocate some temporary storage space for transporting items to the machine, and if none is available, add itself to a wait-queue so that it can be resumed when space becomes available. During the waiting, other computers tasked by other processes could have moved items in and out of the storages, or transported items between machines. The design of OCRemote's server makes sure race conditions caused by reentrance are correctly handled so that no inconsistency could be caused by the asynchronous process execution.
+
+Note: it is safe to terminate the server at any time. However, it is not safe to shutdown the computer in Minecraft while the server is running, as it may cause incomplete set of input items to be sent to machines.
 
 ## Usage for OpenComputers
 The storage/auto-crafting configuration is a part of the server program [here](server/RustImpl/src/config.rs). It contains a sample configuration which you can adapt for your own use. To use OCRemote, you need to build and run the [server program](server/RustImpl) on a server that can be reached from OpenComputers' Internet Card. The server requires a [Rust nightly toolchain](https://rustup.rs/) to build. To setup the computers in Minecraft, edit the last line of the [loader script](client/loader.lua) and flash it to an EEPROM (the computers are meant to run without any OS or storage medium). The last line of the loader script specifies the server address, server port, client name and the screen resolution.

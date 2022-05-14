@@ -128,9 +128,8 @@ where
                         let mut group = Vec::new();
                         let recipe = &this.get_recipes()[i_recipe];
                         for (i_input, input) in recipe.inputs.iter().enumerate() {
-                            let size_per_slot = input.size / input.slots.len() as i32;
                             for inv_slot in &input.slots {
-                                T::load_input(&mut group, access, bus_slots[i_input], *inv_slot, size_per_slot * n_sets)
+                                T::load_input(&mut group, access, bus_slots[i_input], *inv_slot, n_sets)
                             }
                         }
                         for non_consumable in &recipe.non_consumables {
