@@ -80,7 +80,7 @@ impl Process for BufferedProcess {
                 'slot: for (slot, stack) in stacks.iter_mut().enumerate() {
                     if let Some(ref to_extract) = this.config.to_extract {
                         if let Some(some_stack) = stack {
-                            if to_extract(slot, some_stack) {
+                            if to_extract(factory, slot, some_stack) {
                                 tasks.push(extract_output(this, factory, slot, some_stack.item.max_size));
                                 *stack = Some(ItemStack { item: jammer(), size: 1 });
                                 continue 'slot;

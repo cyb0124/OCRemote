@@ -84,7 +84,7 @@ impl Process for SlottedProcess {
                         if let Some(existing_input) = existing_inputs.get_mut(&slot) {
                             *existing_input = Some(stack)
                         } else if let Some(ref to_extract) = this.config.to_extract {
-                            if to_extract(slot, &stack) {
+                            if to_extract(factory, slot, &stack) {
                                 tasks.push(extract_output(this, factory, slot, stack.item.max_size))
                             }
                         }

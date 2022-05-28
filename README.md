@@ -1,19 +1,20 @@
 # OCRemote
-OCRemote is a ComputerCraft/OpenComputers system for item-storage and multi-step parallelized automations. It allows you to build a network of storages and machines similar to an ME system. It is designed to handle heavy automation workloads seen in expert-mode modpacks.
+OCRemote is a ComputerCraft/OpenComputers system for item-storage and multi-step parallelized automations. It allows you to build a network of storages and machines similar to an ME or RS system. It is designed to handle heavy automation workloads seen in expert-mode modpacks.
 
 Main features:
   - User doesn't request crafting from this system. Instead, all craftable items are kept a constant stock of.
   - All input/output/crafting rules are configured as code. This allows extremely compact setups, such as defining 100+ recipes for a single machine, and specifying input, output and crafting all on the same side of a machine.
   - Robust handling of many types of automations, from simple ore-processing to complex multi-block/in-world crafting that requires you to send inputs in the exact amount/proportion to different locations like [this](https://www.youtube.com/watch?v=HKk70owisso). Items in machine buffers can also be precisely regulated: no clogging should ever happen.
-  - Works with probabilistic recipes and recipes that give back inputs.
-  - Tolerates disruptions in the crafting process (e.g. even if someone manually takes inputs out from machines, auto-crafting still won't get stuck).
+  - Works with probabilistic/RNG recipes and recipes that give back inputs.
+  - Support rule-based recipe inputs/outputs, such as "any item whose name ends with 'Ore'", and "any sword that's more than 50% damaged".
   - Prioritization of recipes and inputs (e.g. process the most needed ore first; use the most abundant input variant).
-  - Compressing items for storage, and unpacking them before processing.
   - Preventing recipes from using up the last seed items for recipe loops that multiply items.
+  - Allow defining rules to compress items for storage, and unpack them before processing.
   - Allow defining rules to process/discard excessive items in storage (e.g. secondary outputs).
+  - Tolerates disruptions in the crafting process (e.g. even if someone manually takes inputs out from machines, auto-crafting still won't get stuck).
   - Multiple computers can be used to parallelize item-transfer, achieving more than 1 stack per tick of throughput.
 
-Please watch the [Demo Video](https://www.youtube.com/watch?v=Llr-lM0pIME) for an overview.
+Please watch the [Demo](https://www.youtube.com/watch?v=Llr-lM0pIME) for an overview, or the [Endgame Demo](https://www.youtube.com/watch?v=Il_Ab-WKUgg) for an example endgame base setup.
 
 ## Bus
 OCRemote requires a shared inventory to temporarily hold items for transferring. This inventory is called as the "bus" in the source code.\

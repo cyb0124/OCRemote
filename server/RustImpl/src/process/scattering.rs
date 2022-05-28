@@ -87,7 +87,7 @@ impl Process for ScatteringProcess {
                 if let Some(ref to_extract) = this.config.to_extract {
                     for (slot, stack) in stacks.iter().enumerate() {
                         if let Some(stack) = stack {
-                            if !is_input_slot[slot] && to_extract(slot, stack) {
+                            if !is_input_slot[slot] && to_extract(factory, slot, stack) {
                                 tasks.push(extract_output(this, factory, slot, stack.item.max_size))
                             }
                         }

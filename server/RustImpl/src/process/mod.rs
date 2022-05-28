@@ -26,8 +26,8 @@ impl<T: Process> IntoProcess for T {
 }
 
 pub type SlotFilter = Box<dyn Fn(usize) -> bool>;
-pub type ExtractFilter = Box<dyn Fn(usize, &ItemStack) -> bool>;
-pub fn extract_all() -> Option<ExtractFilter> { Some(Box::new(|_, _| true)) }
+pub type ExtractFilter = Box<dyn Fn(&Factory, usize, &ItemStack) -> bool>;
+pub fn extract_all() -> Option<ExtractFilter> { Some(Box::new(|_, _, _| true)) }
 
 pub trait Inventory: 'static {
     fn get_accesses(&self) -> &Vec<InvAccess>;
