@@ -47,10 +47,14 @@ OCRemote doesn't analyze any tree structure for recipe dependencies; instead it 
     - Automating flux dust ([video](https://www.youtube.com/watch?v=OiZdN3g2Ddc))
     - Automating runic altar ([video](https://www.youtube.com/watch?v=Tgx_kLvESxo))
     - Automating lightning crafting ([video](https://www.youtube.com/watch?v=dX8pQmfp4FQ))
+  - **FluidInvSlotted** (ComputerCraft only)\
+    This process is used for either fluid-only crafting or mixed fluid/item crafting (e.g. GregTech chemical reactor). Similar to MultiInvSlotted, this process also supports recipes that specify multiple input inventory / tank locations (e.g. multiple hatches on a multiblock).
   - **Scattering**\
     This process is intended for machine that can run multiple recipes at once but independently for each slot (e.g. Mekanism factory). This process will try to spread out input items among slots to help with parallelization.
   - **BlockingOutput**\
     This process extracts output items from machine buffer, but only if we don't have enough of that item stored. This is generally used as the output stage of a processing pipeline, where the inputs are already continuously supplied and the processing would block if output is not extracted. This can also be used to extract the correct slate from BM's altar, so that all slates can be automated using the same altar.
+  - **BlockingFluidOutput** (ComputerCraft only)\
+    This is the fluid-equivalent of BlockingOutput.
   - **Conditional**\
     This process conditionally executes another process based on user-defined rules that query stored items. This can be used, for example, to automatically swap the mob type of IF's Mob Duplicator.
   - **RedstoneConditional**\
