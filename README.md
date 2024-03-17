@@ -1,10 +1,10 @@
 # OCRemote
-OCRemote is a ComputerCraft/OpenComputers system for item-storage and multi-step parallelized automations. It allows you to build a network of storages and machines similar to an ME or RS system. It is designed to handle heavy automation workloads seen in expert-mode modpacks.
+OCRemote is a ComputerCraft/OpenComputers system for item-storage and highly compact and parallelized automations. It allows you to build a network of storages and machines similar to an ME or RS system. It is designed to handle heavy automation workloads seen in expert-mode modpacks.
 
 Main features:
   - User doesn't request crafting from this system. Instead, all craftable items are kept a constant stock of.
   - All input/output/crafting rules are configured as code. This allows extremely compact setups, such as defining 100+ recipes for a single machine, and specifying input, output and crafting all on the same side of a machine.
-  - Robust handling of many types of automations, from simple ore-processing to complex multi-block/in-world crafting that requires you to send inputs in the exact amount/proportion to different locations like [this](https://www.youtube.com/watch?v=HKk70owisso). Items in machine buffers can also be precisely regulated: no clogging should ever happen.
+  - Robust handling of many types of automations, from simple ore-processing to complex multiblock/in-world crafting that requires you to send items / fluids in the exact amount/proportion to multiple input locations, like [this](https://www.youtube.com/watch?v=HKk70owisso). Items in machine buffers can also be precisely regulated: no clogging should ever happen.
   - Works with probabilistic/RNG recipes and recipes that give back inputs.
   - Support rule-based recipe inputs/outputs, such as "any item whose name ends with 'Ore'", and "any sword that's more than 50% damaged".
   - Prioritization of recipes and inputs (e.g. process the most needed ore first; use the most abundant input variant).
@@ -47,10 +47,14 @@ OCRemote doesn't analyze any tree structure for recipe dependencies; instead it 
     - Automating flux dust ([video](https://www.youtube.com/watch?v=OiZdN3g2Ddc))
     - Automating runic altar ([video](https://www.youtube.com/watch?v=Tgx_kLvESxo))
     - Automating lightning crafting ([video](https://www.youtube.com/watch?v=dX8pQmfp4FQ))
+  - **FluidInvSlotted** (ComputerCraft only)\
+    This process is used for either fluid-only crafting or mixed fluid/item crafting (e.g. GregTech chemical reactor). Similar to MultiInvSlotted, this process also supports recipes that specify multiple input inventory / tank locations (e.g. multiple hatches on a multiblock).
   - **Scattering**\
     This process is intended for machine that can run multiple recipes at once but independently for each slot (e.g. Mekanism factory). This process will try to spread out input items among slots to help with parallelization.
   - **BlockingOutput**\
     This process extracts output items from machine buffer, but only if we don't have enough of that item stored. This is generally used as the output stage of a processing pipeline, where the inputs are already continuously supplied and the processing would block if output is not extracted. This can also be used to extract the correct slate from BM's altar, so that all slates can be automated using the same altar.
+  - **BlockingFluidOutput** (ComputerCraft only)\
+    This is the fluid-equivalent of BlockingOutput.
   - **Conditional**\
     This process conditionally executes another process based on user-defined rules that query stored items. This can be used, for example, to automatically swap the mob type of IF's Mob Duplicator.
   - **RedstoneConditional**\
@@ -72,6 +76,8 @@ OCRemote doesn't analyze any tree structure for recipe dependencies; instead it 
     These processes allow programming Turtle or PneumaticCraft's drones within OCRemote. States of the turtle/drone will be managed by the OCRemote server, and the in-game turtle/drone will execute actions sent by the server as programmed by the user.
   - **SyncAndRestock** (ComputerCraft only)\
     This process extracts or restocks an inventory upon receiving a request via redstone, and sends out a completion signal upon finishing the request. It is mainly used to dock and restock moving structures from the Create mod.
+  - **ManualUI** (ComputerCraft only)\
+    Display a terminal UI on the server console for listing, searching and manually retrieving items from the storage.
 
 ## External Server and the Asynchronous Architecture
 OCRemote includes a TCP server program running outside Minecraft. All decision-makings happen in this external server. The computers in Minecraft only execute world-interaction tasks scheduled by the server. This makes OCRemote server-friendly, and allows you to control and monitor your base's storage and automation without needing to log into the game. Multiple computers can connect to the same server to parallelize task execution and balance the load. In OCRemote, crafting processes can be interleaved with each other. For example, when a process starts, it needs to send a task to a computer to query the inventory of the machine, and wait for the response. Then, it needs to allocate some temporary storage space for transporting items to the machine, and if none is available, add itself to a wait-queue so that it can be resumed when space becomes available. During the waiting, other computers tasked by other processes could have moved items in and out of the storages, or transported items between machines. The design of OCRemote's server makes sure race conditions caused by reentrance are correctly handled so that no inconsistency could be caused by the asynchronous process execution.
