@@ -1,6 +1,6 @@
 use super::lua_value::{table_remove, Table, Value};
 use flexstr::LocalStr;
-use std::{cmp::min, convert::TryInto, rc::Rc};
+use std::{cmp::min, rc::Rc};
 
 #[derive(PartialEq, Eq, Hash)]
 pub struct Item {

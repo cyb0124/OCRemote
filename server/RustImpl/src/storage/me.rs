@@ -13,7 +13,7 @@ use std::{
 };
 
 pub struct MEConfig {
-    accesses: Vec<MEAccess>,
+    pub accesses: Vec<MEAccess>,
 }
 
 pub struct MEStorage {

@@ -1,7 +1,7 @@
 use flexstr::{local_fmt, LocalStr};
 use num_traits::cast::{AsPrimitive, FromPrimitive};
 use ordered_float::NotNan;
-use std::{collections::BTreeMap, convert::TryFrom, io::Write, str::from_utf8};
+use std::{collections::BTreeMap, io::Write, str::from_utf8};
 
 fn try_into_integer<I>(f: f64) -> Result<I, LocalStr>
 where

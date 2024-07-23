@@ -1,5 +1,3 @@
-#![feature(arc_new_cyclic)]
-
 #[macro_use]
 pub mod util;
 #[macro_use]
