@@ -9,10 +9,11 @@ use flexstr::{local_fmt, LocalStr};
 use fnv::FnvHashMap;
 use std::{
     cell::RefCell,
-    cmp::min,
     rc::{Rc, Weak},
 };
 
+impl_input!(ScatteringInput);
+#[derive(Clone)]
 pub struct ScatteringInput {
     item: Filter,
     size: i32,
@@ -24,20 +25,18 @@ impl ScatteringInput {
     pub fn new(item: Filter) -> Self { ScatteringInput { item, size: 1, allow_backup: false, extra_backup: 0 } }
 }
 
-impl_input!(ScatteringInput);
-
+impl_recipe!(ScatteringRecipe, ScatteringInput);
+#[derive(Clone)]
 pub struct ScatteringRecipe {
-    outputs: Box<dyn Outputs>,
+    outputs: Rc<dyn Outputs>,
     inputs: Vec<ScatteringInput>,
 }
 
 impl ScatteringRecipe {
-    pub fn new(outputs: Box<dyn Outputs>, input: ScatteringInput) -> Self {
+    pub fn new(outputs: Rc<dyn Outputs>, input: ScatteringInput) -> Self {
         ScatteringRecipe { outputs, inputs: vec![input] }
     }
 }
-
-impl_recipe!(ScatteringRecipe, ScatteringInput);
 
 pub struct ScatteringConfig {
     pub name: LocalStr,
@@ -114,21 +113,18 @@ impl Process for ScatteringProcess {
                                     break;
                                 }
                             }
-                            if let Some((slot, size)) = best {
-                                if size >= min(this.config.max_per_slot, inputs.items[0].max_size) {
-                                    break;
-                                }
-                                inputs.n_sets -= 1;
-                                n_inserted += 1;
-                                *insertions.entry(slot).or_default() += 1;
-                                let stack = &mut stacks[slot];
-                                if let Some(ref mut stack) = stack {
-                                    stack.size += 1
-                                } else {
-                                    *stack = Some(ItemStack { item: inputs.items[0].clone(), size: 1 })
-                                }
-                            } else {
+                            let Some((slot, size)) = best else { break };
+                            if size >= this.config.max_per_slot.min(inputs.items[0].max_size) {
                                 break;
+                            }
+                            inputs.n_sets -= 1;
+                            n_inserted += 1;
+                            *insertions.entry(slot).or_default() += 1;
+                            let stack = &mut stacks[slot];
+                            if let Some(ref mut stack) = stack {
+                                stack.size += 1
+                            } else {
+                                *stack = Some(ItemStack { item: inputs.items[0].clone(), size: 1 })
                             }
                         }
                         if n_inserted > 0 {

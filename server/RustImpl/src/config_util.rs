@@ -10,3 +10,15 @@ pub fn both(label: &'static str, name: &'static str) -> Filter { Filter::Both { 
 pub fn custom(desc: &'static str, func: impl Fn(&Item) -> bool + 'static) -> Filter {
     Filter::Custom { desc: s(desc), func: Rc::new(func) }
 }
+
+macro_rules! label {
+    ($($t:tt)*) => {
+        Filter::Label(local_fmt!($($t)*))
+    };
+}
+
+macro_rules! name {
+    ($($t:tt)*) => {
+        Filter::Name(local_fmt!($($t)*))
+    };
+}

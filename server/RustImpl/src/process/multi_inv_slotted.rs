@@ -1,23 +1,24 @@
-use super::super::access::{InvAccess, MultiInvAccess};
-use super::super::action::{ActionFuture, Call};
-use super::super::factory::Factory;
-use super::super::item::{Filter, ItemStack};
-use super::super::recipe::{compute_demands, Demand, Input, Outputs, Recipe};
-use super::super::util::{alive, join_outputs, join_tasks, spawn};
 use super::{extract_output, list_inv, IntoProcess, Inventory, Process};
+use crate::access::{InvAccess, MultiInvAccess};
+use crate::action::{ActionFuture, Call};
+use crate::factory::Factory;
+use crate::item::{Filter, ItemStack};
+use crate::recipe::{compute_demands, Demand, Input, Outputs, Recipe};
+use crate::util::{alive, join_outputs, join_tasks, spawn};
 use abort_on_drop::ChildTask;
 use flexstr::{local_str, LocalStr};
 use fnv::{FnvHashMap, FnvHashSet};
 use std::{
     cell::RefCell,
-    cmp::min,
     rc::{Rc, Weak},
 };
 
+impl_input!(MultiInvSlottedInput);
+#[derive(Clone)]
 pub struct MultiInvSlottedInput {
     item: Filter,
-    size: i32,
-    slots: Vec<(usize, usize, i32)>,
+    pub size: i32,
+    pub slots: Vec<(usize, usize, i32)>,
     allow_backup: bool,
     extra_backup: i32,
 }
@@ -25,22 +26,20 @@ pub struct MultiInvSlottedInput {
 impl MultiInvSlottedInput {
     pub fn new(item: Filter, slots: Vec<(usize, usize, i32)>) -> Self {
         let size = slots.iter().map(|(_, _, size)| size).sum();
-        MultiInvSlottedInput { item, size, slots, allow_backup: false, extra_backup: 0 }
+        Self { item, size, slots, allow_backup: false, extra_backup: 0 }
     }
 }
 
-impl_input!(MultiInvSlottedInput);
-
+impl_recipe!(MultiInvSlottedRecipe, MultiInvSlottedInput);
+#[derive(Clone)]
 pub struct MultiInvSlottedRecipe {
-    pub outputs: Box<dyn Outputs>,
+    pub outputs: Rc<dyn Outputs>,
     pub inputs: Vec<MultiInvSlottedInput>,
     pub max_sets: i32,
 }
 
-impl_recipe!(MultiInvSlottedRecipe, MultiInvSlottedInput);
-
-pub type MultiInvExtractFilter = Box<dyn Fn(usize, usize, &ItemStack) -> bool>;
-pub fn multi_inv_extract_all() -> Option<MultiInvExtractFilter> { Some(Box::new(|_, _, _| true)) }
+pub type MultiInvExtractFilter = Box<dyn Fn(&Factory, usize, usize, &ItemStack) -> bool>;
+pub fn multi_inv_extract_all() -> Option<MultiInvExtractFilter> { Some(Box::new(|_, _, _, _| true)) }
 
 pub struct MultiInvSlottedConfig {
     pub name: LocalStr,
@@ -48,17 +47,18 @@ pub struct MultiInvSlottedConfig {
     pub input_slots: Vec<Vec<usize>>,
     pub to_extract: Option<MultiInvExtractFilter>,
     pub recipes: Vec<MultiInvSlottedRecipe>,
+    pub strict_priority: bool,
 }
 
-struct EachInvConfig {
+pub struct EachInvConfig {
     pub accesses: Vec<InvAccess>,
     pub input_slots: Vec<usize>,
 }
 
-struct EachInv {
-    weak: Weak<RefCell<EachInv>>,
-    config: EachInvConfig,
-    factory: Weak<RefCell<Factory>>,
+pub struct EachInv {
+    pub weak: Weak<RefCell<EachInv>>,
+    pub config: EachInvConfig,
+    pub factory: Weak<RefCell<Factory>>,
 }
 
 impl_inventory!(EachInv);
@@ -70,6 +70,7 @@ pub struct MultiInvSlottedProcess {
     accesses: Vec<MultiInvAccess>,
     to_extract: Option<MultiInvExtractFilter>,
     recipes: Vec<MultiInvSlottedRecipe>,
+    strict_priority: bool,
     invs: Vec<Rc<RefCell<EachInv>>>,
 }
 
@@ -78,34 +79,26 @@ impl IntoProcess for MultiInvSlottedConfig {
     fn into_process(self, factory: &Weak<RefCell<Factory>>) -> Rc<RefCell<Self::Output>> {
         Rc::new_cyclic(|weak| {
             let accesses = self.accesses;
-            let invs = self
-                .input_slots
-                .into_iter()
-                .enumerate()
-                .map(|(i, input_slots)| {
-                    Rc::new_cyclic(|weak| {
-                        RefCell::new(EachInv {
-                            weak: weak.clone(),
-                            config: EachInvConfig {
-                                accesses: accesses
-                                    .iter()
-                                    .map(|access| {
-                                        let each = &access.invs[i];
-                                        InvAccess {
-                                            client: access.client.clone(),
-                                            addr: each.addr.clone(),
-                                            bus_side: each.bus_side,
-                                            inv_side: each.inv_side,
-                                        }
-                                    })
-                                    .collect(),
-                                input_slots,
-                            },
-                            factory: factory.clone(),
-                        })
+            let invs = Vec::from_iter(self.input_slots.into_iter().enumerate().map(|(i, input_slots)| {
+                Rc::new_cyclic(|weak| {
+                    RefCell::new(EachInv {
+                        weak: weak.clone(),
+                        config: EachInvConfig {
+                            accesses: Vec::from_iter(accesses.iter().map(|access| {
+                                let each = &access.invs[i];
+                                InvAccess {
+                                    client: access.client.clone(),
+                                    addr: each.addr.clone(),
+                                    bus_side: each.bus_side,
+                                    inv_side: each.inv_side,
+                                }
+                            })),
+                            input_slots,
+                        },
+                        factory: factory.clone(),
                     })
                 })
-                .collect();
+            }));
             RefCell::new(Self::Output {
                 weak: weak.clone(),
                 factory: factory.clone(),
@@ -113,6 +106,7 @@ impl IntoProcess for MultiInvSlottedConfig {
                 accesses,
                 to_extract: self.to_extract,
                 recipes: self.recipes,
+                strict_priority: self.strict_priority,
                 invs,
             })
         })
@@ -124,7 +118,7 @@ impl Process for MultiInvSlottedProcess {
         if self.to_extract.is_none() && compute_demands(factory, &self.recipes).is_empty() {
             return spawn(async { Ok(()) });
         }
-        let stacks: Vec<_> = self.invs.iter().map(|inv| spawn(list_inv(&*inv.borrow(), factory))).collect();
+        let stacks = Vec::from_iter(self.invs.iter().map(|inv| spawn(list_inv(&*inv.borrow(), factory))));
         let weak = self.weak.clone();
         spawn(async move {
             let stacks = join_outputs(stacks).await?;
@@ -144,7 +138,7 @@ impl Process for MultiInvSlottedProcess {
                             if let Some(existing_input) = existing_inputs.get_mut(&(i, slot)) {
                                 *existing_input = Some(stack)
                             } else if let Some(ref to_extract) = this.to_extract {
-                                if to_extract(i, slot, &stack) {
+                                if to_extract(factory, i, slot, &stack) {
                                     tasks.push(extract_output(
                                         &*this.invs[i].borrow(),
                                         factory,
@@ -156,7 +150,10 @@ impl Process for MultiInvSlottedProcess {
                         }
                     }
                 }
-                let demands = compute_demands(factory, &this.recipes);
+                let mut demands = compute_demands(factory, &this.recipes);
+                if this.strict_priority {
+                    demands.truncate(1)
+                }
                 'recipe: for mut demand in demands.into_iter() {
                     let recipe = &this.recipes[demand.i_recipe];
                     let mut used_slots = FnvHashSet::<(usize, usize)>::default();
@@ -172,9 +169,8 @@ impl Process for MultiInvSlottedProcess {
                             } else {
                                 0
                             };
-                            demand.inputs.n_sets = min(
-                                demand.inputs.n_sets,
-                                (min(recipe.max_sets * mult, demand.inputs.items[i_input].max_size) - existing_size)
+                            demand.inputs.n_sets = demand.inputs.n_sets.min(
+                                ((recipe.max_sets * mult).min(demand.inputs.items[i_input].max_size) - existing_size)
                                     / mult,
                             );
                             if demand.inputs.n_sets <= 0 {
@@ -218,10 +214,7 @@ impl MultiInvSlottedProcess {
         let weak = self.weak.clone();
         spawn(async move {
             let bus_slots = join_outputs(bus_slots).await;
-            let slots_to_free = Rc::try_unwrap(slots_to_free)
-                .map_err(|_| "slots_to_free should be exclusively owned here")
-                .unwrap()
-                .into_inner();
+            let slots_to_free = Rc::into_inner(slots_to_free).unwrap().into_inner();
             let task = async {
                 let bus_slots = bus_slots?;
                 let mut tasks = Vec::new();

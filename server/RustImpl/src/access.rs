@@ -12,14 +12,14 @@ macro_rules! impl_access {
     };
 }
 
+impl_access!(SidedAccess);
 pub struct SidedAccess {
     pub client: LocalStr,
     pub addr: LocalStr,
     pub side: u8,
 }
 
-impl_access!(SidedAccess);
-
+impl_access!(InvAccess);
 pub struct InvAccess {
     pub client: LocalStr,
     pub addr: LocalStr,
@@ -27,8 +27,7 @@ pub struct InvAccess {
     pub inv_side: u8,
 }
 
-impl_access!(InvAccess);
-
+impl_access!(MEAccess);
 pub struct MEAccess {
     pub client: LocalStr,
     pub transposer_addr: LocalStr,
@@ -39,8 +38,7 @@ pub struct MEAccess {
     pub me_slot: usize,
 }
 
-impl_access!(MEAccess);
-
+impl_access!(ComponentAccess);
 pub struct ComponentAccess {
     pub client: LocalStr,
     // typical address for reactor: br_reactor
@@ -49,15 +47,13 @@ pub struct ComponentAccess {
     pub addr: LocalStr,
 }
 
-impl_access!(ComponentAccess);
-
+impl_access!(CraftingRobotAccess);
 pub struct CraftingRobotAccess {
     pub client: LocalStr,
     pub bus_side: u8,
 }
 
-impl_access!(CraftingRobotAccess);
-
+impl_access!(WorkbenchAccess);
 pub struct WorkbenchAccess {
     pub client: LocalStr,
     pub input_addr: LocalStr,
@@ -67,17 +63,45 @@ pub struct WorkbenchAccess {
     pub non_consumable_side: u8,
 }
 
-impl_access!(WorkbenchAccess);
-
 pub struct EachInvAccess {
     pub addr: LocalStr,
     pub bus_side: u8,
     pub inv_side: u8,
 }
 
+impl_access!(MultiInvAccess);
 pub struct MultiInvAccess {
     pub client: LocalStr,
     pub invs: Vec<EachInvAccess>,
 }
 
-impl_access!(MultiInvAccess);
+#[derive(Clone)]
+pub struct EachTank {
+    pub addr: LocalStr,
+    pub side: u8,
+}
+
+impl_access!(FluidAccess);
+pub struct FluidAccess {
+    pub client: LocalStr,
+    pub tanks: Vec<EachTank>,
+}
+
+pub struct EachBusOfTank {
+    pub addr: LocalStr,
+    pub bus_side: u8,
+    pub tank_side: u8,
+}
+
+impl_access!(TankAccess);
+pub struct TankAccess {
+    pub client: LocalStr,
+    pub buses: Vec<EachBusOfTank>,
+}
+
+impl_access!(InvTankAccess);
+pub struct InvTankAccess {
+    pub client: LocalStr,
+    pub invs: Vec<EachInvAccess>,
+    pub tanks: Vec<Vec<EachBusOfTank>>,
+}

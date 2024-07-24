@@ -10,10 +10,11 @@ use flexstr::{local_str, LocalStr};
 use fnv::FnvHashMap;
 use std::{
     cell::RefCell,
-    cmp::min,
     rc::{Rc, Weak},
 };
 
+impl_input!(BufferedInput);
+#[derive(Clone)]
 pub struct BufferedInput {
     item: Filter,
     size: i32,
@@ -25,15 +26,13 @@ impl BufferedInput {
     pub fn new(item: Filter, size: i32) -> Self { BufferedInput { item, size, allow_backup: false, extra_backup: 0 } }
 }
 
-impl_input!(BufferedInput);
-
+impl_recipe!(BufferedRecipe, BufferedInput);
+#[derive(Clone)]
 pub struct BufferedRecipe {
-    pub outputs: Box<dyn Outputs>,
+    pub outputs: Rc<dyn Outputs>,
     pub inputs: Vec<BufferedInput>,
     pub max_inputs: i32,
 }
-
-impl_recipe!(BufferedRecipe, BufferedInput);
 
 pub struct BufferedConfig {
     pub name: LocalStr,
@@ -106,10 +105,8 @@ impl Process for BufferedProcess {
                 for stock in &this.config.stocks {
                     if let Some((item, info)) = factory.search_item(&stock.item) {
                         let existing = existing_size.entry(item.clone()).or_default();
-                        let to_insert = min(
-                            stock.size - *existing,
-                            info.borrow().get_availability(stock.allow_backup, stock.extra_backup),
-                        );
+                        let to_insert = (stock.size - *existing)
+                            .min(info.borrow().get_availability(stock.allow_backup, stock.extra_backup));
                         if to_insert <= 0 {
                             continue;
                         }
@@ -127,13 +124,13 @@ impl Process for BufferedProcess {
                         let recipe = &this.config.recipes[i_recipe];
                         if let Some(mut inputs) = resolve_inputs(factory, recipe) {
                             let size_per_set: i32 = recipe.inputs.iter().map(|x| x.size).sum();
-                            inputs.n_sets = min(inputs.n_sets, remaining_size / size_per_set);
+                            inputs.n_sets = inputs.n_sets.min(remaining_size / size_per_set);
                             if inputs.n_sets <= 0 {
                                 continue 'recipe;
                             }
                             let existing_total: i32 =
                                 inputs.items.iter().map(|item| *existing_size.entry(item.clone()).or_default()).sum();
-                            inputs.n_sets = min(inputs.n_sets, (recipe.max_inputs - existing_total) / size_per_set);
+                            inputs.n_sets = inputs.n_sets.min((recipe.max_inputs - existing_total) / size_per_set);
                             if inputs.n_sets <= 0 {
                                 continue 'recipe;
                             }
@@ -199,10 +196,7 @@ impl BufferedProcess {
         let weak = self.weak.clone();
         spawn(async move {
             let bus_slots = join_outputs(bus_slots).await;
-            let slots_to_free = Rc::try_unwrap(slots_to_free)
-                .map_err(|_| "slots_to_free should be exclusively owned here")
-                .unwrap()
-                .into_inner();
+            let slots_to_free = Rc::into_inner(slots_to_free).unwrap().into_inner();
             let task = async {
                 let bus_slots = bus_slots?;
                 let mut tasks = Vec::new();
@@ -210,7 +204,7 @@ impl BufferedProcess {
                     alive!(weak, this);
                     upgrade!(this.factory, factory);
                     let server = factory.borrow_server();
-                    let access = server.load_balance(&this.config.accesses).1;
+                    let access = server.load_balance(this.config.accesses.iter()).1;
                     let mut group = Vec::new();
                     for (i_input, InsertPlan { insertions, .. }) in plans.into_iter().enumerate() {
                         for (inv_slot, size) in insertions {

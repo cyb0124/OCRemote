@@ -10,10 +10,10 @@ use abort_on_drop::ChildTask;
 use flexstr::{local_str, LocalStr};
 use std::{
     cell::RefCell,
-    cmp::min,
     rc::{Rc, Weak},
 };
 
+#[derive(Clone)]
 pub struct CraftingGridInput {
     item: Filter,
     size: i32,
@@ -22,14 +22,14 @@ pub struct CraftingGridInput {
     extra_backup: i32,
 }
 
+impl_input!(CraftingGridInput);
 impl CraftingGridInput {
     pub fn new(item: Filter, slots: Vec<usize>) -> Self {
         CraftingGridInput { item, size: slots.len() as i32, slots, allow_backup: false, extra_backup: 0 }
     }
 }
 
-impl_input!(CraftingGridInput);
-
+#[derive(Clone)]
 pub struct NonConsumable {
     // for crafting robot:
     //   3, 7, 11, 12, 13, 14
@@ -38,8 +38,10 @@ pub struct NonConsumable {
     pub crafting_grid_slot: usize,
 }
 
+impl_recipe!(CraftingGridRecipe, CraftingGridInput);
+#[derive(Clone)]
 pub struct CraftingGridRecipe {
-    pub outputs: Box<dyn Outputs>,
+    pub outputs: Rc<dyn Outputs>,
     // slots:
     //   0, 1, 2
     //   3, 4, 5
@@ -49,8 +51,6 @@ pub struct CraftingGridRecipe {
     pub max_sets: i32,
     pub non_consumables: Vec<NonConsumable>,
 }
-
-impl_recipe!(CraftingGridRecipe, CraftingGridInput);
 
 trait CraftingGridProcess: 'static {
     type Access: Access;
@@ -85,8 +85,8 @@ where
         if recipe.max_sets <= 0 {
             continue;
         }
-        if let Some(ResolvedInputs { mut n_sets, items }) = resolve_inputs(factory, recipe) {
-            n_sets = min(n_sets, recipe.max_sets);
+        if let Some(ResolvedInputs { mut n_sets, items, .. }) = resolve_inputs(factory, recipe) {
+            n_sets = n_sets.min(recipe.max_sets);
             let mut bus_slots = Vec::new();
             let slots_to_free = Rc::new(RefCell::new(Vec::new()));
             for (i_input, item) in items.into_iter().enumerate() {
@@ -114,10 +114,7 @@ where
             let weak = this.get_weak().clone();
             tasks.push(spawn(async move {
                 let bus_slots = join_outputs(bus_slots).await;
-                let mut slots_to_free = Rc::try_unwrap(slots_to_free)
-                    .map_err(|_| "slots_to_free should be exclusively owned here")
-                    .unwrap()
-                    .into_inner();
+                let mut slots_to_free = Rc::into_inner(slots_to_free).unwrap().into_inner();
                 let task = async {
                     let bus_slots = bus_slots?;
                     let tasks = {

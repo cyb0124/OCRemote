@@ -213,6 +213,21 @@ impl Process for LowAlert {
     }
 }
 
+pub struct FluidLowAlert(pub LocalStr, pub i64);
+impl Process for FluidLowAlert {
+    fn run(&self, factory: &Factory) -> ChildTask<Result<(), LocalStr>> {
+        let n_stored = factory.search_n_fluid(&self.0);
+        if n_stored < self.1 {
+            factory.log(Print {
+                text: local_fmt!("need {}*{}", self.0, self.1 - n_stored),
+                color: 0xF2B2CC,
+                beep: None,
+            })
+        }
+        spawn(async { Ok(()) })
+    }
+}
+
 pub struct ItemCycleConfig {
     pub name: LocalStr,
     pub file_name: LocalStr,

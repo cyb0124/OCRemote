@@ -10,10 +10,10 @@ use flexstr::{local_str, LocalStr};
 use fnv::{FnvHashMap, FnvHashSet};
 use std::{
     cell::RefCell,
-    cmp::min,
     rc::{Rc, Weak},
 };
 
+#[derive(Clone)]
 pub struct SlottedInput {
     item: Filter,
     size: i32,
@@ -22,6 +22,7 @@ pub struct SlottedInput {
     extra_backup: i32,
 }
 
+impl_input!(SlottedInput);
 impl SlottedInput {
     pub fn new(item: Filter, slots: Vec<(usize, i32)>) -> Self {
         let size = slots.iter().map(|(_, size)| size).sum();
@@ -29,15 +30,13 @@ impl SlottedInput {
     }
 }
 
-impl_input!(SlottedInput);
-
+impl_recipe!(SlottedRecipe, SlottedInput);
+#[derive(Clone)]
 pub struct SlottedRecipe {
-    pub outputs: Box<dyn Outputs>,
+    pub outputs: Rc<dyn Outputs>,
     pub inputs: Vec<SlottedInput>,
     pub max_sets: i32,
 }
-
-impl_recipe!(SlottedRecipe, SlottedInput);
 
 pub struct SlottedConfig {
     pub name: LocalStr,
@@ -45,6 +44,7 @@ pub struct SlottedConfig {
     pub input_slots: Vec<usize>,
     pub to_extract: Option<ExtractFilter>,
     pub recipes: Vec<SlottedRecipe>,
+    pub strict_priority: bool,
 }
 
 pub struct SlottedProcess {
@@ -90,7 +90,10 @@ impl Process for SlottedProcess {
                         }
                     }
                 }
-                let demands = compute_demands(factory, &this.config.recipes);
+                let mut demands = compute_demands(factory, &this.config.recipes);
+                if this.config.strict_priority {
+                    demands.truncate(1)
+                }
                 'recipe: for mut demand in demands.into_iter() {
                     let recipe = &this.config.recipes[demand.i_recipe];
                     let mut used_slots = FnvHashSet::<usize>::default();
@@ -105,9 +108,8 @@ impl Process for SlottedProcess {
                             } else {
                                 0
                             };
-                            demand.inputs.n_sets = min(
-                                demand.inputs.n_sets,
-                                (min(recipe.max_sets * mult, demand.inputs.items[i_input].max_size) - existing_size)
+                            demand.inputs.n_sets = demand.inputs.n_sets.min(
+                                ((recipe.max_sets * mult).min(demand.inputs.items[i_input].max_size) - existing_size)
                                     / mult,
                             );
                             if demand.inputs.n_sets <= 0 {
@@ -154,10 +156,7 @@ impl SlottedProcess {
         let weak = self.weak.clone();
         spawn(async move {
             let bus_slots = join_outputs(bus_slots).await;
-            let slots_to_free = Rc::try_unwrap(slots_to_free)
-                .map_err(|_| "slots_to_free should be exclusively owned here")
-                .unwrap()
-                .into_inner();
+            let slots_to_free = Rc::into_inner(slots_to_free).unwrap().into_inner();
             let task = async {
                 let bus_slots = bus_slots?;
                 let mut tasks = Vec::new();

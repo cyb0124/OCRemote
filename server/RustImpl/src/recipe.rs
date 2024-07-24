@@ -1,8 +1,9 @@
-use super::factory::Factory;
 use super::item::{Filter, Item};
+use crate::factory::Factory;
+use flexstr::LocalStr;
 use fnv::FnvHashMap;
 use std::{
-    cmp::{max_by, min, min_by},
+    cmp::{max_by, min_by},
     collections::hash_map::Entry,
     rc::Rc,
 };
@@ -18,23 +19,36 @@ impl<T: Fn(&Factory) -> Option<f64>> Outputs for T {
 pub trait BoxedOutputs {
     fn and(self, other: Self) -> Self;
     fn or(self, other: Self) -> Self;
+    fn not(self) -> Self;
+    fn map_priority(self, f: impl Fn(&Factory, f64) -> f64 + 'static) -> Self;
 }
 
-impl BoxedOutputs for Box<dyn Outputs> {
+impl BoxedOutputs for Rc<dyn Outputs> {
     fn and(self, other: Self) -> Self {
-        Box::new(move |factory: &_| {
+        Rc::new(move |factory: &_| {
             max_by(self.get_priority(factory), other.get_priority(factory), |x, y| x.partial_cmp(y).unwrap())
         })
     }
 
     fn or(self, other: Self) -> Self {
-        Box::new(move |factory: &_| {
+        Rc::new(move |factory: &_| {
             min_by(self.get_priority(factory), other.get_priority(factory), |x, y| x.partial_cmp(y).unwrap())
         })
     }
+
+    fn not(self) -> Self {
+        Rc::new(move |factory: &_| match self.get_priority(factory) {
+            Some(_) => None,
+            None => Some(1.),
+        })
+    }
+
+    fn map_priority(self, f: impl Fn(&Factory, f64) -> f64 + 'static) -> Self {
+        Rc::new(move |factory: &_| self.get_priority(factory).map(|x| f(factory, x)))
+    }
 }
 
-pub fn ignore_outputs(priority: f64) -> Box<dyn Outputs> { Box::new(move |_: &_| Some(priority)) }
+pub fn ignore_outputs(priority: f64) -> Rc<dyn Outputs> { Rc::new(move |_: &_| Some(priority)) }
 
 pub struct Output {
     pub item: Filter,
@@ -42,12 +56,33 @@ pub struct Output {
 }
 
 impl Output {
-    pub fn new(item: Filter, n_wanted: i32) -> Box<dyn Outputs> { Box::new(Self { item, n_wanted }) }
+    pub fn new(item: Filter, n_wanted: i32) -> Rc<dyn Outputs> { Rc::new(Self { item, n_wanted }) }
 }
 
 impl Outputs for Output {
     fn get_priority(&self, factory: &Factory) -> Option<f64> {
         let n_stored = factory.search_n_stored(&self.item);
+        let n_needed = self.n_wanted - n_stored;
+        if n_needed > 0 {
+            Some(n_needed as f64 / self.n_wanted as f64)
+        } else {
+            None
+        }
+    }
+}
+
+pub struct FluidOutput {
+    pub fluid: LocalStr,
+    pub n_wanted: i64,
+}
+
+impl FluidOutput {
+    pub fn new(fluid: LocalStr, n_wanted: i64) -> Rc<dyn Outputs> { Rc::new(Self { fluid, n_wanted }) }
+}
+
+impl Outputs for FluidOutput {
+    fn get_priority(&self, factory: &Factory) -> Option<f64> {
+        let n_stored = factory.search_n_fluid(&self.fluid);
         let n_needed = self.n_wanted - n_stored;
         if n_needed > 0 {
             Some(n_needed as f64 / self.n_wanted as f64)
@@ -87,7 +122,7 @@ macro_rules! impl_input {
     };
 }
 
-pub trait Recipe {
+pub trait Recipe: Clone {
     type In: Input;
     fn get_outputs(&self) -> &dyn Outputs;
     fn get_inputs(&self) -> &Vec<Self::In>;
@@ -105,52 +140,47 @@ macro_rules! impl_recipe {
 
 pub struct ResolvedInputs {
     pub n_sets: i32,
+    pub priority: i32,
     pub items: Vec<Rc<Item>>,
 }
 
 struct InputInfo {
     n_available: i32,
     n_needed: i32,
-    allow_backup: bool,
 }
 
 pub fn resolve_inputs(factory: &Factory, recipe: &impl Recipe) -> Option<ResolvedInputs> {
-    let mut n_sets = i32::MAX;
     let mut items = Vec::new();
     items.reserve(recipe.get_inputs().len());
     let mut infos = FnvHashMap::<&Rc<Item>, InputInfo>::default();
+    let mut max_size_bound = i32::MAX;
     for input in recipe.get_inputs() {
         if let Some((item, item_info)) = factory.search_item(input.get_item()) {
             items.push(item.clone());
             match infos.entry(item) {
+                Entry::Occupied(input_info) => input_info.into_mut().n_needed += input.get_size(),
                 Entry::Vacant(input_info) => {
                     input_info.insert(InputInfo {
-                        n_available: item_info
-                            .borrow()
+                        // Note: backup params are considered for only the first input of the same item.
+                        n_available: (item_info.borrow())
                             .get_availability(input.get_allow_backup(), input.get_extra_backup()),
                         n_needed: input.get_size(),
-                        allow_backup: input.get_allow_backup(),
                     });
                 }
-                Entry::Occupied(input_info) => {
-                    let input_info = input_info.into_mut();
-                    input_info.n_needed += input.get_size();
-                    if input_info.allow_backup && !input.get_allow_backup() {
-                        input_info.allow_backup = false;
-                        input_info.n_available = item_info.borrow().get_availability(false, input.get_extra_backup())
-                    }
-                }
             }
-            n_sets = min(n_sets, item.max_size / input.get_size());
+            max_size_bound = max_size_bound.min(item.max_size / input.get_size());
         } else {
             return None;
         }
     }
+    let mut availability_bound = i32::MAX;
     for (_, input_info) in infos.into_iter() {
-        n_sets = min(n_sets, input_info.n_available / input_info.n_needed)
+        let limit = input_info.n_available / input_info.n_needed;
+        availability_bound = availability_bound.min(limit)
     }
+    let n_sets = max_size_bound.min(availability_bound);
     if n_sets > 0 {
-        Some(ResolvedInputs { n_sets, items })
+        Some(ResolvedInputs { n_sets, priority: availability_bound, items })
     } else {
         None
     }
@@ -159,18 +189,17 @@ pub fn resolve_inputs(factory: &Factory, recipe: &impl Recipe) -> Option<Resolve
 pub struct Demand {
     pub i_recipe: usize,
     pub inputs: ResolvedInputs,
-    priority: f64,
+    pub priority: f64,
 }
 
-pub fn compute_demands(factory: &Factory, recipes: &Vec<impl Recipe>) -> Vec<Demand> {
+pub fn compute_demands(factory: &Factory, recipes: &[impl Recipe]) -> Vec<Demand> {
     let mut result = Vec::new();
     for (i_recipe, recipe) in recipes.iter().enumerate() {
-        if let Some(priority) = recipe.get_outputs().get_priority(factory) {
-            if let Some(inputs) = resolve_inputs(factory, recipe) {
-                result.push(Demand { i_recipe, inputs, priority })
-            }
-        }
+        let Some(mut priority) = recipe.get_outputs().get_priority(factory) else { continue };
+        let Some(inputs) = resolve_inputs(factory, recipe) else { continue };
+        priority *= inputs.priority as f64;
+        result.push(Demand { i_recipe, inputs, priority })
     }
-    result.sort_unstable_by(|x: &Demand, y: &Demand| x.priority.partial_cmp(&y.priority).unwrap().reverse());
+    result.sort_by(|x: &Demand, y: &Demand| x.priority.partial_cmp(&y.priority).unwrap().reverse());
     result
 }

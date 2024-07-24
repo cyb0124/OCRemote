@@ -1,9 +1,9 @@
-use super::super::access::InvAccess;
-use super::super::factory::Factory;
-use super::super::item::Item;
-use super::super::recipe::Output;
-use super::super::util::{alive, join_tasks, spawn};
 use super::{extract_output, list_inv, IntoProcess, Inventory, Process, SlotFilter};
+use crate::access::InvAccess;
+use crate::factory::Factory;
+use crate::item::Item;
+use crate::recipe::Output;
+use crate::util::{alive, join_tasks, spawn};
 use abort_on_drop::ChildTask;
 use flexstr::LocalStr;
 use fnv::FnvHashMap;

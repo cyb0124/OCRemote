@@ -47,7 +47,7 @@ OCRemote doesn't analyze any tree structure for recipe dependencies; instead it 
     - Automating flux dust ([video](https://www.youtube.com/watch?v=OiZdN3g2Ddc))
     - Automating runic altar ([video](https://www.youtube.com/watch?v=Tgx_kLvESxo))
     - Automating lightning crafting ([video](https://www.youtube.com/watch?v=dX8pQmfp4FQ))
-  - **FluidInvSlotted** (ComputerCraft only)\
+  - **FluidInvSlotted**\
     This process is used for either fluid-only crafting or mixed fluid/item crafting (e.g. GregTech chemical reactor). Similar to MultiInvSlotted, this process also supports recipes that specify multiple input inventory / tank locations (e.g. multiple hatches on a multiblock).
   - **Scattering**\
     This process is intended for machine that can run multiple recipes at once but independently for each slot (e.g. Mekanism factory). This process will try to spread out input items among slots to help with parallelization.

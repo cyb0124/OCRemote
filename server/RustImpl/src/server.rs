@@ -30,19 +30,14 @@ pub struct Server {
 impl Drop for Server {
     fn drop(&mut self) {
         while let Some(client) = self.clients.take() {
-            self.clients = Rc::try_unwrap(client)
-                .map_err(|_| "client should be exclusively owned by server")
-                .unwrap()
-                .into_inner()
-                .next
-                .take()
+            self.clients = Rc::into_inner(client).unwrap().into_inner().next.take()
         }
     }
 }
 
 enum WriterState {
     NotWriting(OwnedWriteHalf),
-    Writing(ChildTask<()>),
+    Writing { _task: ChildTask<()> },
     Invalid,
 }
 
@@ -65,12 +60,7 @@ impl Drop for Client {
     fn drop(&mut self) {
         self.log(format_args!("disconnected"));
         let message: LocalStr = [&self.log_prefix, " disconnected"].into_iter().collect();
-        for x in &self.request_queue {
-            for x in x {
-                x.borrow_mut().on_fail(message.clone())
-            }
-        }
-        for x in &self.response_queue {
+        for x in self.request_queue.iter().flatten().chain(&self.response_queue) {
             x.borrow_mut().on_fail(message.clone())
         }
     }
@@ -79,7 +69,6 @@ impl Drop for Client {
 impl Client {
     fn log(&self, args: std::fmt::Arguments) { println!("{}: {}", self.log_prefix, args) }
     fn disconnect(&mut self) { self.disconnect_by_server(&mut self.server.upgrade().unwrap().borrow_mut()); }
-
     fn disconnect_by_server(&mut self, server: &mut Server) {
         if let Some(login) = &self.login {
             server.logins.remove(login);
@@ -105,7 +94,7 @@ impl Client {
         let writer = replace(&mut self.writer, WriterState::Invalid);
         if let WriterState::NotWriting(stream) = writer {
             self.update_timeout(false);
-            self.writer = WriterState::Writing(spawn(writer_main(self.weak.clone(), stream)))
+            self.writer = WriterState::Writing { _task: spawn(writer_main(self.weak.clone(), stream)) }
         } else {
             self.writer = writer
         }
@@ -132,23 +121,20 @@ async fn timeout_main(client: Weak<RefCell<Client>>) {
 async fn writer_main(client: Weak<RefCell<Client>>, mut stream: OwnedWriteHalf) {
     loop {
         let mut data = Vec::new();
-        if let Some(this) = client.upgrade() {
-            let mut this = this.borrow_mut();
-            if let Some(group) = this.request_queue.pop_front() {
-                this.request_queue_size -= group.len();
-                let mut value = Vec::new();
-                for x in group {
-                    value.push(x.borrow_mut().build_request());
-                    this.response_queue.push_back(x)
-                }
-                serialize(&vec_to_table(value).into(), &mut data);
-                #[cfg(feature = "dump_traffic")]
-                this.log(format_args!("out: {}", data.iter().map(|x| char::from(*x)).collect::<String>()));
-            } else {
-                this.writer = WriterState::NotWriting(stream);
-                break;
+        let Some(this) = client.upgrade() else { break };
+        let mut this = this.borrow_mut();
+        if let Some(group) = this.request_queue.pop_front() {
+            this.request_queue_size -= group.len();
+            let mut value = Vec::new();
+            for x in group {
+                value.push(x.borrow_mut().build_request());
+                this.response_queue.push_back(x)
             }
+            serialize(&vec_to_table(value).into(), &mut data);
+            #[cfg(feature = "dump_traffic")]
+            this.log(format_args!("out: {}", data.iter().map(|x| char::from(*x)).collect::<String>()));
         } else {
+            this.writer = WriterState::NotWriting(stream);
             break;
         }
         if let Err(e) = stream.write_all(&data).await {
@@ -161,9 +147,8 @@ async fn writer_main(client: Weak<RefCell<Client>>, mut stream: OwnedWriteHalf) 
 }
 
 fn on_packet(client: &Rc<RefCell<Client>>, value: Value) -> Result<(), LocalStr> {
-    let mut client_ref = client.borrow_mut();
-    let this = &mut *client_ref;
-    if let Some(_) = &this.login {
+    let mut this = client.borrow_mut();
+    if this.login.is_some() {
         if let Some(x) = this.response_queue.pop_front() {
             this.update_timeout(true);
             x.borrow_mut().on_response(value)
@@ -176,7 +161,6 @@ fn on_packet(client: &Rc<RefCell<Client>>, value: Value) -> Result<(), LocalStr>
         this.log(format_args!("logged in"));
         this.login = Some(login.clone());
         drop(this);
-        drop(client_ref);
         server.login(login, Rc::downgrade(client));
         Ok(())
     } else {
@@ -189,30 +173,23 @@ async fn reader_main(client: Weak<RefCell<Client>>, mut stream: OwnedReadHalf) {
     let mut parser = Parser::new();
     loop {
         let n_read = stream.read(&mut data).await;
-        if let Some(this) = client.upgrade() {
-            match n_read {
-                Err(e) => {
-                    this.borrow_mut().log_and_disconnect(format_args!("error reading: {}", e));
-                    break;
-                }
-                Ok(n_read) => {
-                    if n_read > 0 {
-                        let data = &data[..n_read];
-                        #[cfg(feature = "dump_traffic")]
-                        this.borrow()
-                            .log(format_args!("in: {}", data.iter().map(|x| char::from(*x)).collect::<String>()));
-                        if let Err(e) = parser.shift(data, &mut |x| on_packet(&this, x)) {
-                            this.borrow_mut().log_and_disconnect(format_args!("error decoding packet: {}", e));
-                            break;
-                        }
-                    } else {
-                        this.borrow_mut().log_and_disconnect(format_args!("client disconnected"));
+        let Some(this) = client.upgrade() else { break };
+        match n_read {
+            Err(e) => break this.borrow_mut().log_and_disconnect(format_args!("error reading: {}", e)),
+            Ok(n_read) => {
+                if n_read > 0 {
+                    let data = &data[..n_read];
+                    #[cfg(feature = "dump_traffic")]
+                    this.borrow().log(format_args!("in: {}", data.iter().map(|x| char::from(*x)).collect::<String>()));
+                    if let Err(e) = parser.shift(data, &mut |x| on_packet(&this, x)) {
+                        this.borrow_mut().log_and_disconnect(format_args!("error decoding packet: {}", e));
                         break;
                     }
+                } else {
+                    this.borrow_mut().log_and_disconnect(format_args!("client disconnected"));
+                    break;
                 }
             }
-        } else {
-            break;
         }
     }
 }
@@ -230,34 +207,30 @@ fn create_listener(port: u16) -> TcpListener {
 async fn acceptor_main(server: Weak<RefCell<Server>>, listener: TcpListener) {
     loop {
         let (stream, addr) = listener.accept().await.unwrap();
-        match server.upgrade() {
-            None => break,
-            Some(this) => {
-                let mut this = this.borrow_mut();
-                let (r, w) = stream.into_split();
-                this.clients = Some(Rc::new_cyclic(|weak| {
-                    let client = Client {
-                        weak: weak.clone(),
-                        log_prefix: addr.to_string(),
-                        next: this.clients.take(),
-                        prev: None,
-                        server: server.clone(),
-                        login: None,
-                        _reader: spawn(reader_main(weak.clone(), r)),
-                        request_queue: VecDeque::new(),
-                        request_queue_size: 0,
-                        response_queue: VecDeque::new(),
-                        writer: WriterState::NotWriting(w),
-                        timeout: None,
-                    };
-                    if let Some(ref next) = client.next {
-                        next.borrow_mut().prev = Some(weak.clone())
-                    }
-                    client.log(format_args!("connected"));
-                    RefCell::new(client)
-                }))
+        let Some(this) = server.upgrade() else { break };
+        let mut this = this.borrow_mut();
+        let (r, w) = stream.into_split();
+        this.clients = Some(Rc::new_cyclic(|weak| {
+            let client = Client {
+                weak: weak.clone(),
+                log_prefix: addr.to_string(),
+                next: this.clients.take(),
+                prev: None,
+                server: server.clone(),
+                login: None,
+                _reader: spawn(reader_main(weak.clone(), r)),
+                request_queue: VecDeque::new(),
+                request_queue_size: 0,
+                response_queue: VecDeque::new(),
+                writer: WriterState::NotWriting(w),
+                timeout: None,
+            };
+            if let Some(ref next) = client.next {
+                next.borrow_mut().prev = Some(weak.clone())
             }
-        }
+            client.log(format_args!("connected"));
+            RefCell::new(client)
+        }))
     }
 }
 
