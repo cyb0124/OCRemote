@@ -17,12 +17,12 @@ pub trait Process: 'static {
 
 pub trait IntoProcess {
     type Output: Process;
-    fn into_process(self, factory: &Weak<RefCell<Factory>>) -> Rc<RefCell<Self::Output>>;
+    fn into_process(self, factory: &Factory) -> Rc<RefCell<Self::Output>>;
 }
 
 impl<T: Process> IntoProcess for T {
     type Output = T;
-    fn into_process(self, _: &Weak<RefCell<Factory>>) -> Rc<RefCell<Self::Output>> { Rc::new(RefCell::new(self)) }
+    fn into_process(self, _: &Factory) -> Rc<RefCell<Self::Output>> { Rc::new(RefCell::new(self)) }
 }
 
 pub type SlotFilter = Box<dyn Fn(usize) -> bool>;
@@ -155,6 +155,7 @@ mod blocking_output;
 mod buffered;
 mod crafting_grid;
 mod fluid_slotted;
+mod manual_ui;
 mod misc;
 mod multi_inv_slotted;
 mod reactor;
@@ -166,6 +167,7 @@ pub use blocking_output::*;
 pub use buffered::*;
 pub use crafting_grid::*;
 pub use fluid_slotted::*;
+pub use manual_ui::*;
 pub use misc::*;
 pub use multi_inv_slotted::*;
 pub use reactor::*;

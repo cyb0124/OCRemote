@@ -30,12 +30,12 @@ struct MEExtractor {
 
 impl IntoStorage for MEConfig {
     type Output = MEStorage;
-    fn into_storage(self, factory: &Weak<RefCell<Factory>>) -> Rc<RefCell<Self::Output>> {
+    fn into_storage(self, factory: &Factory) -> Rc<RefCell<Self::Output>> {
         Rc::new_cyclic(|weak| {
             RefCell::new(Self::Output {
                 weak: weak.clone(),
                 config: self,
-                factory: factory.clone(),
+                factory: factory.weak.clone(),
                 access_for_item: FnvHashMap::default(),
             })
         })

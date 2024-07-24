@@ -48,18 +48,19 @@ pub struct ScatteringConfig {
     pub max_per_slot: i32,
 }
 
+impl_inventory!(ScatteringProcess);
 pub struct ScatteringProcess {
     weak: Weak<RefCell<ScatteringProcess>>,
     config: ScatteringConfig,
     factory: Weak<RefCell<Factory>>,
 }
 
-impl_inventory!(ScatteringProcess);
-
 impl IntoProcess for ScatteringConfig {
     type Output = ScatteringProcess;
-    fn into_process(self, factory: &Weak<RefCell<Factory>>) -> Rc<RefCell<Self::Output>> {
-        Rc::new_cyclic(|weak| RefCell::new(Self::Output { weak: weak.clone(), config: self, factory: factory.clone() }))
+    fn into_process(self, factory: &Factory) -> Rc<RefCell<Self::Output>> {
+        Rc::new_cyclic(|weak| {
+            RefCell::new(Self::Output { weak: weak.clone(), config: self, factory: factory.weak.clone() })
+        })
     }
 }
 

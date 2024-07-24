@@ -6,6 +6,7 @@ use crate::process::{IntoProcess, Process};
 use crate::server::Server;
 use crate::storage::{DepositResult, Extractor, IntoStorage, Provider, Storage};
 use crate::util::{alive, join_outputs, join_tasks, make_local_one_shot, spawn, LocalReceiver, LocalSender};
+use crate::Tui;
 use abort_on_drop::ChildTask;
 use flexstr::{local_fmt, local_str, LocalStr};
 use fnv::{FnvHashMap, FnvHashSet};
@@ -21,7 +22,7 @@ use std::{
 use tokio::time::{sleep_until, Instant};
 
 pub struct ItemInfo {
-    n_stored: i32,
+    pub n_stored: i32,
     n_backup: i32,
     providers: BinaryHeap<Provider>,
 }
@@ -111,6 +112,7 @@ impl FluidReservation {
 }
 
 pub struct FactoryConfig {
+    pub tui: Rc<Tui>,
     pub server: Rc<RefCell<Server>>,
     pub min_cycle_time: Duration,
     pub log_clients: Vec<LocalStr>,
@@ -137,14 +139,14 @@ struct FluidStorage {
 }
 
 pub struct Factory {
-    weak: Weak<RefCell<Factory>>,
+    pub weak: Weak<RefCell<Factory>>,
     _task: ChildTask<Result<(), LocalStr>>,
     pub config: FactoryConfig,
     storages: Vec<Rc<RefCell<dyn Storage>>>,
     processes: Vec<Rc<RefCell<dyn Process>>>,
     fluid_storages: Vec<Rc<RefCell<FluidStorage>>>,
 
-    items: FnvHashMap<Rc<Item>, RefCell<ItemInfo>>,
+    pub items: FnvHashMap<Rc<Item>, RefCell<ItemInfo>>,
     label_map: FnvHashMap<LocalStr, Vec<Rc<Item>>>,
     name_map: FnvHashMap<LocalStr, Vec<Rc<Item>>>,
     fluid_backups: FnvHashMap<LocalStr, i64>,
@@ -201,8 +203,8 @@ impl FactoryConfig {
 }
 
 impl Factory {
-    pub fn add_storage(&mut self, storage: impl IntoStorage) { self.storages.push(storage.into_storage(&self.weak)) }
-    pub fn add_process(&mut self, process: impl IntoProcess) { self.processes.push(process.into_process(&self.weak)) }
+    pub fn add_storage(&mut self, storage: impl IntoStorage) { self.storages.push(storage.into_storage(&self)) }
+    pub fn add_process(&mut self, process: impl IntoProcess) { self.processes.push(process.into_process(&self)) }
     pub fn get_n_stored(&self, item: &Rc<Item>) -> i32 { self.items.get(item).map_or(0, |info| info.borrow().n_stored) }
     pub fn borrow_server(&self) -> Ref<Server> { self.config.server.borrow() }
     pub fn add_fluid_storage(&mut self, config: FluidStorageConfig) {
@@ -220,7 +222,7 @@ impl Factory {
     }
 
     pub fn log(&self, action: Print) {
-        println!("{}", action.text);
+        self.config.tui.log(action.text.to_std_string(), action.color);
         let server = self.borrow_server();
         for client in &self.config.log_clients {
             server.enqueue_request_group(client, vec![ActionFuture::from(action.clone()).into()]);

@@ -89,9 +89,14 @@ impl_reactor_process!(HysteresisReactorProcess);
 
 impl IntoProcess for HysteresisReactorConfig {
     type Output = HysteresisReactorProcess;
-    fn into_process(self, factory: &Weak<RefCell<Factory>>) -> Rc<RefCell<Self::Output>> {
+    fn into_process(self, factory: &Factory) -> Rc<RefCell<Self::Output>> {
         Rc::new_cyclic(|weak| {
-            RefCell::new(Self::Output { weak: weak.clone(), config: self, factory: factory.clone(), prev_on: None })
+            RefCell::new(Self::Output {
+                weak: weak.clone(),
+                config: self,
+                factory: factory.weak.clone(),
+                prev_on: None,
+            })
         })
     }
 }
@@ -154,9 +159,14 @@ impl_reactor_process!(ProportionalReactorProcess);
 
 impl IntoProcess for ProportionalReactorConfig {
     type Output = ProportionalReactorProcess;
-    fn into_process(self, factory: &Weak<RefCell<Factory>>) -> Rc<RefCell<Self::Output>> {
+    fn into_process(self, factory: &Factory) -> Rc<RefCell<Self::Output>> {
         Rc::new_cyclic(|weak| {
-            RefCell::new(Self::Output { weak: weak.clone(), config: self, factory: factory.clone(), prev_rod: None })
+            RefCell::new(Self::Output {
+                weak: weak.clone(),
+                config: self,
+                factory: factory.weak.clone(),
+                prev_rod: None,
+            })
         })
     }
 }
@@ -220,12 +230,12 @@ impl_reactor_process!(PIDReactorProcess);
 
 impl IntoProcess for PIDReactorConfig {
     type Output = PIDReactorProcess;
-    fn into_process(self, factory: &Weak<RefCell<Factory>>) -> Rc<RefCell<Self::Output>> {
+    fn into_process(self, factory: &Factory) -> Rc<RefCell<Self::Output>> {
         Rc::new_cyclic(|weak| {
             RefCell::new(Self::Output {
                 weak: weak.clone(),
                 config: self,
-                factory: factory.clone(),
+                factory: factory.weak.clone(),
                 state: None,
                 prev_rod: None,
             })

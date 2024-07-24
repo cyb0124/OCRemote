@@ -36,7 +36,7 @@ pub struct RedstoneEmitterProcess {
 
 impl IntoProcess for RedstoneEmitterConfig {
     type Output = RedstoneEmitterProcess;
-    fn into_process(self, _factory: &Weak<RefCell<Factory>>) -> Rc<RefCell<Self::Output>> {
+    fn into_process(self, _factory: &Factory) -> Rc<RefCell<Self::Output>> {
         Rc::new_cyclic(|weak| RefCell::new(Self::Output { weak: weak.clone(), config: self, prev_value: None }))
     }
 }
@@ -84,11 +84,11 @@ pub struct RedstoneConditionalProcess<T: Process> {
 
 impl<T: IntoProcess> IntoProcess for RedstoneConditionalConfig<T> {
     type Output = RedstoneConditionalProcess<T::Output>;
-    fn into_process(self, factory: &Weak<RefCell<Factory>>) -> Rc<RefCell<Self::Output>> {
+    fn into_process(self, factory: &Factory) -> Rc<RefCell<Self::Output>> {
         Rc::new_cyclic(|weak| {
             RefCell::new(Self::Output {
                 weak: weak.clone(),
-                factory: factory.clone(),
+                factory: factory.weak.clone(),
                 name: self.name,
                 accesses: self.accesses,
                 condition: self.condition,

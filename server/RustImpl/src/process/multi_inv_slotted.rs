@@ -76,7 +76,7 @@ pub struct MultiInvSlottedProcess {
 
 impl IntoProcess for MultiInvSlottedConfig {
     type Output = MultiInvSlottedProcess;
-    fn into_process(self, factory: &Weak<RefCell<Factory>>) -> Rc<RefCell<Self::Output>> {
+    fn into_process(self, factory: &Factory) -> Rc<RefCell<Self::Output>> {
         Rc::new_cyclic(|weak| {
             let accesses = self.accesses;
             let invs = Vec::from_iter(self.input_slots.into_iter().enumerate().map(|(i, input_slots)| {
@@ -95,13 +95,13 @@ impl IntoProcess for MultiInvSlottedConfig {
                             })),
                             input_slots,
                         },
-                        factory: factory.clone(),
+                        factory: factory.weak.clone(),
                     })
                 })
             }));
             RefCell::new(Self::Output {
                 weak: weak.clone(),
-                factory: factory.clone(),
+                factory: factory.weak.clone(),
                 name: self.name,
                 accesses,
                 to_extract: self.to_extract,

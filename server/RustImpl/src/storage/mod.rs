@@ -5,7 +5,7 @@ use flexstr::LocalStr;
 use std::{
     cell::{Cell, RefCell},
     cmp::Ordering,
-    rc::{Rc, Weak},
+    rc::Rc,
 };
 
 pub struct DepositResult {
@@ -22,7 +22,7 @@ pub trait Storage: 'static {
 
 pub trait IntoStorage {
     type Output: Storage;
-    fn into_storage(self, factory: &Weak<RefCell<Factory>>) -> Rc<RefCell<Self::Output>>;
+    fn into_storage(self, factory: &Factory) -> Rc<RefCell<Self::Output>>;
 }
 
 pub trait Extractor {

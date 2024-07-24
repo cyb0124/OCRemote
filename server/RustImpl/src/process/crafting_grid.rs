@@ -176,8 +176,10 @@ pub struct CraftingRobotProcess {
 
 impl IntoProcess for CraftingRobotConfig {
     type Output = CraftingRobotProcess;
-    fn into_process(self, factory: &Weak<RefCell<Factory>>) -> Rc<RefCell<Self::Output>> {
-        Rc::new_cyclic(|weak| RefCell::new(Self::Output { weak: weak.clone(), config: self, factory: factory.clone() }))
+    fn into_process(self, factory: &Factory) -> Rc<RefCell<Self::Output>> {
+        Rc::new_cyclic(|weak| {
+            RefCell::new(Self::Output { weak: weak.clone(), config: self, factory: factory.weak.clone() })
+        })
     }
 }
 
@@ -263,8 +265,10 @@ pub struct WorkbenchProcess {
 
 impl IntoProcess for WorkbenchConfig {
     type Output = WorkbenchProcess;
-    fn into_process(self, factory: &Weak<RefCell<Factory>>) -> Rc<RefCell<Self::Output>> {
-        Rc::new_cyclic(|weak| RefCell::new(Self::Output { weak: weak.clone(), config: self, factory: factory.clone() }))
+    fn into_process(self, factory: &Factory) -> Rc<RefCell<Self::Output>> {
+        Rc::new_cyclic(|weak| {
+            RefCell::new(Self::Output { weak: weak.clone(), config: self, factory: factory.weak.clone() })
+        })
     }
 }
 

@@ -30,7 +30,7 @@ pub struct ConditionalProcess<T: Process> {
 
 impl<T: IntoProcess> IntoProcess for ConditionalConfig<T> {
     type Output = ConditionalProcess<T::Output>;
-    fn into_process(self, factory: &Weak<RefCell<Factory>>) -> Rc<RefCell<Self::Output>> {
+    fn into_process(self, factory: &Factory) -> Rc<RefCell<Self::Output>> {
         Rc::new(RefCell::new(Self::Output { condition: self.condition, child: self.child.into_process(factory) }))
     }
 }
@@ -59,7 +59,7 @@ pub struct PlasticMixerProcess {
 
 impl IntoProcess for PlasticMixerConfig {
     type Output = PlasticMixerProcess;
-    fn into_process(self, _factory: &Weak<RefCell<Factory>>) -> Rc<RefCell<Self::Output>> {
+    fn into_process(self, _factory: &Factory) -> Rc<RefCell<Self::Output>> {
         Rc::new_cyclic(|weak| RefCell::new(Self::Output { weak: weak.clone(), config: self, prev_choice: None }))
     }
 }
@@ -130,28 +130,24 @@ pub struct FluxNetworkProcess {
 
 impl IntoProcess for FluxNetworkConfig {
     type Output = FluxNetworkProcess;
-    fn into_process(self, factory: &Weak<RefCell<Factory>>) -> Rc<RefCell<Self::Output>> {
+    fn into_process(self, factory: &Factory) -> Rc<RefCell<Self::Output>> {
         Rc::new_cyclic(|weak| {
             RefCell::new(Self::Output {
                 weak: weak.clone(),
-                factory: factory.clone(),
+                factory: factory.weak.clone(),
                 name: self.name,
                 accesses: self.accesses,
-                outputs: self
-                    .outputs
-                    .into_iter()
-                    .map(|FluxNetworkOutput { output, accesses }| {
-                        let weak = weak.clone();
-                        RedstoneEmitterConfig {
-                            accesses: accesses,
-                            output: Box::new(move |_factory| {
-                                upgrade!(weak, this);
-                                output(this.energy)
-                            }),
-                        }
-                        .into_process(factory)
-                    })
-                    .collect(),
+                outputs: Vec::from_iter(self.outputs.into_iter().map(|FluxNetworkOutput { output, accesses }| {
+                    let weak = weak.clone();
+                    RedstoneEmitterConfig {
+                        accesses: accesses,
+                        output: Box::new(move |_factory| {
+                            upgrade!(weak, this);
+                            output(this.energy)
+                        }),
+                    }
+                    .into_process(factory)
+                })),
                 energy: f64::NAN,
             })
         })
@@ -247,11 +243,11 @@ impl_inventory!(ItemCycleProcess);
 
 impl IntoProcess for ItemCycleConfig {
     type Output = ItemCycleProcess;
-    fn into_process(self, factory: &Weak<RefCell<Factory>>) -> Rc<RefCell<Self::Output>> {
+    fn into_process(self, factory: &Factory) -> Rc<RefCell<Self::Output>> {
         let next_item =
             read_to_string(&*self.file_name).ok().and_then(|x| usize::from_str(&x).ok()).unwrap_or_default();
         Rc::new_cyclic(|weak| {
-            RefCell::new(Self::Output { weak: weak.clone(), factory: factory.clone(), config: self, next_item })
+            RefCell::new(Self::Output { weak: weak.clone(), factory: factory.weak.clone(), config: self, next_item })
         })
     }
 }

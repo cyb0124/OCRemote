@@ -31,12 +31,12 @@ struct ChestExtractor {
 
 impl IntoStorage for ChestConfig {
     type Output = ChestStorage;
-    fn into_storage(self, factory: &Weak<RefCell<Factory>>) -> Rc<RefCell<Self::Output>> {
+    fn into_storage(self, factory: &Factory) -> Rc<RefCell<Self::Output>> {
         Rc::new_cyclic(|weak| {
             RefCell::new(Self::Output {
                 weak: weak.clone(),
                 config: self,
-                factory: factory.clone(),
+                factory: factory.weak.clone(),
                 stacks: Vec::new(),
                 inv_slot_to_deposit: 0,
             })

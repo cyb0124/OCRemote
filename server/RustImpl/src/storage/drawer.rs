@@ -29,8 +29,10 @@ struct DrawerExtractor {
 
 impl IntoStorage for DrawerConfig {
     type Output = DrawerStorage;
-    fn into_storage(self, factory: &Weak<RefCell<Factory>>) -> Rc<RefCell<Self::Output>> {
-        Rc::new_cyclic(|weak| RefCell::new(Self::Output { weak: weak.clone(), config: self, factory: factory.clone() }))
+    fn into_storage(self, factory: &Factory) -> Rc<RefCell<Self::Output>> {
+        Rc::new_cyclic(|weak| {
+            RefCell::new(Self::Output { weak: weak.clone(), config: self, factory: factory.weak.clone() })
+        })
     }
 }
 
