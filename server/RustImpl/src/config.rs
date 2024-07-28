@@ -25,13 +25,35 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
         });
         for (fluid, bus_of_tank) in [
             ("water", EachBusOfTank { addr: s("3cd"), bus_side: EAST, tank_side: DOWN }),
-            ("ic2distilledwater", EachBusOfTank { addr: s("3cd"), bus_side: EAST, tank_side: SOUTH }),
+            ("biomass", EachBusOfTank { addr: s("4e7"), bus_side: WEST, tank_side: DOWN }),
+            ("bioethanol", EachBusOfTank { addr: s("3cd"), bus_side: EAST, tank_side: SOUTH }),
         ] {
             factory.add_fluid_storage(FluidStorageConfig {
                 accesses: vec![TankAccess { client: s("main"), buses: vec![bus_of_tank] }],
                 fluid: s(fluid),
             })
         }
+        /*
+        for (fluid, qty, bus_of_tank) in
+            [("bioethanol", 16_000, EachBusOfTank { addr: s("4e7"), bus_side: WEST, tank_side: EAST })]
+        {
+            factory.add_process(FluidSlottedConfig {
+                name: s("fluidStock"),
+                input_slots: vec![],
+                input_tanks: vec![vec![0]],
+                accesses: vec![InvTankAccess { client: s("main"), invs: vec![], tanks: vec![vec![bus_of_tank]] }],
+                to_extract: None,
+                fluid_extract: None,
+                strict_priority: false,
+                recipes: vec![FluidSlottedRecipe {
+                    outputs: ignore_outputs(1.),
+                    inputs: vec![],
+                    fluids: vec![FluidSlottedInput::new(s(fluid), vec![(0, 1)])],
+                    max_sets: qty,
+                }],
+            })
+        }
+        */
         factory.add_process(SlottedConfig {
             name: s("output"),
             accesses: vec![InvAccess { client: s("main"), addr: s("a53"), bus_side: EAST, inv_side: NORTH }],
@@ -41,22 +63,41 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
             recipes: vec![],
         });
         factory.add_process(FluidSlottedConfig {
-            name: s("distillery-5"),
+            name: s("distillery-1"),
             input_slots: vec![],
             input_tanks: vec![vec![0]],
             accesses: vec![InvTankAccess {
                 client: s("main"),
                 invs: vec![],
-                tanks: vec![vec![EachBusOfTank { addr: s("4e7"), bus_side: WEST, tank_side: DOWN }]],
+                tanks: vec![vec![EachBusOfTank { addr: s("4e7"), bus_side: WEST, tank_side: NORTH }]],
             }],
             to_extract: None,
             fluid_extract: fluid_extract_slots(|_, i| i == 1),
             strict_priority: false,
             recipes: vec![FluidSlottedRecipe {
-                outputs: FluidOutput::new(s("ic2distilledwater"), 8_000),
+                outputs: FluidOutput::new(s("bioethanol"), 8_000),
                 inputs: vec![],
-                fluids: vec![FluidSlottedInput::new(s("water"), vec![(0, 5)])],
+                fluids: vec![FluidSlottedInput::new(s("biomass"), vec![(0, 40)])],
                 max_sets: 64,
+            }],
+        });
+        factory.add_process(FluidSlottedConfig {
+            name: s("brewery"),
+            input_slots: vec![vec![5]],
+            input_tanks: vec![vec![0]],
+            accesses: vec![InvTankAccess {
+                client: s("main"),
+                invs: vec![EachInvAccess { addr: s("3cd"), bus_side: WEST, inv_side: NORTH }],
+                tanks: vec![vec![EachBusOfTank { addr: s("3cd"), bus_side: EAST, tank_side: NORTH }]],
+            }],
+            to_extract: None,
+            fluid_extract: fluid_extract_slots(|_, i| i == 1),
+            strict_priority: false,
+            recipes: vec![FluidSlottedRecipe {
+                outputs: FluidOutput::new(s("biomass"), 8_000),
+                inputs: vec![MultiInvSlottedInput::new(label("Potato"), vec![(0, 5, 1)])],
+                fluids: vec![FluidSlottedInput::new(s("water"), vec![(0, 40)])],
+                max_sets: 8,
             }],
         });
         factory.add_process(BlockingFluidOutputConfig {
