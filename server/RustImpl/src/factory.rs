@@ -727,7 +727,7 @@ pub fn read_tanks<'a, T: Access + 'a>(
         for tank in tanks {
             let mut tank = Table::try_from(tank)?;
             let capacity = table_remove(&mut tank, "capacity")?;
-            let qty = table_remove(&mut tank, "amounut")?;
+            let qty = table_remove(&mut tank, "amount")?;
             let fluid = if qty > 0 { Some(table_remove(&mut tank, "name")?) } else { None };
             result.push(Tank { capacity, qty, fluid })
         }
