@@ -23,12 +23,41 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
         factory.add_storage(ChestConfig {
             accesses: vec![InvAccess { client: s("main"), addr: s("a53"), bus_side: EAST, inv_side: WEST }],
         });
-        factory.add_fluid_storage(FluidStorageConfig {
-            accesses: vec![TankAccess {
+        for (fluid, bus_of_tank) in [
+            ("water", EachBusOfTank { addr: s("3cd"), bus_side: EAST, tank_side: DOWN }),
+            ("ic2distilledwater", EachBusOfTank { addr: s("3cd"), bus_side: EAST, tank_side: SOUTH }),
+        ] {
+            factory.add_fluid_storage(FluidStorageConfig {
+                accesses: vec![TankAccess { client: s("main"), buses: vec![bus_of_tank] }],
+                fluid: s(fluid),
+            })
+        }
+        factory.add_process(SlottedConfig {
+            name: s("output"),
+            accesses: vec![InvAccess { client: s("main"), addr: s("a53"), bus_side: EAST, inv_side: NORTH }],
+            input_slots: vec![],
+            to_extract: extract_all(),
+            strict_priority: false,
+            recipes: vec![],
+        });
+        factory.add_process(FluidSlottedConfig {
+            name: s("distillery-5"),
+            input_slots: vec![],
+            input_tanks: vec![vec![0]],
+            accesses: vec![InvTankAccess {
                 client: s("main"),
-                buses: vec![EachBusOfTank { addr: s("3cd"), bus_side: EAST, tank_side: DOWN }],
+                invs: vec![],
+                tanks: vec![vec![EachBusOfTank { addr: s("4e7"), bus_side: WEST, tank_side: DOWN }]],
             }],
-            fluid: s("water"),
+            to_extract: None,
+            fluid_extract: fluid_extract_slots(|_, i| i == 1),
+            strict_priority: false,
+            recipes: vec![FluidSlottedRecipe {
+                outputs: FluidOutput::new(s("ic2distilledwater"), 8_000),
+                inputs: vec![],
+                fluids: vec![FluidSlottedInput::new(s("water"), vec![(0, 5)])],
+                max_sets: 64,
+            }],
         });
         factory.add_process(BlockingFluidOutputConfig {
             accesses: vec![TankAccess {
