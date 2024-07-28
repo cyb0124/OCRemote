@@ -679,10 +679,11 @@ async fn fluid_bus_update(factory: &Weak<RefCell<Factory>>) -> Result<bool, Loca
         let mut empty_buses = Vec::new();
         for (i, tanks) in buses.into_iter().enumerate() {
             if !this.fluid_bus_allocations.contains(&i) {
-                if tanks.is_empty() {
+                let fluids = tanks_to_fluid_map(&tanks);
+                if fluids.is_empty() {
                     empty_buses.push(i)
                 } else {
-                    for (fluid, (slot, qty)) in tanks_to_fluid_map(&tanks) {
+                    for (fluid, (slot, qty)) in fluids {
                         this.fluid_deposit(i, slot, fluid, qty, &mut tasks)
                     }
                 }
@@ -727,7 +728,7 @@ pub fn read_tanks<'a, T: Access + 'a>(
         for tank in tanks {
             let mut tank = Table::try_from(tank)?;
             let capacity = table_remove(&mut tank, "capacity")?;
-            let qty = table_remove(&mut tank, "amounut")?;
+            let qty = table_remove(&mut tank, "amount")?;
             let fluid = if qty > 0 { Some(table_remove(&mut tank, "name")?) } else { None };
             result.push(Tank { capacity, qty, fluid })
         }
