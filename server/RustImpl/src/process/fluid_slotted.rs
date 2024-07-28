@@ -305,7 +305,7 @@ impl FluidSlottedProcess {
         fluids: FnvHashMap<LocalStr, (usize, i64)>,
         tasks: &mut Vec<ChildTask<Result<(), LocalStr>>>,
     ) {
-        for (_, (qty, slot)) in fluids {
+        for (_, (slot, qty)) in fluids {
             let bus = factory.fluid_bus_allocate();
             let weak = self.weak.clone();
             tasks.push(spawn(async move {
