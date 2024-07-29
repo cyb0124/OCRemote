@@ -21,12 +21,13 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
     .build(|factory| {
         factory.add_process(ManualUiConfig { accesses: vec![] });
         factory.add_storage(ChestConfig {
-            accesses: vec![InvAccess { client: s("main"), addr: s("a53"), bus_side: EAST, inv_side: WEST }],
+            accesses: vec![InvAccess { client: s("main"), addr: s("a53"), bus_side: EAST, inv_side: SOUTH }],
         });
         for (fluid, bus_of_tank) in [
             ("water", EachBusOfTank { addr: s("3cd"), bus_side: EAST, tank_side: DOWN }),
-            ("biomass", EachBusOfTank { addr: s("4e7"), bus_side: WEST, tank_side: DOWN }),
+            ("ic2biomass", EachBusOfTank { addr: s("4e7"), bus_side: WEST, tank_side: DOWN }),
             ("bioethanol", EachBusOfTank { addr: s("3cd"), bus_side: EAST, tank_side: SOUTH }),
+            ("fermentedbiomass", EachBusOfTank { addr: s("c14"), bus_side: WEST, tank_side: DOWN }),
         ] {
             factory.add_fluid_storage(FluidStorageConfig {
                 accesses: vec![TankAccess { client: s("main"), buses: vec![bus_of_tank] }],
@@ -56,14 +57,14 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
         */
         factory.add_process(SlottedConfig {
             name: s("output"),
-            accesses: vec![InvAccess { client: s("main"), addr: s("a53"), bus_side: EAST, inv_side: NORTH }],
+            accesses: vec![InvAccess { client: s("main"), addr: s("a53"), bus_side: EAST, inv_side: WEST }],
             input_slots: vec![],
             to_extract: extract_all(),
             strict_priority: false,
             recipes: vec![],
         });
         factory.add_process(FluidSlottedConfig {
-            name: s("distillery-1"),
+            name: s("distillery-3"),
             input_slots: vec![],
             input_tanks: vec![vec![0]],
             accesses: vec![InvTankAccess {
@@ -77,7 +78,26 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
             recipes: vec![FluidSlottedRecipe {
                 outputs: FluidOutput::new(s("bioethanol"), 8_000),
                 inputs: vec![],
-                fluids: vec![FluidSlottedInput::new(s("biomass"), vec![(0, 40)])],
+                fluids: vec![FluidSlottedInput::new(s("fermentedbiomass"), vec![(0, 1_000)])],
+                max_sets: 8,
+            }],
+        });
+        factory.add_process(FluidSlottedConfig {
+            name: s("fermenter"),
+            input_slots: vec![],
+            input_tanks: vec![vec![0]],
+            accesses: vec![InvTankAccess {
+                client: s("main"),
+                invs: vec![],
+                tanks: vec![vec![EachBusOfTank { addr: s("c14"), bus_side: WEST, tank_side: NORTH }]],
+            }],
+            to_extract: None,
+            fluid_extract: fluid_extract_slots(|_, i| i == 1),
+            strict_priority: false,
+            recipes: vec![FluidSlottedRecipe {
+                outputs: FluidOutput::new(s("fermentedbiomass"), 8_000),
+                inputs: vec![],
+                fluids: vec![FluidSlottedInput::new(s("ic2biomass"), vec![(0, 20)])],
                 max_sets: 64,
             }],
         });
@@ -94,9 +114,45 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
             fluid_extract: fluid_extract_slots(|_, i| i == 1),
             strict_priority: false,
             recipes: vec![FluidSlottedRecipe {
-                outputs: FluidOutput::new(s("biomass"), 8_000),
-                inputs: vec![MultiInvSlottedInput::new(label("Potato"), vec![(0, 5, 1)])],
-                fluids: vec![FluidSlottedInput::new(s("water"), vec![(0, 40)])],
+                outputs: FluidOutput::new(s("ic2biomass"), 8_000),
+                inputs: vec![MultiInvSlottedInput::new(label("Bio Chaff"), vec![(0, 5, 1)])],
+                fluids: vec![FluidSlottedInput::new(s("water"), vec![(0, 1000)])],
+                max_sets: 2,
+            }],
+        });
+        factory.add_process(SlottedConfig {
+            name: s("compressor"),
+            accesses: vec![InvAccess { client: s("main"), addr: s("a53"), bus_side: EAST, inv_side: NORTH }],
+            input_slots: vec![5],
+            to_extract: None,
+            strict_priority: false,
+            recipes: vec![SlottedRecipe {
+                outputs: Output::new(label("Plantball"), 16),
+                inputs: vec![SlottedInput::new(label("Sesame Seeds"), vec![(5, 8)])],
+                max_sets: 8,
+            }],
+        });
+        factory.add_process(SlottedConfig {
+            name: s("macerator"),
+            accesses: vec![InvAccess { client: s("main"), addr: s("a53"), bus_side: EAST, inv_side: DOWN }],
+            input_slots: vec![5],
+            to_extract: None,
+            strict_priority: false,
+            recipes: vec![SlottedRecipe {
+                outputs: Output::new(label("Plant Mass"), 16),
+                inputs: vec![SlottedInput::new(label("Plantball"), vec![(5, 2)])],
+                max_sets: 8,
+            }],
+        });
+        factory.add_process(SlottedConfig {
+            name: s("centrifuge"),
+            accesses: vec![InvAccess { client: s("main"), addr: s("e9b"), bus_side: WEST, inv_side: NORTH }],
+            input_slots: vec![5],
+            to_extract: None,
+            strict_priority: false,
+            recipes: vec![SlottedRecipe {
+                outputs: Output::new(label("Bio Chaff"), 16),
+                inputs: vec![SlottedInput::new(label("Plant Mass"), vec![(5, 1)])],
                 max_sets: 8,
             }],
         });
