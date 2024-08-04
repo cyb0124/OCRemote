@@ -42,7 +42,7 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
             ("molten.plastic", EachBusOfTank { addr: s("02a"), bus_side: WEST, tank_side: EAST }),
             ("chlorine", EachBusOfTank { addr: s("02a"), bus_side: WEST, tank_side: NORTH }),
             ("vinylchloride", EachBusOfTank { addr: s("02a"), bus_side: WEST, tank_side: UP }),
-            ("polyvinylchloride", EachBusOfTank { addr: s("02a"), bus_side: WEST, tank_side: SOUTH }),
+            ("molten.polyvinylchloride", EachBusOfTank { addr: s("02a"), bus_side: WEST, tank_side: SOUTH }),
         ] {
             factory.add_fluid_storage(FluidStorageConfig {
                 accesses: vec![TankAccess { client: s("main"), buses: vec![bus_of_tank] }],
@@ -244,7 +244,7 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
                     max_sets: 8,
                 },
                 FluidSlottedRecipe {
-                    outputs: FluidOutput::new(s("polyvinylchloride"), 16_000),
+                    outputs: FluidOutput::new(s("molten.polyvinylchloride"), 16_000),
                     inputs: vec![MultiInvSlottedInput::new(label("Oxygen Cell"), vec![(0, 5, 1)])],
                     fluids: vec![FluidSlottedInput::new(s("vinylchloride"), vec![(0, 144)])],
                     max_sets: 8,
