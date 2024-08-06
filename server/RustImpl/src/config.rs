@@ -181,7 +181,7 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
             strict_priority: false,
             recipes: vec![
                 FluidSlottedRecipe {
-                    outputs: ignore_outputs(1.), /*Output::new(label("Ethanol Cell"), 16)*/
+                    outputs: Output::new(label("Ethanol Cell"), 16),
                     inputs: vec![MultiInvSlottedInput::new(label("Empty Cell"), vec![(0, 0, 1)])],
                     fluids: vec![FluidSlottedInput::new(s("bioethanol"), vec![(0, 1_000)])],
                     max_sets: 8,
@@ -232,7 +232,7 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
                     max_sets: 2,
                 },
                 FluidSlottedRecipe {
-                    outputs: FluidOutput::new(s("molten.plastic"), 16_000),
+                    outputs: FluidOutput::new(s("molten.plastic"), 32_000),
                     inputs: vec![MultiInvSlottedInput::new(label("Ethylene Cell"), vec![(0, 5, 1)])],
                     fluids: vec![FluidSlottedInput::new(s("oxygen"), vec![(0, 7_000)])],
                     max_sets: 2,
@@ -244,7 +244,7 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
                     max_sets: 8,
                 },
                 FluidSlottedRecipe {
-                    outputs: FluidOutput::new(s("molten.polyvinylchloride"), 16_000),
+                    outputs: FluidOutput::new(s("molten.polyvinylchloride"), 32_000),
                     inputs: vec![MultiInvSlottedInput::new(label("Oxygen Cell"), vec![(0, 5, 1)])],
                     fluids: vec![FluidSlottedInput::new(s("vinylchloride"), vec![(0, 144)])],
                     max_sets: 8,
