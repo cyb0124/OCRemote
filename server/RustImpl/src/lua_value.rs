@@ -325,8 +325,7 @@ impl Parser {
                                     escape = false
                                 }
                                 b'~' => {
-                                    let string = std::str::from_utf8(&result)
-                                        .map_err(|e| local_fmt!("non utf-8 string: {}", e))?;
+                                    let string = String::from_utf8_lossy(&result);
                                     self.reduce(LocalStr::from_ref(string).into(), handler)?;
                                     continue 'outer;
                                 }
