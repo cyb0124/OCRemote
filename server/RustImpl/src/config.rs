@@ -469,7 +469,7 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
                     outputs: FluidOutput::new(s("seedoil"), 16_000),
                     inputs: vec![MultiInvSlottedInput::new(label("Sesame Seeds"), vec![(0, 5, 1)])],
                     fluids: vec![],
-                    max_sets: 16,
+                    max_sets: 64,
                 },
             ],
         });
