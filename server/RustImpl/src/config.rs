@@ -30,6 +30,7 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
         factory.add_process(LowAlert::new(label("Phenol Cell"), 16));
         factory.add_process(LowAlert::new(label("Sulfur Dust"), 16));
         factory.add_process(LowAlert::new(label("Carbon Dust"), 16));
+        factory.add_process(LowAlert::new(label("Silver Dust"), 16));
         factory.add_process(LowAlert::new(label("Raw Silicon Dust"), 16));
         factory.add_storage(ChestConfig {
             accesses: vec![InvAccess { client: s("main"), addr: s("09c"), bus_side: NORTH, inv_side: SOUTH }],
@@ -642,6 +643,15 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
                     fluids: vec![FluidSlottedInput::new(s("sulfuricacid"), vec![(0, 500)])],
                     max_sets: 8,
                 },
+                FluidSlottedRecipe {
+                    outputs: Output::new(label("Advanced Circuit Board"), 16),
+                    inputs: vec![
+                        MultiInvSlottedInput::new(label("Epoxy Circuit Board"), vec![(0, 5, 1)]),
+                        MultiInvSlottedInput::new(label("Electrum Foil"), vec![(0, 6, 8)]),
+                    ],
+                    fluids: vec![FluidSlottedInput::new(s("ironiiichloride"), vec![(0, 500)])],
+                    max_sets: 8,
+                },
             ],
         });
         factory.add_process(FluidSlottedConfig {
@@ -820,16 +830,37 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
             }],
         });
         factory.add_process(SlottedConfig {
+            name: s("alloySmelter"),
+            accesses: vec![InvAccess { client: s("c1"), addr: s("fe0"), bus_side: NORTH, inv_side: SOUTH }],
+            input_slots: vec![5, 6],
+            to_extract: None,
+            strict_priority: false,
+            recipes: vec![SlottedRecipe {
+                outputs: Output::new(label("Electrum Ingot"), 16),
+                inputs: vec![
+                    SlottedInput::new(label("Gold Dust"), vec![(5, 1)]),
+                    SlottedInput::new(label("Silver Dust"), vec![(6, 1)]),
+                ],
+                max_sets: 8,
+            }],
+        });
+        factory.add_process(SlottedConfig {
             name: s("bender-10"),
             accesses: vec![InvAccess { client: s("c1"), addr: s("fe0"), bus_side: NORTH, inv_side: UP }],
             input_slots: vec![5],
             to_extract: None,
             strict_priority: false,
-            recipes: vec![SlottedRecipe {
-                outputs: Output::new(label("Gold Foil"), 16),
-                inputs: vec![SlottedInput::new(label("Gold Ingot"), vec![(5, 1)])],
-                max_sets: 8,
-            }],
+            recipes: vec![
+                SlottedRecipe {
+                    outputs: Output::new(label("Gold Foil"), 16),
+                    inputs: vec![SlottedInput::new(label("Gold Ingot"), vec![(5, 1)])],
+                    max_sets: 8,
+                },SlottedRecipe {
+                    outputs: Output::new(label("Electrum Foil"), 16),
+                    inputs: vec![SlottedInput::new(label("Electrum Ingot"), vec![(5, 1)])],
+                    max_sets: 8,
+                },
+            ],
         });
         factory.add_process(SlottedConfig {
             name: s("macerator"),
