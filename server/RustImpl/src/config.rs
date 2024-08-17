@@ -126,6 +126,7 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
             })
         }
         for (fluid, per_set, max_sets, client, bus_of_tank) in [
+            ("ammonia", 1_000, 256, "c1", EachBusOfTank { addr: s("6e5"), bus_side: SOUTH, tank_side: EAST }),
             ("oxygen", 1_000, 16, "c2", EachBusOfTank { addr: s("9a6"), bus_side: SOUTH, tank_side: EAST }),
             ("nitrofuel", 1_000, 16, "main", EachBusOfTank { addr: s("e47"), bus_side: SOUTH, tank_side: UP }),
         ] {
@@ -749,7 +750,7 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
         }
         factory.add_process(SlottedConfig {
             name: s("compressor"),
-            accesses: vec![InvAccess { client: s("main"), addr: s("09c"), bus_side: NORTH, inv_side: WEST }],
+            accesses: vec![InvAccess { client: s("c2"), addr: s("72e"), bus_side: WEST, inv_side: UP }],
             input_slots: vec![5],
             to_extract: None,
             strict_priority: false,
