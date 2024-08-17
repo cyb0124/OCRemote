@@ -191,15 +191,19 @@ while true do
           print(p)
         elseif p.op == "list" then
           local stacks = inv.getAllStacks(p.side)
-          local count = stacks.count()
-          result = {}
-          for slot = 1, count do
-            local item = stacks()
-            if item and item.name and item.size > 0 then
-              item.aspects = nil
-              result[slot] = item
-            elseif slot == count then
-              result[slot] = ''
+          if stacks == nil then
+            result = {''}
+          else
+            local count = stacks.count()
+            result = {}
+            for slot = 1, count do
+              local item = stacks()
+              if item and item.name and item.size > 0 then
+                item.aspects = nil
+                result[slot] = item
+              elseif slot == count then
+                result[slot] = ''
+              end
             end
           end
         elseif p.op == "listME" then
