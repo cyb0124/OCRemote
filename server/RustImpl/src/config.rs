@@ -547,7 +547,7 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
                 FluidSlottedRecipe {
                     outputs: Output::new(label("aceticacid"), 16),
                     inputs: vec![
-                        MultiInvSlottedInput::new(label("Carbon Dust Cell"), vec![(0, 0, 2)]),
+                        MultiInvSlottedInput::new(label("Carbon Dust"), vec![(0, 0, 2)]),
                         MultiInvSlottedInput::new(label("Hydrogen Cell"), vec![(1, 0, 4)]),
                     ],
                     fluids: vec![FluidSlottedInput::new(s("oxygen"), vec![(0, 2_000)])],
