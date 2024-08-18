@@ -33,8 +33,9 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
         factory.add_process(LowAlert::new(label("Sulfur Dust"), 16));
         factory.add_process(LowAlert::new(label("Carbon Dust"), 16));
         factory.add_process(LowAlert::new(label("Silver Dust"), 16));
-        factory.add_process(LowAlert::new(label("Raw Silicon Dust"), 16));
+        factory.add_process(LowAlert::new(label("Silicon Dioxide Dust"), 16));
         factory.add_process(LowAlert::new(label("Crushed Ilmenite Ore"), 16));
+        factory.add_process(LowAlert::new(label("Copper Ingot"), 16));
         factory.add_storage(ChestConfig {
             accesses: vec![InvAccess { client: s("main"), addr: s("09c"), bus_side: NORTH, inv_side: SOUTH }],
         });
@@ -42,6 +43,8 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
          filters: vec![label("Sesame Seeds")] });
         let hydrogen_output = || FluidOutput::new(s("hydrogen"), 16_000).or(Output::new(label("Hydrogen Cell"), 65));
         let hcl_output = || FluidOutput::new(s("hydrochloricacid_gt5u"), 33_000).or(Output::new(label("Hydrochloric Acid Cell"), 16));
+        let plastic_cb = || custom("plasticCB", |x| x.label == "Plastic Circuit Board" && x.damage == 32007);
+        let plastic_pcb = || custom("plasticPCB", |x| x.label == "Plastic Circuit Board" && x.damage == 32106);
         for (fluid, client, bus_of_tank) in [
             ("water", "main", EachBusOfTank { addr: s("608"), bus_side: SOUTH, tank_side: UP }),
             ("hydrogen", "main", EachBusOfTank { addr: s("608"), bus_side: SOUTH, tank_side: NORTH }),
@@ -492,6 +495,24 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
                     max_sets: 8,
                 },
                 FluidSlottedRecipe {
+                    outputs: Output::new(plastic_cb(), 16),
+                    inputs: vec![
+                        MultiInvSlottedInput::new(label("Polyvinyl Chloride Sheet"), vec![(0, 0, 1)]),
+                        MultiInvSlottedInput::new(label("Copper Foil"), vec![(0, 1, 4)]),
+                    ],
+                    fluids: vec![FluidSlottedInput::new(s("sulfuricacid"), vec![(0, 500)])],
+                    max_sets: 8,
+                },
+                FluidSlottedRecipe {
+                    outputs: Output::new(plastic_pcb(), 16),
+                    inputs: vec![
+                        MultiInvSlottedInput::new(plastic_cb(), vec![(0, 0, 1)]),
+                        MultiInvSlottedInput::new(label("Copper Foil"), vec![(0, 1, 6)]),
+                    ],
+                    fluids: vec![FluidSlottedInput::new(s("ironiiichloride"), vec![(0, 250)])],
+                    max_sets: 8,
+                },
+                FluidSlottedRecipe {
                     outputs: FluidOutput::new(s("molten.silicone"), 32_000),
                     inputs: vec![
                         MultiInvSlottedInput::new(label("Polydimethylsiloxane Pulp"), vec![(0, 0, 9)]),
@@ -529,6 +550,15 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
                     inputs: vec![MultiInvSlottedInput::new(label("Nitric Acid Cell"), vec![(1, 0, 8)])],
                     fluids: vec![FluidSlottedInput::new(s("ethenone"), vec![(0, 1_000)])],
                     max_sets: 4,
+                },
+                FluidSlottedRecipe {
+                    outputs: Output::new(label("Raw Silicon Dust"), 16),
+                    inputs: vec![
+                        MultiInvSlottedInput::new(label("Silicon Dioxide Dust"), vec![(0, 0, 3)]),
+                        MultiInvSlottedInput::new(label("Magnesium Dust"), vec![(0, 1, 2)]),
+                    ],
+                    fluids: vec![],
+                    max_sets: 8,
                 },
             ]
         });
@@ -686,6 +716,12 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
                     max_sets: 8,
                 },
                 FluidSlottedRecipe {
+                    outputs: ignore_outputs(64.),
+                    inputs: vec![MultiInvSlottedInput::new(label("Magnesia Dust"), vec![(0, 5, 2)])],
+                    fluids: vec![],
+                    max_sets: 8,
+                },
+                FluidSlottedRecipe {
                     outputs: FluidOutput::new(s("chlorine"), 16_000).and(Output::new(label("Sodium Dust"),16)),
                     inputs: vec![MultiInvSlottedInput::new(label("Salt"), vec![(0, 5, 2)])],
                     fluids: vec![],
@@ -785,14 +821,14 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
         });
         factory.add_process(SlottedConfig {
             name: s("extractor"),
-            accesses: vec![InvAccess { client: s("main"), addr: s("09c"), bus_side: NORTH, inv_side: UP }],
+            accesses: vec![InvAccess { client: s("c2"), addr: s("72e"), bus_side: WEST, inv_side: SOUTH }],
             input_slots: vec![5],
             to_extract: None,
             strict_priority: false,
             recipes: vec![SlottedRecipe {
                 outputs: Output::new(label("Glowstone Dust"), 16),
                 inputs: vec![SlottedInput::new(label("Glow Flower"), vec![(5, 2)])],
-                max_sets: 8,
+                max_sets: 32,
             }],
         });
         factory.add_process(SlottedConfig {
@@ -833,7 +869,13 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
                     outputs: Output::new(label("Gold Foil"), 16),
                     inputs: vec![SlottedInput::new(label("Gold Ingot"), vec![(5, 1)])],
                     max_sets: 8,
-                },SlottedRecipe {
+                },
+                SlottedRecipe {
+                    outputs: Output::new(label("Copper Foil"), 16),
+                    inputs: vec![SlottedInput::new(label("Copper Ingot"), vec![(5, 1)])],
+                    max_sets: 8,
+                },
+                SlottedRecipe {
                     outputs: Output::new(label("Electrum Foil"), 16),
                     inputs: vec![SlottedInput::new(label("Electrum Ingot"), vec![(5, 1)])],
                     max_sets: 8,
