@@ -26,12 +26,13 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
     }
     .build(|factory| {
         factory.add_process(ManualUiConfig { accesses: vec![] });
+        factory.add_process(LowAlert::new(label("Sand"), 16));
         factory.add_process(LowAlert::new(label("Salt"), 16));
         factory.add_process(LowAlert::new(label("Iron Dust"), 16));
         factory.add_process(LowAlert::new(label("Empty Cell"), 16));
         factory.add_process(LowAlert::new(label("Phenol Cell"), 16));
         factory.add_process(LowAlert::new(label("Sulfur Dust"), 16));
-        factory.add_process(LowAlert::new(label("Carbon Dust"), 16));
+        factory.add_process(LowAlert::new(label("Charcoal"), 16));
         factory.add_process(LowAlert::new(label("Silver Dust"), 16));
         factory.add_process(LowAlert::new(label("Silicon Dioxide Dust"), 16));
         factory.add_process(LowAlert::new(label("Aluminium Ingot"), 16));
@@ -44,8 +45,10 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
         factory.add_storage(ChestConfig {
             accesses: vec![InvAccess { client: s("main"), addr: s("09c"), bus_side: NORTH, inv_side: SOUTH }],
         });
-        factory.add_storage(DrawerConfig { accesses: vec![InvAccess{ client: s("main"), addr: s("c47"), bus_side: NORTH, inv_side: SOUTH }],
-         filters: vec![label("Sesame Seeds")] });
+        factory.add_storage(DrawerConfig {
+            accesses: vec![InvAccess{ client: s("main"), addr: s("c47"), bus_side: NORTH, inv_side: SOUTH }],
+            filters: vec![label("Sesame Seeds"), label("Redstone")]
+        });
         let hydrogen_output = || FluidOutput::new(s("hydrogen"), 64_000).or(Output::new(label("Hydrogen Cell"), 65));
         let oxygen_output = || FluidOutput::new(s("oxygen"), 64_000).or(Output::new(label("Oxygen Cell"), 129));
         let hcl_output = || FluidOutput::new(s("hydrochloricacid_gt5u"), 33_000).or(Output::new(label("Hydrochloric Acid Cell"), 16));
@@ -164,6 +167,12 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
                 CraftingGridRecipe {
                     outputs: ignore_outputs(1.),
                     inputs: vec![CraftingGridInput::new(label("Small Pile of Wood Pulp"), vec![0, 1, 3, 4])],
+                    max_sets: 64,
+                    non_consumables: vec![],
+                },
+                CraftingGridRecipe {
+                    outputs: Output::new(label("Clay Dust"), 16),
+                    inputs: vec![CraftingGridInput::new(label("Small Pile of Clay Dust"), vec![0, 1, 3, 4])],
                     max_sets: 64,
                     non_consumables: vec![],
                 },
@@ -785,6 +794,12 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
                     fluids: vec![],
                     max_sets: 8,
                 },
+                FluidSlottedRecipe {
+                    outputs: Output::new(label("Carbon Dust"), 16),
+                    inputs: vec![MultiInvSlottedInput::new(label("Charcoal Dust"), vec![(0, 5, 1)])],
+                    fluids: vec![],
+                    max_sets: 8,
+                },
             ],
         });
         factory.add_process(FluidSlottedConfig {
@@ -887,6 +902,12 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
                     fluids: vec![FluidSlottedInput::new(s("air"), vec![(0, 10_000)])],
                     max_sets: 6,
                 },
+                FluidSlottedRecipe {
+                    outputs: Output::new(label("Small Pile of Clay Dust"), 16),
+                    inputs: vec![MultiInvSlottedInput::new(label("Dried Dirt"), vec![(0, 0, 1)])],
+                    fluids: vec![],
+                    max_sets: 64,
+                },
             ],
         });
         factory.add_process(SlottedConfig {
@@ -940,6 +961,11 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
                 SlottedRecipe {
                     outputs: Output::new(label("Electrum Ingot"), 16),
                     inputs: vec![SlottedInput::new(label("Electrum Dust"), vec![(5, 1)])],
+                    max_sets: 16,
+                },
+                SlottedRecipe {
+                    outputs: Output::new(label("Dried Dirt"), 16),
+                    inputs: vec![SlottedInput::new(label("Dirt"), vec![(5, 1)])],
                     max_sets: 16,
                 },
             ],
@@ -1032,6 +1058,21 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
                     outputs: Output::new(label("Crushed Ilmenite Ore"), 16),
                     inputs: vec![SlottedInput::new(label("Ilmenite Ore"), vec![(5, 1)])],
                     max_sets: 8,
+                },
+                SlottedRecipe {
+                    outputs: Output::new(label("Quartz Sand"), 16),
+                    inputs: vec![SlottedInput::new(label("Sand"), vec![(5, 1)])],
+                    max_sets: 8,
+                },
+                SlottedRecipe {
+                    outputs: Output::new(label("Dirt"), 16),
+                    inputs: vec![SlottedInput::new(label("Bio Chaff"), vec![(5, 1)])],
+                    max_sets: 8,
+                },
+                SlottedRecipe {
+                    outputs: Output::new(label("Charcoal Dust"), 16),
+                    inputs: vec![SlottedInput::new(label("Charcoal"), vec![(5, 1)])],
+                    max_sets: 64,
                 },
             ],
         });
