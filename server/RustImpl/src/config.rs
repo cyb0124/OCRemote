@@ -34,6 +34,7 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
         factory.add_process(LowAlert::new(label("Carbon Dust"), 16));
         factory.add_process(LowAlert::new(label("Silver Dust"), 16));
         factory.add_process(LowAlert::new(label("Raw Silicon Dust"), 16));
+        factory.add_process(LowAlert::new(label("Crushed Ilmenite Ore"), 16));
         factory.add_storage(ChestConfig {
             accesses: vec![InvAccess { client: s("main"), addr: s("09c"), bus_side: NORTH, inv_side: SOUTH }],
         });
@@ -44,6 +45,7 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
         for (fluid, client, bus_of_tank) in [
             ("water", "main", EachBusOfTank { addr: s("608"), bus_side: SOUTH, tank_side: UP }),
             ("hydrogen", "main", EachBusOfTank { addr: s("608"), bus_side: SOUTH, tank_side: NORTH }),
+            ("solution.greenvitriol", "main", EachBusOfTank { addr: s("608"), bus_side: SOUTH, tank_side: EAST }),
             ("bioethanol", "main", EachBusOfTank { addr: s("e47"), bus_side: SOUTH, tank_side: EAST }),
             ("molten.polyvinylchloride", "main", EachBusOfTank { addr: s("e47"), bus_side: SOUTH, tank_side: NORTH }),
             ("biomass", "c1", EachBusOfTank { addr: s("cd4"), bus_side: SOUTH, tank_side: WEST }),
@@ -241,19 +243,27 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
             input_slots: vec![vec![5]],
             input_tanks: vec![vec![0]],
             accesses: vec![InvTankAccess {
-                client: s("main"),
-                invs: vec![EachInvAccess { addr: s("7c4"), bus_side: SOUTH, inv_side: WEST }],
-                tanks: vec![vec![EachBusOfTank { addr: s("7c4"), bus_side: NORTH, tank_side: WEST }]],
+                client: s("c2"),
+                invs: vec![EachInvAccess { addr: s("655"), bus_side: WEST, inv_side: NORTH }],
+                tanks: vec![vec![EachBusOfTank { addr: s("655"), bus_side: EAST, tank_side: NORTH }]],
             }],
             to_extract: None,
-            fluid_extract: None,
+            fluid_extract: fluid_extract_slots(|_, i| i == 1),
             strict_priority: false,
-            recipes: vec![FluidSlottedRecipe {
-                outputs: Output::new(label("Mulch"), 16),
-                inputs: vec![MultiInvSlottedInput::new(label("Bio Chaff"), vec![(0, 5, 1)])],
-                fluids: vec![FluidSlottedInput::new(s("water"), vec![(0, 750)])],
-                max_sets: 8,
-            }],
+            recipes: vec![
+                FluidSlottedRecipe {
+                    outputs: Output::new(label("Mulch"), 16),
+                    inputs: vec![MultiInvSlottedInput::new(label("Bio Chaff"), vec![(0, 5, 1)])],
+                    fluids: vec![FluidSlottedInput::new(s("water"), vec![(0, 750)])],
+                    max_sets: 8,
+                },
+                FluidSlottedRecipe {
+                    outputs: Output::new(label("Rutile Dust"), 64),
+                    inputs: vec![MultiInvSlottedInput::new(label("Crushed Ilmenite Ore"), vec![(0, 5, 1)])],
+                    fluids: vec![FluidSlottedInput::new(s("sulfuricacid"), vec![(0, 1_000)])],
+                    max_sets: 8,
+                },
+            ],
         });
         factory.add_process(FluidSlottedConfig {
             name: s("brewery"),
@@ -661,6 +671,12 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
                     outputs: ignore_outputs(64.),
                     inputs: vec![MultiInvSlottedInput::new(label("Empty Cell"), vec![(0, 5, 1)])],
                     fluids: vec![FluidSlottedInput::new(s("saltwater"), vec![(0, 1_000)]).extra_backup(1)],
+                    max_sets: 8,
+                },
+                FluidSlottedRecipe {
+                    outputs: ignore_outputs(64.),
+                    inputs: vec![MultiInvSlottedInput::new(label("Empty Cell"), vec![(0, 5, 1)])],
+                    fluids: vec![FluidSlottedInput::new(s("solution.greenvitriol"), vec![(0, 2_000)]).extra_backup(1)],
                     max_sets: 8,
                 },
                 FluidSlottedRecipe {
