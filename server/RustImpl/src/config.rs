@@ -186,12 +186,6 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
                     non_consumables: vec![],
                 },
                 CraftingGridRecipe {
-                    outputs: Output::new(label("Clay Dust"), 16),
-                    inputs: vec![CraftingGridInput::new(label("Small Pile of Clay Dust"), vec![0, 1, 3, 4])],
-                    max_sets: 64,
-                    non_consumables: vec![],
-                },
-                CraftingGridRecipe {
                     outputs: Output::new(label("Glow Flower Seed"), 16).and(Output::new(label("Glow Flower"), 1024).not()),
                     inputs: vec![CraftingGridInput::new(label("Glow Flower"), vec![0]).allow_backup()],
                     max_sets: 64,
@@ -1057,12 +1051,6 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
                     max_sets: 6,
                 },
                 FluidSlottedRecipe {
-                    outputs: Output::new(label("Small Pile of Clay Dust"), 16),
-                    inputs: vec![MultiInvSlottedInput::new(label("Dried Dirt"), vec![(0, 0, 1)])],
-                    fluids: vec![],
-                    max_sets: 64,
-                },
-                FluidSlottedRecipe {
                     outputs: Output::new(label("Silicon Dioxide Dust"), 16),
                     inputs: vec![MultiInvSlottedInput::new(label("Glass Dust"), vec![(0, 0, 1)])],
                     fluids: vec![],
@@ -1121,11 +1109,6 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
                 SlottedRecipe {
                     outputs: Output::new(label("Electrum Ingot"), 16),
                     inputs: vec![SlottedInput::new(label("Electrum Dust"), vec![(5, 1)])],
-                    max_sets: 16,
-                },
-                SlottedRecipe {
-                    outputs: Output::new(label("Dried Dirt"), 16),
-                    inputs: vec![SlottedInput::new(label("Dirt"), vec![(5, 1)])],
                     max_sets: 16,
                 },
             ],
@@ -1236,16 +1219,6 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
                 SlottedRecipe {
                     outputs: Output::new(label("Crushed Ilmenite Ore"), 16),
                     inputs: vec![SlottedInput::new(label("Ilmenite Ore"), vec![(5, 1)])],
-                    max_sets: 8,
-                },
-                SlottedRecipe {
-                    outputs: Output::new(label("Quartz Sand"), 16),
-                    inputs: vec![SlottedInput::new(label("Sand"), vec![(5, 1)])],
-                    max_sets: 8,
-                },
-                SlottedRecipe {
-                    outputs: Output::new(label("Dirt"), 16),
-                    inputs: vec![SlottedInput::new(label("Bio Chaff"), vec![(5, 1)])],
                     max_sets: 8,
                 },
                 SlottedRecipe {
