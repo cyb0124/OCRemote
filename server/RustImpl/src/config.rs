@@ -72,6 +72,7 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
             ("molten.epoxid", "main", EachBusOfTank { addr: s("6e2"), bus_side: EAST, tank_side: SOUTH }),
             ("saltwater", "main", EachBusOfTank { addr: s("6e2"), bus_side: EAST, tank_side: WEST }),
             ("ammonia", "main", EachBusOfTank { addr: s("6e2"), bus_side: EAST, tank_side: UP }),
+            ("mercury", "main", EachBusOfTank { addr: s("6e2"), bus_side: EAST, tank_side: NORTH }),
             ("molten.glowstone", "main", EachBusOfTank { addr: s("e1c"), bus_side: WEST, tank_side: NORTH }),
             ("glycerol", "main", EachBusOfTank { addr: s("e1c"), bus_side: WEST, tank_side: SOUTH }),
             ("lubricant", "main", EachBusOfTank { addr: s("e1c"), bus_side: WEST, tank_side: EAST }),
