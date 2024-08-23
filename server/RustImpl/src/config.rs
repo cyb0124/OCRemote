@@ -22,7 +22,7 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
             FluidAccess { client: s("c2"), tanks: vec![EachTank { addr: s("92b"), side: NORTH }] },
             FluidAccess { client: s("cr"), tanks: vec![EachTank { addr: s("36a"), side: EAST }] },
         ],
-        fluid_bus_capacity: 64_000,
+        fluid_bus_capacity: 256_000,
         backups: vec![(label("Glow Flower"), 16), (label("Oxygen Cell"), 30)],
         fluid_backups: vec![(s("oxygen"), 30_000)],
     }
@@ -792,7 +792,7 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
                     max_sets: 8,
                 },
                 FluidSlottedRecipe {
-                    outputs: Output::new(label("Black Steel Dust"), 64),
+                    outputs: Output::new(label("Black Steel Dust"), 16),
                     inputs: vec![
                         MultiInvSlottedInput::new(label("Black Bronze Dust"), vec![(0, 5, 1)]),
                         MultiInvSlottedInput::new(label("Nickel Dust"), vec![(0, 6, 1)]),
@@ -806,6 +806,15 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
                     inputs: vec![
                         MultiInvSlottedInput::new(label("Tin Dust"), vec![(0, 5, 9)]),
                         MultiInvSlottedInput::new(label("Antimony Dust"), vec![(0, 6, 1)]),
+                    ],
+                    fluids: vec![],
+                    max_sets: 8,
+                },
+                FluidSlottedRecipe {
+                    outputs: Output::new(label("Nichrome Dust"), 16),
+                    inputs: vec![
+                        MultiInvSlottedInput::new(label("Nickel Dust"), vec![(0, 5, 4)]),
+                        MultiInvSlottedInput::new(label("Chrome Dust"), vec![(0, 6, 1)]),
                     ],
                     fluids: vec![],
                     max_sets: 8,
@@ -846,11 +855,21 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
                     max_sets: 8,
                 },
                 FluidSlottedRecipe {
-                    outputs: Output::new(label("Energetic Alloy Dust"), 64),
+                    outputs: Output::new(label("Energetic Alloy Dust"), 16),
                     inputs: vec![
                         MultiInvSlottedInput::new(label("Conductive Iron Dust"), vec![(0, 5, 1)]),
                         MultiInvSlottedInput::new(label("Gold Dust"), vec![(0, 6, 1)]),
                         MultiInvSlottedInput::new(label("Black Steel Dust"), vec![(0, 7, 1)]),
+                    ],
+                    fluids: vec![],
+                    max_sets: 8,
+                },
+                FluidSlottedRecipe {
+                    outputs: Output::new(label("Electrical Steel Dust"), 16),
+                    inputs: vec![
+                        MultiInvSlottedInput::new(label("Steel Dust"), vec![(0, 5, 1)]),
+                        MultiInvSlottedInput::new(label("Coal Dust"), vec![(0, 6, 1)]),
+                        MultiInvSlottedInput::new(label("Raw Silicon Dust"), vec![(0, 7, 1)]),
                     ],
                     fluids: vec![],
                     max_sets: 8,
@@ -912,6 +931,12 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
                 FluidSlottedRecipe {
                     outputs: Output::new(label("Carbon Dust"), 16),
                     inputs: vec![MultiInvSlottedInput::new(label("Charcoal Dust"), vec![(0, 5, 1)])],
+                    fluids: vec![],
+                    max_sets: 8,
+                },
+                FluidSlottedRecipe {
+                    outputs: Output::new(label("Chrome Dust"), 16),
+                    inputs: vec![MultiInvSlottedInput::new(label("Ruby Dust"), vec![(0, 5, 6)])],
                     fluids: vec![],
                     max_sets: 8,
                 },
@@ -1150,6 +1175,12 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
                 FluidSlottedRecipe {
                     outputs: Output::new(label("Silicon Dioxide Dust"), 16),
                     inputs: vec![MultiInvSlottedInput::new(label("Glass Dust"), vec![(0, 0, 1)])],
+                    fluids: vec![],
+                    max_sets: 64,
+                },
+                FluidSlottedRecipe {
+                    outputs: Output::new(label("Ruby Dust"), 16).and(Output::new(label("Pyrite Dust"), 16)),
+                    inputs: vec![MultiInvSlottedInput::new(label("Redstone"), vec![(0, 0, 10)])],
                     fluids: vec![],
                     max_sets: 64,
                 },
