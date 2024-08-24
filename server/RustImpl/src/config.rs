@@ -49,7 +49,7 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
         });
         factory.add_storage(DrawerConfig {
             accesses: vec![InvAccess { client: s("main"), addr: s("c47"), bus_side: NORTH, inv_side: SOUTH }],
-            filters: vec![label("Sesame Seeds"), label("Redstone"), label("Glow Flower"), label("Wood Pulp")],
+            filters: vec![label("Sesame Seeds"), label("Pyrite Dust"), label("Glow Flower"), label("Wood Pulp")],
         });
         let hydrogen_output = || FluidOutput::new(s("hydrogen"), 64_000).or(Output::new(label("Hydrogen Cell"), 65));
         let oxygen_output = || FluidOutput::new(s("oxygen"), 64_000).or(Output::new(label("Oxygen Cell"), 129));
@@ -64,14 +64,14 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
             ("solution.greenvitriol", "main", EachBusOfTank { addr: s("608"), bus_side: SOUTH, tank_side: EAST }),
             ("bioethanol", "main", EachBusOfTank { addr: s("e47"), bus_side: SOUTH, tank_side: EAST }),
             ("molten.polyvinylchloride", "main", EachBusOfTank { addr: s("e47"), bus_side: SOUTH, tank_side: NORTH }),
-            ("molten.epoxid", "main", EachBusOfTank { addr: s("6e2"), bus_side: EAST, tank_side: SOUTH }),
-            ("saltwater", "main", EachBusOfTank { addr: s("6e2"), bus_side: EAST, tank_side: WEST }),
-            ("ammonia", "main", EachBusOfTank { addr: s("6e2"), bus_side: EAST, tank_side: UP }),
-            ("mercury", "main", EachBusOfTank { addr: s("6e2"), bus_side: EAST, tank_side: NORTH }),
-            ("molten.glowstone", "main", EachBusOfTank { addr: s("e1c"), bus_side: WEST, tank_side: NORTH }),
-            ("glycerol", "main", EachBusOfTank { addr: s("e1c"), bus_side: WEST, tank_side: SOUTH }),
-            ("lubricant", "main", EachBusOfTank { addr: s("e1c"), bus_side: WEST, tank_side: EAST }),
-            ("molten.solderingalloy", "main", EachBusOfTank { addr: s("e1c"), bus_side: WEST, tank_side: UP }),
+            ("molten.epoxid", "c1", EachBusOfTank { addr: s("6e2"), bus_side: EAST, tank_side: SOUTH }),
+            ("saltwater", "c1", EachBusOfTank { addr: s("6e2"), bus_side: EAST, tank_side: WEST }),
+            ("ammonia", "c1", EachBusOfTank { addr: s("6e2"), bus_side: EAST, tank_side: UP }),
+            ("mercury", "c1", EachBusOfTank { addr: s("6e2"), bus_side: EAST, tank_side: NORTH }),
+            ("molten.glowstone", "c1", EachBusOfTank { addr: s("e1c"), bus_side: WEST, tank_side: NORTH }),
+            ("glycerol", "c1", EachBusOfTank { addr: s("e1c"), bus_side: WEST, tank_side: SOUTH }),
+            ("lubricant", "c1", EachBusOfTank { addr: s("e1c"), bus_side: WEST, tank_side: EAST }),
+            ("molten.solderingalloy", "c1", EachBusOfTank { addr: s("e1c"), bus_side: WEST, tank_side: UP }),
             ("biomass", "c1", EachBusOfTank { addr: s("cd4"), bus_side: SOUTH, tank_side: WEST }),
             ("ic2distilledwater", "c1", EachBusOfTank { addr: s("cd4"), bus_side: SOUTH, tank_side: UP }),
             ("molten.plastic", "c1", EachBusOfTank { addr: s("cd4"), bus_side: SOUTH, tank_side: NORTH }),
@@ -100,7 +100,7 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
             ("biodiesel", "c2", EachBusOfTank { addr: s("d51"), bus_side: WEST, tank_side: SOUTH }),
             ("ethenone", "c2", EachBusOfTank { addr: s("d51"), bus_side: WEST, tank_side: NORTH }),
             ("sulfurdioxide", "main", EachBusOfTank { addr: s("98c"), bus_side: EAST, tank_side: DOWN }),
-            ("carbonmonoxide", "main", EachBusOfTank { addr: s("e7e"), bus_side: WEST, tank_side: DOWN }),
+            ("carbonmonoxide", "main", EachBusOfTank { addr: s("e7e"), bus_side: WEST, tank_side: UP }),
         ] {
             factory.add_fluid_storage(FluidStorageConfig {
                 accesses: vec![TankAccess { client: s(client), buses: vec![bus_of_tank] }],
@@ -108,7 +108,7 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
             })
         }
         for access in [
-            InvAccess { client: s("main"), addr: s("fb3"), bus_side: DOWN, inv_side: EAST }, // EBF
+            InvAccess { client: s("main"), addr: s("fb3"), bus_side: DOWN, inv_side: WEST }, // EBF
             InvAccess { client: s("main"), addr: s("c47"), bus_side: NORTH, inv_side: UP },
             InvAccess { client: s("cr"), addr: s("b20"), bus_side: EAST, inv_side: UP },
         ] {
@@ -157,7 +157,6 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
             ("ammonia", 1_000, 256, "c1", EachBusOfTank { addr: s("6e5"), bus_side: SOUTH, tank_side: EAST }), // platLine
             ("lubricant", 1_000, 16, "c2", EachBusOfTank { addr: s("9a6"), bus_side: SOUTH, tank_side: UP }), // LCE-main
             ("oxygen", 1_000, 16, "c2", EachBusOfTank { addr: s("9a6"), bus_side: SOUTH, tank_side: EAST }), // LCE-main
-            ("nitrofuel", 1_000, 16, "main", EachBusOfTank { addr: s("e47"), bus_side: SOUTH, tank_side: UP }), // TCG-main
             ("lubricant", 1_000, 16, "main", EachBusOfTank { addr: s("98c"), bus_side: EAST, tank_side: WEST }), // LCE-cr
             ("oxygen", 1_000, 16, "main", EachBusOfTank { addr: s("98c"), bus_side: EAST, tank_side: SOUTH }), // LCE-cr
             ("nitrofuel", 1_000, 16, "main", EachBusOfTank { addr: s("98c"), bus_side: EAST, tank_side: UP }), // LCE-cr
@@ -256,7 +255,7 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
             accesses: vec![InvTankAccess {
                 client: s("main"),
                 invs: vec![],
-                tanks: vec![vec![EachBusOfTank { addr: s("e47"), bus_side: SOUTH, tank_side: WEST }]],
+                tanks: vec![vec![EachBusOfTank { addr: s("e7e"), bus_side: WEST, tank_side: DOWN }]],
             }],
             to_extract: None,
             fluid_extract: None,
@@ -320,9 +319,9 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
             input_slots: vec![vec![5]],
             input_tanks: vec![vec![0]],
             accesses: vec![InvTankAccess {
-                client: s("main"),
-                invs: vec![EachInvAccess { addr: s("7c4"), bus_side: SOUTH, inv_side: EAST }],
-                tanks: vec![vec![EachBusOfTank { addr: s("7c4"), bus_side: NORTH, tank_side: EAST }]],
+                client: s("c2"),
+                invs: vec![EachInvAccess { addr: s("7b0"), bus_side: WEST, inv_side: UP }],
+                tanks: vec![vec![EachBusOfTank { addr: s("7b0"), bus_side: EAST, tank_side: UP }]],
             }],
             to_extract: None,
             fluid_extract: fluid_extract_slots(|_, i| i == 1),
@@ -779,15 +778,6 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
             strict_priority: false,
             recipes: vec![
                 FluidSlottedRecipe {
-                    outputs: ignore_outputs(64.),
-                    inputs: vec![
-                        MultiInvSlottedInput::new(label("Ilmenite Dust"), vec![(0, 0, 5)]),
-                        MultiInvSlottedInput::new(label("Carbon Dust"), vec![(0, 1, 1)]),
-                    ],
-                    fluids: vec![],
-                    max_sets: 16,
-                },
-                FluidSlottedRecipe {
                     outputs: FluidOutput::new(s("sulfurdioxide"), 16_000)
                         .and(Output::new(label("Roasted Iron Dust"), 16)),
                     inputs: vec![MultiInvSlottedInput::new(label("Pyrite Dust"), vec![(0, 0, 1)])],
@@ -884,6 +874,15 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
                     inputs: vec![
                         MultiInvSlottedInput::new(label("Nickel Dust"), vec![(0, 5, 4)]),
                         MultiInvSlottedInput::new(label("Chrome Dust"), vec![(0, 6, 1)]),
+                    ],
+                    fluids: vec![],
+                    max_sets: 8,
+                },
+                FluidSlottedRecipe {
+                    outputs: Output::new(label("Nitration Mixture Cell"), 16),
+                    inputs: vec![
+                        MultiInvSlottedInput::new(label("Sulfuric Acid Cell"), vec![(0, 5, 1)]),
+                        MultiInvSlottedInput::new(label("Nitric Acid Cell"), vec![(0, 6, 1)]),
                     ],
                     fluids: vec![],
                     max_sets: 8,
@@ -1306,7 +1305,7 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
         });
         factory.add_process(SlottedConfig {
             name: s("furnace"),
-            accesses: vec![InvAccess { client: s("c1"), addr: s("fe0"), bus_side: NORTH, inv_side: WEST }],
+            accesses: vec![InvAccess { client: s("c2"), addr: s("2ec"), bus_side: EAST, inv_side: SOUTH }],
             input_slots: vec![5],
             to_extract: None,
             strict_priority: false,
@@ -1354,7 +1353,7 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
         });
         factory.add_process(SlottedConfig {
             name: s("bender-1"),
-            accesses: vec![InvAccess { client: s("main"), addr: s("09c"), bus_side: NORTH, inv_side: UP }],
+            accesses: vec![InvAccess { client: s("c2"), addr: s("2ec"), bus_side: EAST, inv_side: UP }],
             input_slots: vec![5],
             to_extract: None,
             strict_priority: false,
@@ -1366,7 +1365,7 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
         });
         factory.add_process(SlottedConfig {
             name: s("bender-10"),
-            accesses: vec![InvAccess { client: s("c1"), addr: s("fe0"), bus_side: NORTH, inv_side: UP }],
+            accesses: vec![InvAccess { client: s("c2"), addr: s("2ec"), bus_side: EAST, inv_side: WEST }],
             input_slots: vec![5],
             to_extract: None,
             strict_priority: false,
