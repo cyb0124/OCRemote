@@ -49,7 +49,7 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
         });
         factory.add_storage(DrawerConfig {
             accesses: vec![InvAccess { client: s("main"), addr: s("c47"), bus_side: NORTH, inv_side: SOUTH }],
-            filters: vec![label("Sesame Seeds"), label("Redstone"), label("Glow Flower")],
+            filters: vec![label("Sesame Seeds"), label("Redstone"), label("Glow Flower"), label("Wood Pulp")],
         });
         let hydrogen_output = || FluidOutput::new(s("hydrogen"), 64_000).or(Output::new(label("Hydrogen Cell"), 65));
         let oxygen_output = || FluidOutput::new(s("oxygen"), 64_000).or(Output::new(label("Oxygen Cell"), 129));
@@ -779,6 +779,15 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
             strict_priority: false,
             recipes: vec![
                 FluidSlottedRecipe {
+                    outputs: ignore_outputs(64.),
+                    inputs: vec![
+                        MultiInvSlottedInput::new(label("Ilmenite Dust"), vec![(0, 0, 5)]),
+                        MultiInvSlottedInput::new(label("Carbon Dust"), vec![(0, 1, 1)]),
+                    ],
+                    fluids: vec![],
+                    max_sets: 16,
+                },
+                FluidSlottedRecipe {
                     outputs: FluidOutput::new(s("sulfurdioxide"), 16_000)
                         .and(Output::new(label("Roasted Iron Dust"), 16)),
                     inputs: vec![MultiInvSlottedInput::new(label("Pyrite Dust"), vec![(0, 0, 1)])],
@@ -1420,7 +1429,7 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
         });
         factory.add_process(SlottedConfig {
             name: s("macerator"),
-            accesses: vec![InvAccess { client: s("main"), addr: s("c47"), bus_side: NORTH, inv_side: EAST }],
+            accesses: vec![InvAccess { client: s("c2"), addr: s("5b8"), bus_side: EAST, inv_side: UP }],
             input_slots: vec![5],
             to_extract: None,
             strict_priority: false,
