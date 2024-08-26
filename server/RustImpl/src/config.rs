@@ -37,6 +37,7 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
         factory.add_process(LowAlert::new(label("Silver Dust"), 16));
         factory.add_process(LowAlert::new(label("Benzene Cell"), 16));
         factory.add_process(LowAlert::new(label("Neodymium Ring"), 16));
+        factory.add_process(LowAlert::new(label("Manganese Dust"), 16));
         factory.add_process(LowAlert::new(label("Lepidolite Dust"), 16));
         factory.add_process(LowAlert::new(label("Potassium Dichromate Dust"), 16));
         factory.add_process(LowAlert::new(label("1,2-Dimethylbenzene Cell"), 16));
@@ -125,6 +126,7 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
             ("phosphoricacid_gt5u", "c2", EachBusOfTank { addr: s("0c0"), bus_side: EAST, tank_side: UP }),
             ("biodiesel", "c2", EachBusOfTank { addr: s("d51"), bus_side: WEST, tank_side: SOUTH }),
             ("ethenone", "c2", EachBusOfTank { addr: s("d51"), bus_side: WEST, tank_side: NORTH }),
+            ("nitrobenzene", "c2", EachBusOfTank { addr: s("324"), bus_side: EAST, tank_side: WEST }),
             ("sulfurdioxide", "main", EachBusOfTank { addr: s("98c"), bus_side: EAST, tank_side: DOWN }),
             ("carbonmonoxide", "main", EachBusOfTank { addr: s("e7e"), bus_side: WEST, tank_side: UP }),
         ] {
@@ -149,10 +151,10 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
         }
         for (client, bus_of_tank) in [
             ("c2", EachBusOfTank { addr: s("d51"), bus_side: WEST, tank_side: UP }), // DT
-            ("c2", EachBusOfTank { addr: s("9a6"), bus_side: SOUTH, tank_side: WEST }), // EV-LCR-1
-            ("c2", EachBusOfTank { addr: s("92b"), bus_side: NORTH, tank_side: EAST }), // EV-LCR-1
-            ("c2", EachBusOfTank { addr: s("f6a"), bus_side: SOUTH, tank_side: NORTH }), // IV-LCR-24
-            ("c2", EachBusOfTank { addr: s("92b"), bus_side: NORTH, tank_side: WEST }), // IV-LCR-24
+            ("c2", EachBusOfTank { addr: s("9a6"), bus_side: SOUTH, tank_side: WEST }), // IV-LCR-1
+            ("c2", EachBusOfTank { addr: s("92b"), bus_side: NORTH, tank_side: EAST }), // IV-LCR-1
+            ("c2", EachBusOfTank { addr: s("f6a"), bus_side: SOUTH, tank_side: NORTH }), // EV-LCR-24
+            ("c2", EachBusOfTank { addr: s("92b"), bus_side: NORTH, tank_side: WEST }), // EV-LCR-24
             ("main", EachBusOfTank { addr: s("e7e"), bus_side: WEST, tank_side: SOUTH }), // EBF
         ] {
             factory.add_process(FluidSlottedConfig {
@@ -572,14 +574,16 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
             ],
         });
         factory.add_process(FluidSlottedConfig {
-            name: s("EV-LCR-1"),
-            input_slots: vec![vec![0, 1], vec![0]],
+            name: s("IV-LCR-1"),
+            input_slots: vec![vec![0, 1], vec![0], vec![0], vec![0]],
             input_tanks: vec![vec![0]],
             accesses: vec![InvTankAccess {
                 client: s("c2"),
                 invs: vec![
-                    EachInvAccess { addr: s("72e"), bus_side: WEST, inv_side: EAST },
+                    EachInvAccess { addr: s("72e"), bus_side: WEST, inv_side: SOUTH },
                     EachInvAccess { addr: s("72e"), bus_side: WEST, inv_side: NORTH },
+                    EachInvAccess { addr: s("72e"), bus_side: WEST, inv_side: UP },
+                    EachInvAccess { addr: s("72e"), bus_side: WEST, inv_side: EAST },
                 ],
                 tanks: vec![vec![EachBusOfTank { addr: s("f6a"), bus_side: SOUTH, tank_side: EAST }]],
             }],
@@ -729,13 +733,53 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
                     outputs: FluidOutput::new(s("ammonia"), 16_000),
                     inputs: vec![MultiInvSlottedInput::new(label("Hydrogen Cell"), vec![(1, 0, 3)])],
                     fluids: vec![FluidSlottedInput::new(s("nitrogen"), vec![(0, 1_000)])],
-                    max_sets: 8,
+                    max_sets: 16,
                 },
                 FluidSlottedRecipe {
                     outputs: FluidOutput::new(s("phosphoricacid_gt5u"), 16_000),
                     inputs: vec![MultiInvSlottedInput::new(label("Phosphorous Pentoxide Dust"), vec![(0, 0, 14)])],
                     fluids: vec![FluidSlottedInput::new(s("water"), vec![(0, 6_000)])],
+                    max_sets: 10,
+                },
+                FluidSlottedRecipe {
+                    outputs: FluidOutput::new(s("ethenone"), 16_000),
+                    inputs: vec![MultiInvSlottedInput::new(label("Sulfuric Acid Cell"), vec![(1, 0, 1)])],
+                    fluids: vec![FluidSlottedInput::new(s("aceticacid"), vec![(0, 1_000)])],
                     max_sets: 8,
+                },
+                FluidSlottedRecipe {
+                    outputs: FluidOutput::new(s("diphenylisophtalate"), 16_000),
+                    inputs: vec![
+                        MultiInvSlottedInput::new(label("Sulfuric Acid Cell"), vec![(1, 0, 1)]),
+                        MultiInvSlottedInput::new(label("Phenol Cell"), vec![(2, 0, 2)]),
+                    ],
+                    fluids: vec![FluidSlottedInput::new(s("phtalicacid"), vec![(0, 1_000)])],
+                    max_sets: 8,
+                },
+                FluidSlottedRecipe {
+                    outputs: FluidOutput::new(s("3,3diaminobenzidine"), 16_000),
+                    inputs: vec![
+                        MultiInvSlottedInput::new(label("Zinc Dust"), vec![(0, 0, 1)]),
+                        MultiInvSlottedInput::new(label("Ammonia Cell"), vec![(1, 0, 2)]),
+                    ],
+                    fluids: vec![FluidSlottedInput::new(s("3,3dichlorobenzidine"), vec![(0, 1_000)])],
+                    max_sets: 8,
+                },
+                FluidSlottedRecipe {
+                    outputs: FluidOutput::new(s("molten.polybenzimidazole"), 32_000),
+                    inputs: vec![MultiInvSlottedInput::new(label("Diphenyl Isophtalate Cell"), vec![(1, 0, 1)])],
+                    fluids: vec![FluidSlottedInput::new(s("3,3diaminobenzidine"), vec![(0, 1_000)])],
+                    max_sets: 8,
+                },
+                FluidSlottedRecipe {
+                    outputs: FluidOutput::new(s("nitrobenzene"), 32_000),
+                    inputs: vec![
+                        MultiInvSlottedInput::new(label("Benzene Cell"), vec![(1, 0, 5)]),
+                        MultiInvSlottedInput::new(label("Sulfuric Acid Cell"), vec![(2, 0, 3)]),
+                        MultiInvSlottedInput::new(label("Nitric Acid Cell"), vec![(3, 0, 5)]),
+                    ],
+                    fluids: vec![FluidSlottedInput::new(s("ic2distilledwater"), vec![(0, 10_000)])],
+                    max_sets: 6,
                 },
                 FluidSlottedRecipe {
                     outputs: Output::new(label("Phosphorous Pentoxide Dust"), 16),
@@ -744,13 +788,7 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
                         MultiInvSlottedInput::new(label("Oxygen Cell"), vec![(1, 0, 10)]).allow_backup(),
                     ],
                     fluids: vec![],
-                    max_sets: 8,
-                },
-                FluidSlottedRecipe {
-                    outputs: FluidOutput::new(s("ethenone"), 16_000),
-                    inputs: vec![MultiInvSlottedInput::new(label("Sulfuric Acid Cell"), vec![(1, 0, 1)])],
-                    fluids: vec![FluidSlottedInput::new(s("aceticacid"), vec![(0, 1_000)])],
-                    max_sets: 8,
+                    max_sets: 6,
                 },
                 FluidSlottedRecipe {
                     outputs: FluidOutput::new(s("tetranitromethane"), 16_000),
@@ -761,7 +799,7 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
             ],
         });
         factory.add_process(FluidSlottedConfig {
-            name: s("IV-LCR-24"),
+            name: s("EV-LCR-24"),
             input_slots: vec![vec![0, 1], vec![0], vec![0], vec![0]],
             input_tanks: vec![vec![0]],
             accesses: vec![InvTankAccess {
@@ -887,30 +925,6 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
                     max_sets: 8,
                 },
                 FluidSlottedRecipe {
-                    outputs: FluidOutput::new(s("diphenylisophtalate"), 16_000),
-                    inputs: vec![
-                        MultiInvSlottedInput::new(label("Sulfuric Acid Cell"), vec![(1, 0, 1)]),
-                        MultiInvSlottedInput::new(label("Phenol Cell"), vec![(2, 0, 2)]),
-                    ],
-                    fluids: vec![FluidSlottedInput::new(s("phtalicacid"), vec![(0, 1_000)])],
-                    max_sets: 8,
-                },
-                FluidSlottedRecipe {
-                    outputs: FluidOutput::new(s("3,3diaminobenzidine"), 16_000),
-                    inputs: vec![
-                        MultiInvSlottedInput::new(label("Zinc Dust"), vec![(0, 0, 1)]),
-                        MultiInvSlottedInput::new(label("Ammonia Cell"), vec![(1, 0, 2)]),
-                    ],
-                    fluids: vec![FluidSlottedInput::new(s("3,3dichlorobenzidine"), vec![(0, 1_000)])],
-                    max_sets: 8,
-                },
-                FluidSlottedRecipe {
-                    outputs: FluidOutput::new(s("molten.polybenzimidazole"), 32_000),
-                    inputs: vec![MultiInvSlottedInput::new(label("Diphenyl Isophtalate Cell"), vec![(1, 0, 1)])],
-                    fluids: vec![FluidSlottedInput::new(s("3,3diaminobenzidine"), vec![(0, 1_000)])],
-                    max_sets: 8,
-                },
-                FluidSlottedRecipe {
                     outputs: Output::new(label("NanoCPU Wafer"), 4),
                     inputs: vec![
                         MultiInvSlottedInput::new(label("Central Processing Unit (Wafer)"), vec![(0, 0, 1)]),
@@ -976,6 +990,18 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
                     max_sets: 16,
                 },
                 FluidSlottedRecipe {
+                    outputs: Output::new(label("Blue Steel Ingot"), 16),
+                    inputs: vec![MultiInvSlottedInput::new(label("Blue Steel Dust"), vec![(0, 0, 1)])],
+                    fluids: vec![FluidSlottedInput::new(s("oxygen"), vec![(0, 1_000)])],
+                    max_sets: 16,
+                },
+                FluidSlottedRecipe {
+                    outputs: Output::new(label("Stainless Steel Ingot"), 16),
+                    inputs: vec![MultiInvSlottedInput::new(label("Stainless Steel Dust"), vec![(0, 0, 1)])],
+                    fluids: vec![FluidSlottedInput::new(s("oxygen"), vec![(0, 1_000)])],
+                    max_sets: 16,
+                },
+                FluidSlottedRecipe {
                     outputs: Output::new(label("Energetic Alloy Ingot"), 16),
                     inputs: vec![MultiInvSlottedInput::new(label("Energetic Alloy Dust"), vec![(0, 0, 1)])],
                     fluids: vec![FluidSlottedInput::new(s("hydrogen"), vec![(0, 1_000)])],
@@ -1004,7 +1030,7 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
         });
         factory.add_process(FluidSlottedConfig {
             name: s("mixer-1"),
-            input_slots: vec![vec![5, 6, 7]],
+            input_slots: vec![vec![5, 6, 7, 8]],
             input_tanks: vec![vec![0]],
             accesses: vec![InvTankAccess {
                 client: s("c2"),
@@ -1050,6 +1076,17 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
                     max_sets: 8,
                 },
                 FluidSlottedRecipe {
+                    outputs: Output::new(label("Blue Steel Dust"), 16),
+                    inputs: vec![
+                        MultiInvSlottedInput::new(label("Rose Gold Dust"), vec![(0, 5, 1)]),
+                        MultiInvSlottedInput::new(label("Brass Dust"), vec![(0, 6, 1)]),
+                        MultiInvSlottedInput::new(label("Black Steel Dust"), vec![(0, 7, 4)]),
+                        MultiInvSlottedInput::new(label("Steel Dust"), vec![(0, 8, 2)]),
+                    ],
+                    fluids: vec![],
+                    max_sets: 8,
+                },
+                FluidSlottedRecipe {
                     outputs: Output::new(label("Soldering Alloy Dust"), 16),
                     inputs: vec![
                         MultiInvSlottedInput::new(label("Tin Dust"), vec![(0, 5, 9)]),
@@ -1063,6 +1100,15 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
                     inputs: vec![
                         MultiInvSlottedInput::new(label("Nickel Dust"), vec![(0, 5, 4)]),
                         MultiInvSlottedInput::new(label("Chrome Dust"), vec![(0, 6, 1)]),
+                    ],
+                    fluids: vec![],
+                    max_sets: 8,
+                },
+                FluidSlottedRecipe {
+                    outputs: Output::new(label("Brass Dust"), 16),
+                    inputs: vec![
+                        MultiInvSlottedInput::new(label("Copper Dust"), vec![(0, 5, 3)]),
+                        MultiInvSlottedInput::new(label("Zinc Dust"), vec![(0, 6, 1)]),
                     ],
                     fluids: vec![],
                     max_sets: 8,
@@ -1112,6 +1158,17 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
                     max_sets: 8,
                 },
                 FluidSlottedRecipe {
+                    outputs: Output::new(label("Stainless Steel Dust"), 16),
+                    inputs: vec![
+                        MultiInvSlottedInput::new(label("Iron Dust"), vec![(0, 5, 6)]),
+                        MultiInvSlottedInput::new(label("Nickel Dust"), vec![(0, 6, 1)]),
+                        MultiInvSlottedInput::new(label("Manganese Dust"), vec![(0, 7, 1)]),
+                        MultiInvSlottedInput::new(label("Chrome Dust"), vec![(0, 8, 1)]),
+                    ],
+                    fluids: vec![],
+                    max_sets: 8,
+                },
+                FluidSlottedRecipe {
                     outputs: Output::new(label("Energetic Alloy Dust"), 16),
                     inputs: vec![
                         MultiInvSlottedInput::new(label("Conductive Iron Dust"), vec![(0, 5, 1)]),
@@ -1127,6 +1184,15 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
                         MultiInvSlottedInput::new(label("Steel Dust"), vec![(0, 5, 1)]),
                         MultiInvSlottedInput::new(label("Coal Dust"), vec![(0, 6, 1)]),
                         MultiInvSlottedInput::new(label("Raw Silicon Dust"), vec![(0, 7, 1)]),
+                    ],
+                    fluids: vec![],
+                    max_sets: 8,
+                },
+                FluidSlottedRecipe {
+                    outputs: Output::new(label("Rose Gold Dust"), 16),
+                    inputs: vec![
+                        MultiInvSlottedInput::new(label("Copper Dust"), vec![(0, 5, 1)]),
+                        MultiInvSlottedInput::new(label("Gold Dust"), vec![(0, 6, 4)]),
                     ],
                     fluids: vec![],
                     max_sets: 8,
@@ -1564,7 +1630,7 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
         });
         factory.add_process(SlottedConfig {
             name: s("compressor"),
-            accesses: vec![InvAccess { client: s("c2"), addr: s("72e"), bus_side: WEST, inv_side: UP }],
+            accesses: vec![InvAccess { client: s("c2"), addr: s("2ec"), bus_side: EAST, inv_side: NORTH }],
             input_slots: vec![5],
             to_extract: None,
             strict_priority: false,
@@ -1582,8 +1648,9 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
             ],
         });
         factory.add_process(SlottedConfig {
+            // TODO: move to item-bus only
             name: s("extractor"),
-            accesses: vec![InvAccess { client: s("c2"), addr: s("72e"), bus_side: WEST, inv_side: SOUTH }],
+            accesses: vec![InvAccess { client: s("c2"), addr: s("7b0"), bus_side: WEST, inv_side: SOUTH }],
             input_slots: vec![5],
             to_extract: None,
             strict_priority: false,
