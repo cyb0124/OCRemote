@@ -2218,6 +2218,11 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
                 "NAND Memory Chip (Wafer)",
                 InvAccess { client: s("cr"), addr: s("b20"), bus_side: EAST, inv_side: SOUTH },
             ),
+            (
+                "red",
+                "Integrated Logic Circuit (Wafer)",
+                InvAccess { client: s("cr"), addr: s("36a"), bus_side: WEST, inv_side: SOUTH },
+            ),
         ] {
             factory.add_process(SlottedConfig {
                 name: local_fmt!("{color}Engraver"),
