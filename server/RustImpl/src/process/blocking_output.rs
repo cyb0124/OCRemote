@@ -31,9 +31,7 @@ impl_inventory!(BlockingOutputProcess);
 impl IntoProcess for BlockingOutputConfig {
     type Output = BlockingOutputProcess;
     fn into_process(self, factory: &Factory) -> Rc<RefCell<Self::Output>> {
-        Rc::new_cyclic(|weak| {
-            RefCell::new(Self::Output { weak: weak.clone(), config: self, factory: factory.weak.clone() })
-        })
+        Rc::new_cyclic(|weak| RefCell::new(Self::Output { weak: weak.clone(), config: self, factory: factory.weak.clone() }))
     }
 }
 

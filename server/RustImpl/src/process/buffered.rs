@@ -55,9 +55,7 @@ impl_inventory!(BufferedProcess);
 impl IntoProcess for BufferedConfig {
     type Output = BufferedProcess;
     fn into_process(self, factory: &Factory) -> Rc<RefCell<Self::Output>> {
-        Rc::new_cyclic(|weak| {
-            RefCell::new(Self::Output { weak: weak.clone(), config: self, factory: factory.weak.clone() })
-        })
+        Rc::new_cyclic(|weak| RefCell::new(Self::Output { weak: weak.clone(), config: self, factory: factory.weak.clone() }))
     }
 }
 
@@ -107,8 +105,7 @@ impl Process for BufferedProcess {
                 for stock in &this.config.stocks {
                     if let Some((item, info)) = factory.search_item(&stock.item) {
                         let existing = existing_size.entry(item.clone()).or_default();
-                        let to_insert = (stock.size - *existing)
-                            .min(info.borrow().get_availability(stock.allow_backup, stock.extra_backup));
+                        let to_insert = (stock.size - *existing).min(info.borrow().get_availability(stock.allow_backup, stock.extra_backup));
                         if to_insert <= 0 {
                             continue;
                         }
@@ -130,8 +127,7 @@ impl Process for BufferedProcess {
                             if inputs.n_sets <= 0 {
                                 continue 'recipe;
                             }
-                            let existing_total: i32 =
-                                inputs.items.iter().map(|item| *existing_size.entry(item.clone()).or_default()).sum();
+                            let existing_total: i32 = inputs.items.iter().map(|item| *existing_size.entry(item.clone()).or_default()).sum();
                             inputs.n_sets = inputs.n_sets.min((recipe.max_inputs - existing_total) / size_per_set);
                             if inputs.n_sets <= 0 {
                                 continue 'recipe;
@@ -175,12 +171,7 @@ impl Process for BufferedProcess {
 }
 
 impl BufferedProcess {
-    fn execute_recipe(
-        &self,
-        factory: &mut Factory,
-        items: Vec<Rc<Item>>,
-        plans: Vec<InsertPlan>,
-    ) -> ChildTask<Result<(), LocalStr>> {
+    fn execute_recipe(&self, factory: &mut Factory, items: Vec<Rc<Item>>, plans: Vec<InsertPlan>) -> ChildTask<Result<(), LocalStr>> {
         let mut bus_slots = Vec::new();
         let slots_to_free = Rc::new(RefCell::new(Vec::new()));
         for (i_input, item) in items.into_iter().enumerate() {

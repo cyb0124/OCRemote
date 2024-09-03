@@ -5,9 +5,7 @@ use super::super::item::Filter;
 use super::super::lua_value::{call_result, table_remove};
 use super::super::recipe::Input;
 use super::super::util::{alive, join_tasks, spawn};
-use super::{
-    list_inv, IntoProcess, Inventory, Process, RedstoneEmitterConfig, RedstoneEmitterProcess, ScatteringInput,
-};
+use super::{list_inv, IntoProcess, Inventory, Process, RedstoneEmitterConfig, RedstoneEmitterProcess, ScatteringInput};
 use abort_on_drop::ChildTask;
 use flexstr::{local_fmt, local_str, LocalStr};
 use std::{
@@ -93,11 +91,7 @@ impl Process for PlasticMixerProcess {
         }
         let server = factory.borrow_server();
         let access = server.load_balance(&self.config.accesses).1;
-        let action = ActionFuture::from(Call {
-            addr: access.addr.clone(),
-            func: local_str!("selectColor"),
-            args: vec![choice.into()],
-        });
+        let action = ActionFuture::from(Call { addr: access.addr.clone(), func: local_str!("selectColor"), args: vec![choice.into()] });
         server.enqueue_request_group(&access.client, vec![action.clone().into()]);
         let weak = self.weak.clone();
         spawn(async move {
@@ -158,8 +152,7 @@ impl Process for FluxNetworkProcess {
     fn run(&self, factory: &Factory) -> ChildTask<Result<(), LocalStr>> {
         let server = factory.borrow_server();
         let access = server.load_balance(&self.accesses).1;
-        let action =
-            ActionFuture::from(Call { addr: access.addr.clone(), func: local_str!("getEnergyInfo"), args: Vec::new() });
+        let action = ActionFuture::from(Call { addr: access.addr.clone(), func: local_str!("getEnergyInfo"), args: Vec::new() });
         server.enqueue_request_group(&access.client, vec![action.clone().into()]);
         let weak = self.weak.clone();
         spawn(async move {
@@ -199,11 +192,7 @@ impl Process for LowAlert {
     fn run(&self, factory: &Factory) -> ChildTask<Result<(), LocalStr>> {
         let n_stored = factory.search_n_stored(&self.item);
         if n_stored < self.n_wanted {
-            factory.log(Print {
-                text: local_fmt!("need {}*{}", self.log, self.n_wanted - n_stored),
-                color: 0xF2B2CC,
-                beep: None,
-            })
+            factory.log(Print { text: local_fmt!("need {}*{}", self.log, self.n_wanted - n_stored), color: 0xF2B2CC, beep: None })
         }
         spawn(async { Ok(()) })
     }
@@ -214,11 +203,7 @@ impl Process for FluidLowAlert {
     fn run(&self, factory: &Factory) -> ChildTask<Result<(), LocalStr>> {
         let n_stored = factory.search_n_fluid(&self.0);
         if n_stored < self.1 {
-            factory.log(Print {
-                text: local_fmt!("need {}*{}", self.0, self.1 - n_stored),
-                color: 0xF2B2CC,
-                beep: None,
-            })
+            factory.log(Print { text: local_fmt!("need {}*{}", self.0, self.1 - n_stored), color: 0xF2B2CC, beep: None })
         }
         spawn(async { Ok(()) })
     }
@@ -244,11 +229,8 @@ impl_inventory!(ItemCycleProcess);
 impl IntoProcess for ItemCycleConfig {
     type Output = ItemCycleProcess;
     fn into_process(self, factory: &Factory) -> Rc<RefCell<Self::Output>> {
-        let next_item =
-            read_to_string(&*self.file_name).ok().and_then(|x| usize::from_str(&x).ok()).unwrap_or_default();
-        Rc::new_cyclic(|weak| {
-            RefCell::new(Self::Output { weak: weak.clone(), factory: factory.weak.clone(), config: self, next_item })
-        })
+        let next_item = read_to_string(&*self.file_name).ok().and_then(|x| usize::from_str(&x).ok()).unwrap_or_default();
+        Rc::new_cyclic(|weak| RefCell::new(Self::Output { weak: weak.clone(), factory: factory.weak.clone(), config: self, next_item }))
     }
 }
 
@@ -280,8 +262,7 @@ impl Process for ItemCycleProcess {
                     async move {
                         let bus_slot = bus_slot.await?;
                         *slot_to_free = Some(bus_slot);
-                        let extraction =
-                            reservation.extract(&*alive(&weak)?.borrow().factory.upgrade().unwrap().borrow(), bus_slot);
+                        let extraction = reservation.extract(&*alive(&weak)?.borrow().factory.upgrade().unwrap().borrow(), bus_slot);
                         extraction.await?;
                         let task = {
                             alive_mut!(weak, this);
@@ -311,8 +292,7 @@ impl Process for ItemCycleProcess {
                         if this.next_item == this.config.items.len() {
                             this.next_item = 0
                         }
-                        std::fs::write(&*this.config.file_name, this.next_item.to_string())
-                            .map_err(|e| local_fmt!("{}: {}", this.config.name, e))
+                        std::fs::write(&*this.config.file_name, this.next_item.to_string()).map_err(|e| local_fmt!("{}: {}", this.config.name, e))
                     }
                 } else {
                     return Ok(());

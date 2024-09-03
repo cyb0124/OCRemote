@@ -33,9 +33,7 @@ pub struct ScatteringRecipe {
 }
 
 impl ScatteringRecipe {
-    pub fn new(outputs: Rc<dyn Outputs>, input: ScatteringInput) -> Self {
-        ScatteringRecipe { outputs, inputs: vec![input] }
-    }
+    pub fn new(outputs: Rc<dyn Outputs>, input: ScatteringInput) -> Self { ScatteringRecipe { outputs, inputs: vec![input] } }
 }
 
 pub struct ScatteringConfig {
@@ -58,9 +56,7 @@ pub struct ScatteringProcess {
 impl IntoProcess for ScatteringConfig {
     type Output = ScatteringProcess;
     fn into_process(self, factory: &Factory) -> Rc<RefCell<Self::Output>> {
-        Rc::new_cyclic(|weak| {
-            RefCell::new(Self::Output { weak: weak.clone(), config: self, factory: factory.weak.clone() })
-        })
+        Rc::new_cyclic(|weak| RefCell::new(Self::Output { weak: weak.clone(), config: self, factory: factory.weak.clone() }))
     }
 }
 

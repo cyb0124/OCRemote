@@ -73,13 +73,7 @@ where
             action = ActionFuture::from(Call {
                 addr: access.addr.clone(),
                 func: local_str!("transferItem"),
-                args: vec![
-                    access.inv_side.into(),
-                    access.bus_side.into(),
-                    size.into(),
-                    (slot + 1).into(),
-                    (bus_slot + 1).into(),
-                ],
+                args: vec![access.inv_side.into(), access.bus_side.into(), size.into(), (slot + 1).into(), (bus_slot + 1).into()],
             });
             server.enqueue_request_group(&access.client, vec![action.clone().into()])
         }
@@ -91,12 +85,7 @@ where
     })
 }
 
-fn scattering_insert<T, U>(
-    this: &T,
-    factory: &mut Factory,
-    reservation: Reservation,
-    insertions: U,
-) -> ChildTask<Result<(), LocalStr>>
+fn scattering_insert<T, U>(this: &T, factory: &mut Factory, reservation: Reservation, insertions: U) -> ChildTask<Result<(), LocalStr>>
 where
     T: Inventory,
     U: IntoIterator<Item = (usize, i32)> + 'static,
@@ -122,13 +111,7 @@ where
                     let action = ActionFuture::from(Call {
                         addr: access.addr.clone(),
                         func: local_str!("transferItem"),
-                        args: vec![
-                            access.bus_side.into(),
-                            access.inv_side.into(),
-                            size.into(),
-                            (bus_slot + 1).into(),
-                            (inv_slot + 1).into(),
-                        ],
+                        args: vec![access.bus_side.into(), access.inv_side.into(), size.into(), (bus_slot + 1).into(), (inv_slot + 1).into()],
                     });
                     server.enqueue_request_group(&access.client, vec![action.clone().into()]);
                     tasks.push(spawn(async move { action.await.map(|_| ()) }))

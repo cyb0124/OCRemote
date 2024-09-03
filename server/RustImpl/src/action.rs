@@ -69,9 +69,7 @@ impl<T: Action> Future for ActionFuture<T> {
 }
 
 impl<T: Action> From<T> for ActionFuture<T> {
-    fn from(action: T) -> Self {
-        ActionFuture(Rc::new(RefCell::new(ActionState { result: None, waker: None, action: Some(action) })))
-    }
+    fn from(action: T) -> Self { ActionFuture(Rc::new(RefCell::new(ActionState { result: None, waker: None, action: Some(action) }))) }
 }
 
 impl<T: Action> From<ActionFuture<T>> for Rc<RefCell<dyn ActionRequest>> {

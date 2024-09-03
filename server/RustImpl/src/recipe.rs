@@ -25,15 +25,11 @@ pub trait BoxedOutputs {
 
 impl BoxedOutputs for Rc<dyn Outputs> {
     fn and(self, other: Self) -> Self {
-        Rc::new(move |factory: &_| {
-            max_by(self.get_priority(factory), other.get_priority(factory), |x, y| x.partial_cmp(y).unwrap())
-        })
+        Rc::new(move |factory: &_| max_by(self.get_priority(factory), other.get_priority(factory), |x, y| x.partial_cmp(y).unwrap()))
     }
 
     fn or(self, other: Self) -> Self {
-        Rc::new(move |factory: &_| {
-            min_by(self.get_priority(factory), other.get_priority(factory), |x, y| x.partial_cmp(y).unwrap())
-        })
+        Rc::new(move |factory: &_| min_by(self.get_priority(factory), other.get_priority(factory), |x, y| x.partial_cmp(y).unwrap()))
     }
 
     fn not(self) -> Self {
@@ -162,8 +158,7 @@ pub fn resolve_inputs(factory: &Factory, recipe: &impl Recipe) -> Option<Resolve
                 Entry::Vacant(input_info) => {
                     input_info.insert(InputInfo {
                         // Note: backup params are considered for only the first input of the same item.
-                        n_available: (item_info.borrow())
-                            .get_availability(input.get_allow_backup(), input.get_extra_backup()),
+                        n_available: (item_info.borrow()).get_availability(input.get_allow_backup(), input.get_extra_backup()),
                         n_needed: input.get_size(),
                     });
                 }

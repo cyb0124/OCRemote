@@ -58,9 +58,7 @@ impl_inventory!(SlottedProcess);
 impl IntoProcess for SlottedConfig {
     type Output = SlottedProcess;
     fn into_process(self, factory: &Factory) -> Rc<RefCell<Self::Output>> {
-        Rc::new_cyclic(|weak| {
-            RefCell::new(Self::Output { weak: weak.clone(), config: self, factory: factory.weak.clone() })
-        })
+        Rc::new_cyclic(|weak| RefCell::new(Self::Output { weak: weak.clone(), config: self, factory: factory.weak.clone() }))
     }
 }
 
@@ -110,10 +108,10 @@ impl Process for SlottedProcess {
                             } else {
                                 0
                             };
-                            demand.inputs.n_sets = demand.inputs.n_sets.min(
-                                ((recipe.max_sets * mult).min(demand.inputs.items[i_input].max_size) - existing_size)
-                                    / mult,
-                            );
+                            demand.inputs.n_sets = demand
+                                .inputs
+                                .n_sets
+                                .min(((recipe.max_sets * mult).min(demand.inputs.items[i_input].max_size) - existing_size) / mult);
                             if demand.inputs.n_sets <= 0 {
                                 continue 'recipe;
                             }
@@ -140,11 +138,7 @@ impl SlottedProcess {
         let slots_to_free = Rc::new(RefCell::new(Vec::new()));
         let recipe = &self.config.recipes[demand.i_recipe];
         for (i_input, input) in recipe.inputs.iter().enumerate() {
-            let reservation = factory.reserve_item(
-                &self.config.name,
-                &demand.inputs.items[i_input],
-                demand.inputs.n_sets * input.size,
-            );
+            let reservation = factory.reserve_item(&self.config.name, &demand.inputs.items[i_input], demand.inputs.n_sets * input.size);
             let bus_slot = factory.bus_allocate();
             let slots_to_free = slots_to_free.clone();
             let weak = self.factory.clone();

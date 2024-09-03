@@ -55,10 +55,7 @@ impl ItemStack {
         let max_damage = table_remove(&mut table, "maxDamage")?;
         let max_size = table_remove(&mut table, "maxSize")?;
         let has_tag = table_remove(&mut table, "hasTag")?;
-        Ok(ItemStack {
-            item: Rc::new(Item { label, name, damage, max_damage, max_size, has_tag, others: table }),
-            size,
-        })
+        Ok(ItemStack { item: Rc::new(Item { label, name, damage, max_damage, max_size, has_tag, others: table }), size })
     }
 }
 

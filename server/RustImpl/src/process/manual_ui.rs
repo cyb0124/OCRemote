@@ -112,8 +112,7 @@ impl Process for ManualUiProcess {
                     let Ok(mut size) = request[pos + 1..].parse() else { continue };
                     size = factory.items.get(&stack.item).map_or(0, |info| info.borrow().n_stored).min(size);
                     loop {
-                        let InsertPlan { n_inserted, insertions } =
-                            insert_into_inventory(&mut stacks, &stack.item, size.min(stack.item.max_size));
+                        let InsertPlan { n_inserted, insertions } = insert_into_inventory(&mut stacks, &stack.item, size.min(stack.item.max_size));
                         if n_inserted <= 0 {
                             break;
                         };

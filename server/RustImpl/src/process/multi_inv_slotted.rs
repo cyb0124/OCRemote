@@ -86,12 +86,7 @@ impl IntoProcess for MultiInvSlottedConfig {
                         config: EachInvConfig {
                             accesses: Vec::from_iter(accesses.iter().map(|access| {
                                 let each = &access.invs[i];
-                                InvAccess {
-                                    client: access.client.clone(),
-                                    addr: each.addr.clone(),
-                                    bus_side: each.bus_side,
-                                    inv_side: each.inv_side,
-                                }
+                                InvAccess { client: access.client.clone(), addr: each.addr.clone(), bus_side: each.bus_side, inv_side: each.inv_side }
                             })),
                             input_slots,
                         },
@@ -139,12 +134,7 @@ impl Process for MultiInvSlottedProcess {
                                 *existing_input = Some(stack)
                             } else if let Some(ref to_extract) = this.to_extract {
                                 if to_extract(factory, i, slot, &stack) {
-                                    tasks.push(extract_output(
-                                        &*this.invs[i].borrow(),
-                                        factory,
-                                        slot,
-                                        stack.item.max_size,
-                                    ))
+                                    tasks.push(extract_output(&*this.invs[i].borrow(), factory, slot, stack.item.max_size))
                                 }
                             }
                         }
@@ -169,10 +159,10 @@ impl Process for MultiInvSlottedProcess {
                             } else {
                                 0
                             };
-                            demand.inputs.n_sets = demand.inputs.n_sets.min(
-                                ((recipe.max_sets * mult).min(demand.inputs.items[i_input].max_size) - existing_size)
-                                    / mult,
-                            );
+                            demand.inputs.n_sets = demand
+                                .inputs
+                                .n_sets
+                                .min(((recipe.max_sets * mult).min(demand.inputs.items[i_input].max_size) - existing_size) / mult);
                             if demand.inputs.n_sets <= 0 {
                                 continue 'recipe;
                             }
@@ -199,8 +189,7 @@ impl MultiInvSlottedProcess {
         let slots_to_free = Rc::new(RefCell::new(Vec::new()));
         let recipe = &self.recipes[demand.i_recipe];
         for (i_input, input) in recipe.inputs.iter().enumerate() {
-            let reservation =
-                factory.reserve_item(&self.name, &demand.inputs.items[i_input], demand.inputs.n_sets * input.size);
+            let reservation = factory.reserve_item(&self.name, &demand.inputs.items[i_input], demand.inputs.n_sets * input.size);
             let bus_slot = factory.bus_allocate();
             let slots_to_free = slots_to_free.clone();
             let weak = self.factory.clone();

@@ -49,11 +49,8 @@ impl Process for RedstoneEmitterProcess {
         } else {
             let server = factory.borrow_server();
             let access = server.load_balance(&self.config.accesses).1;
-            let action = ActionFuture::from(Call {
-                addr: access.addr.clone(),
-                func: local_str!("setOutput"),
-                args: vec![access.side.into(), value.into()],
-            });
+            let action =
+                ActionFuture::from(Call { addr: access.addr.clone(), func: local_str!("setOutput"), args: vec![access.side.into(), value.into()] });
             server.enqueue_request_group(&access.client, vec![action.clone().into()]);
             let weak = self.weak.clone();
             spawn(async move {
@@ -102,11 +99,7 @@ impl<T: Process> Process for RedstoneConditionalProcess<T> {
     fn run(&self, factory: &Factory) -> ChildTask<Result<(), LocalStr>> {
         let server = factory.borrow_server();
         let access = server.load_balance(&self.accesses).1;
-        let action = ActionFuture::from(Call {
-            addr: access.addr.clone(),
-            func: local_str!("getInput"),
-            args: vec![access.side.into()],
-        });
+        let action = ActionFuture::from(Call { addr: access.addr.clone(), func: local_str!("getInput"), args: vec![access.side.into()] });
         server.enqueue_request_group(&access.client, vec![action.clone().into()]);
         let weak = self.weak.clone();
         spawn(async move {

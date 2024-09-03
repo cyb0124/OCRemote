@@ -30,9 +30,7 @@ struct DrawerExtractor {
 impl IntoStorage for DrawerConfig {
     type Output = DrawerStorage;
     fn into_storage(self, factory: &Factory) -> Rc<RefCell<Self::Output>> {
-        Rc::new_cyclic(|weak| {
-            RefCell::new(Self::Output { weak: weak.clone(), config: self, factory: factory.weak.clone() })
-        })
+        Rc::new_cyclic(|weak| RefCell::new(Self::Output { weak: weak.clone(), config: self, factory: factory.weak.clone() }))
     }
 }
 
@@ -94,13 +92,7 @@ impl Extractor for DrawerExtractor {
         let action = ActionFuture::from(Call {
             addr: access.addr.clone(),
             func: local_str!("transferItem"),
-            args: vec![
-                access.inv_side.into(),
-                access.bus_side.into(),
-                size.into(),
-                (self.inv_slot + 1).into(),
-                (bus_slot + 1).into(),
-            ],
+            args: vec![access.inv_side.into(), access.bus_side.into(), size.into(), (self.inv_slot + 1).into(), (bus_slot + 1).into()],
         });
         server.enqueue_request_group(&access.client, vec![action.clone().into()]);
         spawn(async move { action.await.map(|_| ()) })

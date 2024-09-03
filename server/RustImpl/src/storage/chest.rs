@@ -33,13 +33,7 @@ impl IntoStorage for ChestConfig {
     type Output = ChestStorage;
     fn into_storage(self, factory: &Factory) -> Rc<RefCell<Self::Output>> {
         Rc::new_cyclic(|weak| {
-            RefCell::new(Self::Output {
-                weak: weak.clone(),
-                config: self,
-                factory: factory.weak.clone(),
-                stacks: Vec::new(),
-                inv_slot_to_deposit: 0,
-            })
+            RefCell::new(Self::Output { weak: weak.clone(), config: self, factory: factory.weak.clone(), stacks: Vec::new(), inv_slot_to_deposit: 0 })
         })
     }
 }
@@ -113,13 +107,7 @@ impl Storage for ChestStorage {
         let action = ActionFuture::from(Call {
             addr: access.addr.clone(),
             func: local_str!("transferItem"),
-            args: vec![
-                access.bus_side.into(),
-                access.inv_side.into(),
-                n_deposited.into(),
-                (bus_slot + 1).into(),
-                (inv_slot + 1).into(),
-            ],
+            args: vec![access.bus_side.into(), access.inv_side.into(), n_deposited.into(), (bus_slot + 1).into(), (inv_slot + 1).into()],
         });
         server.enqueue_request_group(&access.client, vec![action.clone().into()]);
         let task = spawn(async move { action.await.map(|_| ()) });
@@ -136,13 +124,7 @@ impl Extractor for ChestExtractor {
         let action = ActionFuture::from(Call {
             addr: access.addr.clone(),
             func: local_str!("transferItem"),
-            args: vec![
-                access.inv_side.into(),
-                access.bus_side.into(),
-                size.into(),
-                (inv_slot + 1).into(),
-                (bus_slot + 1).into(),
-            ],
+            args: vec![access.inv_side.into(), access.bus_side.into(), size.into(), (inv_slot + 1).into(), (bus_slot + 1).into()],
         });
         server.enqueue_request_group(&access.client, vec![action.clone().into()]);
         let weak = self.weak.clone();

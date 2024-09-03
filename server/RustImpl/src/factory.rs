@@ -70,8 +70,7 @@ pub struct Reservation {
 
 impl Reservation {
     pub fn extract(self, factory: &Factory, bus_slot: usize) -> impl Future<Output = Result<(), LocalStr>> {
-        let tasks =
-            self.extractors.into_iter().map(|(extractor, size)| extractor.extract(factory, size, bus_slot)).collect();
+        let tasks = self.extractors.into_iter().map(|(extractor, size)| extractor.extract(factory, size, bus_slot)).collect();
         join_tasks(tasks)
     }
 }
@@ -94,12 +93,7 @@ impl FluidReservation {
                     task = ActionFuture::from(Call {
                         addr: bus_of_tank.addr.clone(),
                         func: local_str!("transferFluid"),
-                        args: vec![
-                            bus_of_tank.tank_side.into(),
-                            bus_of_tank.bus_side.into(),
-                            qty.into(),
-                            (storage.slot.unwrap() + 1).into(),
-                        ],
+                        args: vec![bus_of_tank.tank_side.into(), bus_of_tank.bus_side.into(), qty.into(), (storage.slot.unwrap() + 1).into()],
                     });
                     server.enqueue_request_group(&access.client, vec![task.clone().into()])
                 }
@@ -286,9 +280,7 @@ impl Factory {
         best
     }
 
-    pub fn search_n_stored(&self, filter: &Filter) -> i32 {
-        self.search_item(filter).map_or(0, |(_, info)| info.borrow().n_stored)
-    }
+    pub fn search_n_stored(&self, filter: &Filter) -> i32 { self.search_item(filter).map_or(0, |(_, info)| info.borrow().n_stored) }
 
     pub fn bus_allocate(&mut self) -> LocalReceiver<usize> {
         let (sender, receiver) = make_local_one_shot();
@@ -399,24 +391,14 @@ impl Factory {
         }
     }
 
-    fn fluid_deposit(
-        &self,
-        bus: usize,
-        slot: usize,
-        fluid: LocalStr,
-        mut qty: i64,
-        tasks: &mut Vec<ChildTask<Result<(), LocalStr>>>,
-    ) {
+    fn fluid_deposit(&self, bus: usize, slot: usize, fluid: LocalStr, mut qty: i64, tasks: &mut Vec<ChildTask<Result<(), LocalStr>>>) {
         self.log(Print { text: local_fmt!("{fluid}*{qty}"), color: 0xFFA500, beep: None });
         let server = self.config.server.borrow();
         while qty > 0 {
             let mut best: Option<(&Rc<RefCell<FluidStorage>>, i64)> = None;
             for storage in &self.fluid_storages {
                 let sto = storage.borrow();
-                if sto.config.fluid == fluid
-                    && sto.n_stored_hi < sto.capacity
-                    && best.as_ref().map_or(true, |&(_, best)| sto.n_stored_hi > best)
-                {
+                if sto.config.fluid == fluid && sto.n_stored_hi < sto.capacity && best.as_ref().map_or(true, |&(_, best)| sto.n_stored_hi > best) {
                     best = Some((storage, sto.n_stored_hi))
                 }
             }
@@ -430,12 +412,7 @@ impl Factory {
                 let task = ActionFuture::from(Call {
                     addr: bus_of_tank.addr.clone(),
                     func: local_str!("transferFluid"),
-                    args: vec![
-                        bus_of_tank.bus_side.into(),
-                        bus_of_tank.tank_side.into(),
-                        n_deposited.into(),
-                        (slot + 1).into(),
-                    ],
+                    args: vec![bus_of_tank.bus_side.into(), bus_of_tank.tank_side.into(), n_deposited.into(), (slot + 1).into()],
                 });
                 server.enqueue_request_group(&access.client, vec![task.clone().into()]);
                 tasks.push(spawn(async move { task.await.map(|_| ()) }))
@@ -453,10 +430,7 @@ impl Factory {
             let mut best = None;
             for storage in &self.fluid_storages {
                 let sto = storage.borrow();
-                if sto.config.fluid == fluid
-                    && sto.n_stored_lo > 0
-                    && best.as_ref().map_or(true, |&(_, best)| sto.n_stored_lo < best)
-                {
+                if sto.config.fluid == fluid && sto.n_stored_lo > 0 && best.as_ref().map_or(true, |&(_, best)| sto.n_stored_lo < best) {
                     best = Some((storage.clone(), sto.n_stored_lo))
                 }
             }
@@ -558,11 +532,7 @@ async fn update_storages(factory: &Weak<RefCell<Factory>>) -> Result<(), LocalSt
     for (_, item) in &this.items {
         n_total += item.borrow().n_stored
     }
-    this.log(Print {
-        text: local_fmt!("storage: {} items, {} types", n_total, this.items.len()),
-        color: 0x00FF00,
-        beep: None,
-    });
+    this.log(Print { text: local_fmt!("storage: {} items, {} types", n_total, this.items.len()), color: 0x00FF00, beep: None });
     for (filter, n_backup) in &this.config.backups {
         if let Some((_, info)) = this.search_item(filter) {
             info.borrow_mut().n_backup += n_backup
@@ -661,17 +631,16 @@ async fn fluid_bus_main(factory: Weak<RefCell<Factory>>) -> Result<(), LocalStr>
 }
 
 async fn fluid_bus_update(factory: &Weak<RefCell<Factory>>) -> Result<bool, LocalStr> {
-    let buses =
-        {
-            alive_mut!(factory, this);
-            this.n_fluid_bus_updates += 1;
-            let Some(acceess) = this.config.fluid_bus_accesses.first() else { return Ok(false) };
-            let n_buses = acceess.tanks.len();
-            let server = this.config.server.borrow();
-            join_outputs(Vec::from_iter((0..n_buses).map(|i| {
-                spawn(read_tanks(&*server, &this.config.fluid_bus_accesses, |access| access.tanks[i].clone()))
-            })))
-        };
+    let buses = {
+        alive_mut!(factory, this);
+        this.n_fluid_bus_updates += 1;
+        let Some(acceess) = this.config.fluid_bus_accesses.first() else { return Ok(false) };
+        let n_buses = acceess.tanks.len();
+        let server = this.config.server.borrow();
+        join_outputs(Vec::from_iter(
+            (0..n_buses).map(|i| spawn(read_tanks(&*server, &this.config.fluid_bus_accesses, |access| access.tanks[i].clone()))),
+        ))
+    };
     let buses = buses.await?;
     let mut tasks = Vec::new();
     {
@@ -719,8 +688,7 @@ pub fn read_tanks<'a, T: Access + 'a>(
 ) -> impl Future<Output = Result<Vec<Tank>, LocalStr>> + 'static {
     let access = server.load_balance(accesses).1;
     let tank = tank(access);
-    let action =
-        ActionFuture::from(Call { addr: tank.addr, func: local_str!("getFluidInTank"), args: vec![tank.side.into()] });
+    let action = ActionFuture::from(Call { addr: tank.addr, func: local_str!("getFluidInTank"), args: vec![tank.side.into()] });
     server.enqueue_request_group(access.get_client(), vec![action.clone().into()]);
     async move {
         let tanks = table_to_vec(call_result::<Table>(action.await?)?)?;
@@ -747,10 +715,10 @@ pub fn tanks_to_fluid_map(tanks: &[Tank]) -> FnvHashMap<LocalStr, (usize, i64)> 
 
 impl FluidStorage {
     fn update(&self) -> ChildTask<Result<(), LocalStr>> {
-        let task =
-            read_tanks(&*self.factory.upgrade().unwrap().borrow().borrow_server(), &self.config.accesses, |access| {
-                EachTank { addr: access.buses[0].addr.clone(), side: access.buses[0].tank_side }
-            });
+        let task = read_tanks(&*self.factory.upgrade().unwrap().borrow().borrow_server(), &self.config.accesses, |access| EachTank {
+            addr: access.buses[0].addr.clone(),
+            side: access.buses[0].tank_side,
+        });
         let weak = self.weak.clone();
         spawn(async move {
             let tanks = task.await?;
@@ -759,11 +727,7 @@ impl FluidStorage {
                 if let Some(fluid) = tank.fluid {
                     if fluid != this.config.fluid {
                         upgrade!(this.factory, this);
-                        this.log(Print {
-                            text: local_fmt!("unexpected {fluid} stored"),
-                            color: 0xFF0000,
-                            beep: Some(880.0),
-                        });
+                        this.log(Print { text: local_fmt!("unexpected {fluid} stored"), color: 0xFF0000, beep: Some(880.0) });
                         continue;
                     }
                 }

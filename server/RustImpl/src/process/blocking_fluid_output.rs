@@ -25,9 +25,7 @@ pub struct BlockingFluidOutputProcess {
 impl IntoProcess for BlockingFluidOutputConfig {
     type Output = BlockingFluidOutputProcess;
     fn into_process(self, factory: &Factory) -> Rc<RefCell<Self::Output>> {
-        Rc::new_cyclic(|weak| {
-            RefCell::new(Self::Output { weak: weak.clone(), config: self, factory: factory.weak.clone() })
-        })
+        Rc::new_cyclic(|weak| RefCell::new(Self::Output { weak: weak.clone(), config: self, factory: factory.weak.clone() }))
     }
 }
 
@@ -78,12 +76,7 @@ impl Process for BlockingFluidOutputProcess {
                                 task = ActionFuture::from(Call {
                                     addr: bus_of_tank.addr.clone(),
                                     func: local_str!("transferFluid"),
-                                    args: vec![
-                                        bus_of_tank.tank_side.into(),
-                                        bus_of_tank.bus_side.into(),
-                                        qty.into(),
-                                        (slot + 1).into(),
-                                    ],
+                                    args: vec![bus_of_tank.tank_side.into(), bus_of_tank.bus_side.into(), qty.into(), (slot + 1).into()],
                                 });
                                 server.enqueue_request_group(&access.client, vec![task.clone().into()])
                             }

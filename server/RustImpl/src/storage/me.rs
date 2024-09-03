@@ -32,12 +32,7 @@ impl IntoStorage for MEConfig {
     type Output = MEStorage;
     fn into_storage(self, factory: &Factory) -> Rc<RefCell<Self::Output>> {
         Rc::new_cyclic(|weak| {
-            RefCell::new(Self::Output {
-                weak: weak.clone(),
-                config: self,
-                factory: factory.weak.clone(),
-                access_for_item: FnvHashMap::default(),
-            })
+            RefCell::new(Self::Output { weak: weak.clone(), config: self, factory: factory.weak.clone(), access_for_item: FnvHashMap::default() })
         })
     }
 }
@@ -76,13 +71,7 @@ impl Storage for MEStorage {
         let action = ActionFuture::from(Call {
             addr: access.transposer_addr.clone(),
             func: local_str!("transferItem"),
-            args: vec![
-                access.bus_side.into(),
-                access.me_side.into(),
-                n_deposited.into(),
-                (bus_slot + 1).into(),
-                9.into(),
-            ],
+            args: vec![access.bus_side.into(), access.me_side.into(), n_deposited.into(), (bus_slot + 1).into(), 9.into()],
         });
         server.enqueue_request_group(&access.client, vec![action.clone().into()]);
         let task = spawn(async move { action.await.map(|_| ()) });
@@ -103,13 +92,7 @@ impl Extractor for MEExtractor {
             filter: self.item.serialize(),
             size,
             transposer_addr: access.transposer_addr.clone(),
-            transposer_args: vec![
-                access.me_side.into(),
-                access.bus_side.into(),
-                size.into(),
-                (access.me_slot + 1).into(),
-                (bus_slot + 1).into(),
-            ],
+            transposer_args: vec![access.me_side.into(), access.bus_side.into(), size.into(), (access.me_slot + 1).into(), (bus_slot + 1).into()],
         });
         server.enqueue_request_group(&access.client, vec![action.clone().into()]);
         spawn(async move { action.await.map(|_| ()) })

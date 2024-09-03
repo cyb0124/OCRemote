@@ -137,10 +137,7 @@ where
                             T::store_non_consumable(&mut group, access, non_consumable)
                         }
                         let group: Vec<_> = group.into_iter().map(|x| ActionFuture::from(x)).collect();
-                        server.enqueue_request_group(
-                            access.get_client(),
-                            group.iter().map(|x| x.clone().into()).collect(),
-                        );
+                        server.enqueue_request_group(access.get_client(), group.iter().map(|x| x.clone().into()).collect());
                         group.into_iter().map(|x| spawn(async move { x.await.map(|_| ()) })).collect()
                     };
                     join_tasks(tasks).await?;
@@ -177,9 +174,7 @@ pub struct CraftingRobotProcess {
 impl IntoProcess for CraftingRobotConfig {
     type Output = CraftingRobotProcess;
     fn into_process(self, factory: &Factory) -> Rc<RefCell<Self::Output>> {
-        Rc::new_cyclic(|weak| {
-            RefCell::new(Self::Output { weak: weak.clone(), config: self, factory: factory.weak.clone() })
-        })
+        Rc::new_cyclic(|weak| RefCell::new(Self::Output { weak: weak.clone(), config: self, factory: factory.weak.clone() }))
     }
 }
 
@@ -198,11 +193,7 @@ impl CraftingGridProcess for CraftingRobotProcess {
     impl_crafting_grid_process!();
 
     fn load_input(group: &mut Vec<Call>, access: &Self::Access, bus_slot: usize, inv_slot: usize, size: i32) {
-        group.push(Call {
-            addr: local_str!("robot"),
-            func: local_str!("select"),
-            args: vec![(map_robot_grid(inv_slot) + 1).into()],
-        });
+        group.push(Call { addr: local_str!("robot"), func: local_str!("select"), args: vec![(map_robot_grid(inv_slot) + 1).into()] });
         group.push(Call {
             addr: local_str!("inventory_controller"),
             func: local_str!("suckFromSlot"),
@@ -211,11 +202,7 @@ impl CraftingGridProcess for CraftingRobotProcess {
     }
 
     fn load_non_consumable(group: &mut Vec<Call>, _access: &Self::Access, non_consumable: &NonConsumable) {
-        group.push(Call {
-            addr: local_str!("robot"),
-            func: local_str!("select"),
-            args: vec![(non_consumable.storage_slot + 1).into()],
-        });
+        group.push(Call { addr: local_str!("robot"), func: local_str!("select"), args: vec![(non_consumable.storage_slot + 1).into()] });
         group.push(Call {
             addr: local_str!("robot"),
             func: local_str!("transferTo"),
@@ -239,11 +226,7 @@ impl CraftingGridProcess for CraftingRobotProcess {
             func: local_str!("select"),
             args: vec![(map_robot_grid(non_consumable.crafting_grid_slot) + 1).into()],
         });
-        group.push(Call {
-            addr: local_str!("robot"),
-            func: local_str!("transferTo"),
-            args: vec![(non_consumable.storage_slot + 1).into()],
-        });
+        group.push(Call { addr: local_str!("robot"), func: local_str!("transferTo"), args: vec![(non_consumable.storage_slot + 1).into()] });
     }
 }
 
@@ -266,9 +249,7 @@ pub struct WorkbenchProcess {
 impl IntoProcess for WorkbenchConfig {
     type Output = WorkbenchProcess;
     fn into_process(self, factory: &Factory) -> Rc<RefCell<Self::Output>> {
-        Rc::new_cyclic(|weak| {
-            RefCell::new(Self::Output { weak: weak.clone(), config: self, factory: factory.weak.clone() })
-        })
+        Rc::new_cyclic(|weak| RefCell::new(Self::Output { weak: weak.clone(), config: self, factory: factory.weak.clone() }))
     }
 }
 
@@ -280,13 +261,7 @@ impl CraftingGridProcess for WorkbenchProcess {
         group.push(Call {
             addr: access.input_addr.clone(),
             func: local_str!("transferItem"),
-            args: vec![
-                access.input_bus_side.into(),
-                DOWN.into(),
-                size.into(),
-                (bus_slot + 1).into(),
-                (inv_slot + 1).into(),
-            ],
+            args: vec![access.input_bus_side.into(), DOWN.into(), size.into(), (bus_slot + 1).into(), (inv_slot + 1).into()],
         });
     }
 
