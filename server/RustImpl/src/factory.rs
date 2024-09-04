@@ -666,7 +666,6 @@ async fn fluid_bus_update(factory: &Weak<RefCell<Factory>>) -> Result<bool, Loca
             this.fluid_bus_wait_queue.pop_front().unwrap().send(Ok(bus))
         }
     }
-    let ever_deposited = !tasks.is_empty();
     join_tasks(tasks).await?;
     alive_mut!(factory, this);
     while !empty_buses_after_deposit.is_empty() && !this.fluid_bus_wait_queue.is_empty() {
@@ -679,7 +678,7 @@ async fn fluid_bus_update(factory: &Weak<RefCell<Factory>>) -> Result<bool, Loca
         this.fluid_bus_allocations.remove(&slot);
         ever_freed = true
     }
-    Ok(ever_freed || ever_deposited && !this.fluid_bus_wait_queue.is_empty())
+    Ok(ever_freed)
 }
 
 pub struct Tank {

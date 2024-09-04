@@ -236,10 +236,10 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
         factory.add_process(CraftingRobotConfig {
             name: s("craftingGrid"),
             accesses: vec![CraftingRobotAccess { client: s("crafter"), bus_side: FRONT }],
-            recipes: (["Raw Silicon", "Wood Pulp"].into_iter())
+            recipes: (["Raw Silicon Dust", "Wood Pulp"].into_iter())
                 .map(|x| CraftingGridRecipe {
                     outputs: ignore_outputs(1.),
-                    inputs: vec![CraftingGridInput::new(label!("Small Pile of {x} Dust"), vec![0, 1, 3, 4])],
+                    inputs: vec![CraftingGridInput::new(label!("Small Pile of {x}"), vec![0, 1, 3, 4])],
                     max_sets: 64,
                     non_consumables: vec![],
                 })
