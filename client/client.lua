@@ -243,7 +243,12 @@ while true do
       end
       local data = socket.read()
       if data then
-        onRead(data)
+        local ok, err = pcall(onRead, data)
+        if not ok then
+          print{text = err, color = 0xFF0000, beep = 880}
+          socket.close()
+          break
+        end
       else
         print{text = "Connection closed (read)", color = 0xFF0000, beep = 880}
         socket.close()
