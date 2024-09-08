@@ -1072,7 +1072,7 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
                     inputs: vec![
                         MultiInvSlottedInput::new(label("Rutile Dust"), vec![(0, 0, 2)]),
                         MultiInvSlottedInput::new(label("Rutile Dust"), vec![(0, 1, 1)]),
-                        MultiInvSlottedInput::new(label("Carbon Dust"), vec![(0, 1, 2)]),
+                        MultiInvSlottedInput::new(label("Carbon Dust"), vec![(0, 2, 2)]),
                     ],
                     fluids: vec![FluidSlottedInput::new(s("chlorine"), vec![(0, 4_000)])],
                     max_sets: 32,
@@ -2842,8 +2842,8 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
                     max_sets: 8,
                 }
             }))
-            .chain(["Arsenic", "Antimony", "Bauxite"].into_iter().map(|x| SlottedRecipe {
-                outputs: Output::new(label!("{x} Dust"), 16),
+            .chain([(16, "Arsenic"), (16, "Antimony"), (64, "Bauxite")].into_iter().map(|(q, x)| SlottedRecipe {
+                outputs: Output::new(label!("{x} Dust"), q),
                 inputs: vec![SlottedInput::new(label!("Centrifuged {x} Ore"), vec![(5, 1)])],
                 max_sets: 16,
             }))
