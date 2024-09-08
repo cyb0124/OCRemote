@@ -2524,7 +2524,7 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
         });
         factory.add_process(FluidSlottedConfig {
             name: s("centrifuge"),
-            input_slots: vec![vec![0]],
+            input_slots: vec![(0..4).collect()],
             input_tanks: vec![vec![0]],
             accesses: vec![InvTankAccess {
                 client: s("c3"),
@@ -2561,7 +2561,7 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
                 },
                 FluidSlottedRecipe {
                     outputs: Output::new(label("Silicon Dioxide Dust"), 256),
-                    inputs: vec![MultiInvSlottedInput::new(label("Glass Dust"), vec![(0, 0, 1)])],
+                    inputs: (0..4).map(|i| MultiInvSlottedInput::new(label("Glass Dust"), vec![(0, i, 1)])).collect(),
                     fluids: vec![],
                     max_sets: 64,
                 },
