@@ -27,7 +27,7 @@ use ratatui::{
     layout::{Constraint, Layout, Margin},
     style::Color,
     text::Line,
-    widgets::{List, ListItem, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState},
+    widgets::{Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState},
     Frame, Terminal,
 };
 use std::{
@@ -82,8 +82,8 @@ impl Tui {
     }
 
     fn frame(&self, frame: &mut Frame) {
-        let layout = Layout::vertical([Constraint::Fill(1), Constraint::Length(1)]).split(frame.size());
-        frame.render_widget(self.text_area.borrow().widget(), layout[1]);
+        let layout = Layout::vertical([Constraint::Fill(1), Constraint::Length(1)]).split(frame.area());
+        frame.render_widget(&*self.text_area.borrow(), layout[1]);
 
         let log_size;
         let main_list = self.main_list.borrow();

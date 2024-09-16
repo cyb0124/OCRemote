@@ -87,7 +87,7 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
             filters: vec![label("Sesame Seeds"), label("Pyrite Dust"), label("Glow Flower"), label("Wood Pulp")],
         });
         factory.add_storage(DrawerConfig {
-            accesses: vec![InvAccess { client: s("main"), addr: s("c47"), bus_side: NORTH, inv_side: EAST }],
+            accesses: vec![InvAccess { client: s("main"), addr: s("789"), bus_side: SOUTH, inv_side: UP }],
             filters: vec![label("Gold Dust"), label("Roasted Iron Dust"), label("Sodium Dust"), label("Potassium Dust")],
         });
         factory.add_storage(DrawerConfig {
@@ -194,6 +194,7 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
             ("nitrogendioxide", "c5", EachBusOfTank { addr: s("957"), bus_side: UP, tank_side: WEST }),
             ("palladium enriched ammonia", "c5", EachBusOfTank { addr: s("957"), bus_side: UP, tank_side: SOUTH }),
             ("methanol", "c3", EachBusOfTank { addr: s("f1b"), bus_side: UP, tank_side: SOUTH }),
+            ("molten.redsteel", "main", EachBusOfTank { addr: s("2d4"), bus_side: DOWN, tank_side: EAST }),
         ] {
             factory
                 .add_fluid_storage(FluidStorageConfig { accesses: vec![TankAccess { client: s(client), buses: vec![bus_of_tank] }], fluid: s(fluid) })
@@ -3143,6 +3144,7 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
                 (16_000, "molten.solderingalloy", "Soldering Alloy Dust"),
                 (16_000, "molten.energeticalloy", "Energetic Alloy Ingot"),
                 (16_000, "molten.potassium disulfate", "Potassium Disulfate Dust"),
+                (16_000, "molten.redsteel", "Red Steel Ingot"),
             ]
             .into_iter()
             .map(|(q, o, i)| FluidSlottedRecipe {
@@ -3477,7 +3479,7 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
         });
         factory.add_process(SlottedConfig {
             name: s("ICO-8"),
-            accesses: vec![InvAccess { client: s("main"), addr: s("789"), bus_side: UP, inv_side: WEST }],
+            accesses: vec![InvAccess { client: s("main"), addr: s("789"), bus_side: SOUTH, inv_side: WEST }],
             input_slots: (0..16).collect(),
             to_extract: None,
             strict_priority: false,
