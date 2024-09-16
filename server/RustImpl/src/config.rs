@@ -84,7 +84,7 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
         factory.add_storage(ChestConfig { accesses: vec![InvAccess { client: s("main"), addr: s("09c"), bus_side: NORTH, inv_side: WEST }] });
         factory.add_storage(DrawerConfig {
             accesses: vec![InvAccess { client: s("main"), addr: s("c47"), bus_side: NORTH, inv_side: SOUTH }],
-            filters: vec![label("Sesame Seeds"), label("Pyrite Dust"), label("Glow Flower"), label("Wood Pulp")],
+            filters: vec![label("Sesame Seeds"), label("Borax Dust"), label("Glow Flower"), label("Wood Pulp")],
         });
         factory.add_storage(DrawerConfig {
             accesses: vec![InvAccess { client: s("main"), addr: s("789"), bus_side: SOUTH, inv_side: UP }],
@@ -2482,6 +2482,15 @@ pub fn build_factory(tui: Rc<Tui>) -> Rc<RefCell<Factory>> {
                         MultiInvSlottedInput::new(label("Cable"), vec![(0, 9, 2)]),
                     ],
                     fluids: vec![FluidSlottedInput::new(s("molten.plastic"), vec![(0, 72)])],
+                    max_sets: 4,
+                },
+                FluidSlottedRecipe {
+                    outputs: Output::new(label("Field Generator (LV)"), 4),
+                    inputs: vec![
+                        MultiInvSlottedInput::new(label("Enderpearl Plate"), vec![(0, 5, 1)]),
+                        MultiInvSlottedInput::new(label("Nanoprocessor"), vec![(0, 6, 4)]),
+                    ],
+                    fluids: vec![FluidSlottedInput::new(s("molten.redsteel"), vec![(0, 288)])],
                     max_sets: 4,
                 },
                 FluidSlottedRecipe {
